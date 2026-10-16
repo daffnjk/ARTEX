@@ -1,0 +1,57 @@
+name: Research harness
+
+on:
+  pull_request:
+    paths:
+      - 'harness/**'
+      - 'cmd/harness-eval/**'
+      - 'agent/assembly.go'
+      - 'agent/completion_guard*.go'
+      - 'scripts/test-harness-offline.sh'
+      - '.github/workflows/research-harness.yml'
+      - 'go.mod'
+      - 'go.sum'
+  push:
+    branches: ['research/evidence-harness-m1']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: research-harness-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline-core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, pinned
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5, pinned
+        with:
+          go-version: '1.23.2'
+          cache: false
+      - run: sh scripts/test-harness-offline.sh
+
+  agent-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, pinned
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5, pinned
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Core under project toolchain
+        run: go test -race -count=1 ./harness ./cmd/harness-eval
+        env:
+          GOFLAGS: -mod=readonly
+      - name: Completion gate integration (no target or database)
+        run: go test -count=1 -run '^TestGoalCompletion' ./agent
+        env:
+          GOFLAGS: -mod=readonly
