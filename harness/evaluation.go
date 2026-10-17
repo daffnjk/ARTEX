@@ -43,16 +43,17 @@ type EvidenceRef struct {
 // EvaluationRequest intentionally has no conversation history, model confidence,
 // tool command, or permission to change a task's state.
 type EvaluationRequest struct {
-	SchemaVersion    string        `json:"schema_version"`
-	ID               string        `json:"id"`
-	TaskID           int64         `json:"task_id"`
-	GoalID           int64         `json:"goal_id"`
-	ExperimentID     string        `json:"experiment_id"`
-	ContextVersion   string        `json:"context_version"`
-	Claim            string        `json:"claim"`
-	CriterionID      string        `json:"criterion_id"`
-	CriterionVersion string        `json:"criterion_version"`
-	Evidence         []EvidenceRef `json:"evidence"`
+	SchemaVersion     string        `json:"schema_version"`
+	ID                string        `json:"id"`
+	TaskID            int64         `json:"task_id"`
+	GoalID            int64         `json:"goal_id"`
+	ExperimentID      string        `json:"experiment_id"`
+	ContextVersion    string        `json:"context_version"`
+	Claim             string        `json:"claim"`
+	CriterionID       string        `json:"criterion_id"`
+	CriterionVersion  string        `json:"criterion_version"`
+	AcceptanceVersion string        `json:"acceptance_version,omitempty"`
+	Evidence          []EvidenceRef `json:"evidence"`
 }
 
 // Observation MUST be obtained from a trusted capture store, never reconstructed
@@ -78,21 +79,22 @@ type Issue struct {
 }
 
 type EvaluationReport struct {
-	SchemaVersion    string        `json:"schema_version"`
-	RequestID        string        `json:"request_id"`
-	TaskID           int64         `json:"task_id"`
-	GoalID           int64         `json:"goal_id"`
-	ExperimentID     string        `json:"experiment_id"`
-	ContextVersion   string        `json:"context_version"`
-	CriterionID      string        `json:"criterion_id"`
-	CriterionVersion string        `json:"criterion_version"`
-	Validity         Validity      `json:"validity"`
-	Conclusion       Conclusion    `json:"conclusion"`
-	Disposition      Disposition   `json:"disposition"`
-	CheckedEvidence  []EvidenceRef `json:"checked_evidence"`
-	UsedEvidence     []string      `json:"used_evidence,omitempty"`
-	Reason           string        `json:"reason,omitempty"`
-	Issues           []Issue       `json:"issues,omitempty"`
+	SchemaVersion     string        `json:"schema_version"`
+	RequestID         string        `json:"request_id"`
+	TaskID            int64         `json:"task_id"`
+	GoalID            int64         `json:"goal_id"`
+	ExperimentID      string        `json:"experiment_id"`
+	ContextVersion    string        `json:"context_version"`
+	CriterionID       string        `json:"criterion_id"`
+	CriterionVersion  string        `json:"criterion_version"`
+	AcceptanceVersion string        `json:"acceptance_version,omitempty"`
+	Validity          Validity      `json:"validity"`
+	Conclusion        Conclusion    `json:"conclusion"`
+	Disposition       Disposition   `json:"disposition"`
+	CheckedEvidence   []EvidenceRef `json:"checked_evidence"`
+	UsedEvidence      []string      `json:"used_evidence,omitempty"`
+	Reason            string        `json:"reason,omitempty"`
+	Issues            []Issue       `json:"issues,omitempty"`
 }
 
 // Resolver implementations must enforce caller/task access and bound reads
@@ -115,12 +117,15 @@ type Verdict struct {
 type Verifier func(context.Context, EvaluationRequest, []Observation) (Verdict, error)
 
 type Evaluator struct {
-	resolver  Resolver
-	verifiers map[Criterion]Verifier
+	resolver   Resolver
+	verifiers  map[Criterion]Verifier
+	acceptance AcceptanceResolver
 }
 
 // NewEvaluator snapshots the registry. No domain verifier is registered by
 // default: artifact integrity alone can never confirm a technical claim.
+// Registered verifiers also require a trusted goal source; use
+// NewEvaluatorWithAcceptance to install that source independently of requests.
 func NewEvaluator(resolver Resolver, registry map[Criterion]Verifier) *Evaluator {
 	copyRegistry := make(map[Criterion]Verifier, len(registry))
 	for key, verifier := range registry {
@@ -140,6 +145,9 @@ func (r EvaluationRequest) Validate() error {
 		if strings.TrimSpace(s) == "" || len(s) > 4096 {
 			return fmt.Errorf("missing or oversized request field")
 		}
+	}
+	if r.AcceptanceVersion != "" && (strings.TrimSpace(r.AcceptanceVersion) == "" || len(r.AcceptanceVersion) > 4096) {
+		return fmt.Errorf("invalid acceptance_version")
 	}
 	if len(r.Evidence) == 0 || len(r.Evidence) > MaxEvidenceRefs {
 		return fmt.Errorf("evidence count out of range")
@@ -221,7 +229,31 @@ func (e *Evaluator) Evaluate(ctx context.Context, req EvaluationRequest) Evaluat
 		observations = append(observations, o)
 		r.CheckedEvidence = append(r.CheckedEvidence, ref)
 	}
-	verifier := e.verifiers[Criterion{ID: req.CriterionID, Version: req.CriterionVersion}]
+	if ctx.Err() != nil {
+		return fail("cancelled", "", ValidityUnknown, Review)
+	}
+	// Preserve integrity-only/CLI compatibility. An empty registry cannot prove
+	// any claim and does not need a goal configuration to return REVIEW.
+	if len(e.verifiers) == 0 {
+		return fail("criterion_unimplemented", "", ValidityUnknown, Review)
+	}
+	spec, err := resolveAcceptance(ctx, e.acceptance, req.TaskID, req.GoalID)
+	if ctx.Err() != nil {
+		return fail("cancelled", "", ValidityUnknown, Review)
+	}
+	if err != nil {
+		return fail("acceptance_unavailable", "", ValidityUnknown, Review)
+	}
+	if spec.Validate() != nil {
+		return fail("acceptance_invalid", "", ValidityUnknown, Review)
+	}
+	if !spec.matches(req) {
+		return fail("acceptance_binding_mismatch", "", ValidityUnknown, Review)
+	}
+	// The request has matched the whole frozen binding. Only the trusted
+	// source now determines which registry entry can be invoked.
+	r.AcceptanceVersion = spec.Version
+	verifier := e.verifiers[spec.Criterion]
 	if verifier == nil {
 		return fail("criterion_unimplemented", "", ValidityUnknown, Review)
 	}
@@ -234,6 +266,19 @@ func (e *Evaluator) Evaluate(ctx context.Context, req EvaluationRequest) Evaluat
 	}
 	if !validVerdict(v, r.CheckedEvidence) {
 		return fail("invalid_verdict", "", ValidityUnknown, Review)
+	}
+	// Reject a verdict if the goal configuration changed while evidence was
+	// verified. This is a read-only check, not an atomic database completion
+	// operation: the eventual writer must enforce the same revision in its TX.
+	current, err := resolveAcceptance(ctx, e.acceptance, req.TaskID, req.GoalID)
+	if ctx.Err() != nil {
+		return fail("cancelled", "", ValidityUnknown, Review)
+	}
+	if err != nil {
+		return fail("acceptance_unavailable", "", ValidityUnknown, Review)
+	}
+	if current != spec {
+		return fail("acceptance_changed", "", ValidityUnknown, Review)
 	}
 	r.Validity, r.Conclusion, r.Reason = v.Validity, v.Conclusion, v.Reason
 	r.UsedEvidence = append([]string(nil), v.EvidenceIDs...)
