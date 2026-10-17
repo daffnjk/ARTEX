@@ -1,0 +1,33 @@
+{
+  "request": {
+    "schema_version": "1",
+    "id": "eval-local-1",
+    "task_id": 1,
+    "goal_id": 2,
+    "experiment_id": "experiment-local-1",
+    "context_version": "context-1",
+    "claim": "Local fixture value equals 42 (no target interaction).",
+    "criterion_id": "fixture-value",
+    "criterion_version": "1",
+    "evidence": [
+      {
+        "observation_id": "observation-local-1",
+        "sha256": "20487b17d02df41fdbcf98c96e046392974d9565991260aafd60d476d91bcc6a"
+      }
+    ]
+  },
+  "observations": [
+    {
+      "id": "observation-local-1",
+      "task_id": 1,
+      "experiment_id": "experiment-local-1",
+      "execution_id": "execution-local-1",
+      "context_version": "context-1",
+      "subject_ref": "fixture-user",
+      "object_ref": "fixture-object",
+      "observed_at": "2026-10-16T00:00:00Z",
+      "complete": true,
+      "payload": "eyJmaXh0dXJlX3ZhbHVlIjo0Mn0="
+    }
+  ]
+}
