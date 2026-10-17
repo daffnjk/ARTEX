@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "contract_id": "ARTEX-RESEARCH-V1",
+  "contract_sha256": "bb0bf9e10f7d3838b70e7a7e63f8646eba372b743c33f7998d85e3888d9ec349",
+  "repository": "daffnjk/ARTEX",
+  "work_branch": "research/autopilot-v1",
+  "observed_main_commit": "674dd067eb4eba7dc95b786a63b7576abb064a48",
+  "checkpoint_parent_commit": "674dd067eb4eba7dc95b786a63b7576abb064a48",
+  "last_verified_code_commit": null,
+  "historical_verified_commit": "daa01668c7785e1e7ee9824ef3d9fc19668f65e7",
+  "historical_verification_scope": "PR #1 scoped core and TestGoalCompletion CI; not rerun here",
+  "current_task": "GOV.0",
+  "next_task": "M1a.1",
+  "run_state": "WORKING",
+  "writer": "current authorized executor; remote expected-SHA checks required",
+  "external_scheduler": "not configured",
+  "cost": "unknown",
+  "remaining_quota": "unknown",
+  "blockers": [
+    {"id":"ENV-NETWORK","scope":"direct local git clone/dependency acquisition","root_cause":"github.com DNS lookup failed in container; archive download not available through viewed URL path","strategies_attempted":2,"next_strategy":"existing read-only GitHub connector and bounded CI source artifact","status":"PARTIAL_WORKAROUND"},
+    {"id":"ENV-PG","scope":"local PG validation","root_cause":"no psql/postgres/docker or installed PostgreSQL directory found","strategies_attempted":0,"next_strategy":"inspect project test conventions; use dedicated isolated CI PostgreSQL if supported","status":"OPEN"},
+    {"id":"MODEL-BUDGET","scope":"live model baseline/ablation","root_cause":"no approved configured model credentials or measurable quota in current executor","strategies_attempted":0,"status":"NEEDS_INPUT"}
+  ],
+  "independent_review": "not yet requested; existing repo Codex review observed, cost unknown",
+  "remote_save": "research branch created at baseline; inspect actual head on resume",
+  "deployment_actions_in_session": false
+}

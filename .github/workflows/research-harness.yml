@@ -8,6 +8,8 @@ on:
       - 'agent/assembly.go'
       - 'agent/completion_guard*.go'
       - 'scripts/test-harness-offline.sh'
+      - 'docs/autopilot/**'
+      - 'docs/research-harness/**'
       - '.github/workflows/research-harness.yml'
       - 'go.mod'
       - 'go.sum'
@@ -30,11 +32,32 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, pinned
         with:
           persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5, pinned
         with:
           go-version: '1.23.2'
           cache: false
-      - run: sh scripts/test-harness-offline.sh
+      - name: Record exact source and toolchain (no environment or credentials)
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/research-evidence"
+          git rev-parse HEAD > "$RUNNER_TEMP/research-evidence/source-commit.txt"
+          git rev-parse HEAD^{tree} > "$RUNNER_TEMP/research-evidence/source-tree.txt"
+          git bundle create "$RUNNER_TEMP/research-evidence/source.bundle" HEAD
+          git bundle verify "$RUNNER_TEMP/research-evidence/source.bundle"
+          go version > "$RUNNER_TEMP/research-evidence/toolchain.txt"
+      - name: Offline core tests with failure-preserving log
+        shell: bash
+        run: sh scripts/test-harness-offline.sh 2>&1 | tee "$RUNNER_TEMP/research-evidence/offline-core.log"
+      - name: Retain exact-source and test evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4, pinned
+        with:
+          name: research-offline-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/research-evidence/
+          if-no-files-found: error
+          retention-days: 3
 
   agent-integration:
     runs-on: ubuntu-latest
