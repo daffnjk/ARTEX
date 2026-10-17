@@ -63,3 +63,10 @@ sh scripts/test-harness-offline.sh
 当前内核还没有可信数据库 Resolver、领域验收器、评估持久化、共同数据库完成门、人工批准 UI、任务计划恢复或动态信念更新。复核模式只保护两个经公共装配路径暴露的完成工具；直接存储写入与其他旁路仍需 M1b 审计。默认 legacy 是兼容性选择，不提供新增完成保护。
 
 GitHub Actions 工作流定义可检查新内核及 Agent 适配器；提交本记录时不预先宣称 CI 成功。PR 合并前应核对实际运行结论，并在本地隔离实例完成 legacy/review 两种模式烟雾检查。
+
+
+## 2026-10-17 后续：M1a.1
+
+研究分支 `research/autopilot-v1` 修复请求自行选择验收器的缺陷：选择绑定宿主可信冻结的 task/goal、验收版本、criterion/version、精确命题、实验与上下文。未绑定来源的注册表不能确认；CLI 默认空注册表仍 REVIEW。验收过程中状态变化会丢弃结论，但这不代替 M1b.3/M2 的数据库最终事务检查。
+
+本地先复现两项错误确认，再运行修复后的 25 个顶层测试（含命名子测试共 90 项）、race、vet、构建与 CLI 退出码检查。项目当前提交 CI、独立审查和完整系统验收在对应检查点记录，不能沿用历史 CI。详细证据、代码对象和限制见 `../autopilot/evidence/M1a-1-validation.md` 与 `M1a-1-local-results.json`。

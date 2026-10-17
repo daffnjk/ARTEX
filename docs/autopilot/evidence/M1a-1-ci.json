@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "task": "M1a.1",
+  "code_commit": "be0d4e65ba4d382556ac69f65aefc0899f938d80",
+  "source_tree": "9e44e44262553d9238701e8ed4ac46e6cd936d55",
+  "workflow_run": 39047329301,
+  "workflow_conclusion": "success",
+  "jobs": [
+    {
+      "id": 117438589229,
+      "name": "offline-core",
+      "conclusion": "success",
+      "source_commit": "be0d4e65ba4d382556ac69f65aefc0899f938d80",
+      "checks": [
+        "offline script: tests/race/vet/build/CLI review exit 2"
+      ]
+    },
+    {
+      "id": 117438589501,
+      "name": "agent-integration",
+      "conclusion": "success",
+      "source_commit": "60dedbff738c59e3123319ae830e268a27b0bd4e",
+      "source_kind": "GitHub temporary PR merge; tree verified identical to code_commit; NOT a merge to main",
+      "toolchain": "go1.26.3 linux/amd64",
+      "checks": [
+        "GOFLAGS=-mod=readonly go test -race -count=1 ./harness ./cmd/harness-eval",
+        "GOFLAGS=-mod=readonly go test -count=1 -run ^TestGoalCompletion ./agent"
+      ]
+    }
+  ],
+  "independent_review": {
+    "reviewer": "chatgpt-codex-connector[bot]",
+    "code_commit": "be0d4e65ba4d382556ac69f65aefc0899f938d80",
+    "request_comment": 6236207940,
+    "receipt_comment": 6236232397,
+    "summary_comment": 6236211557,
+    "completed_at": "2026-10-17T16:00:03.551889Z",
+    "reported_major_issues": false,
+    "scope": "independent code review, not a formal security proof; no separate security review claimed"
+  },
+  "merged_to_main": false,
+  "deployed": false,
+  "not_verified": [
+    "PostgreSQL resolver/completion transaction",
+    "full ARTEX suite",
+    "UI and end-to-end research scenarios",
+    "capability improvement"
+  ]
+}

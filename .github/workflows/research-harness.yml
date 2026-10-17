@@ -5,8 +5,10 @@ on:
     paths:
       - 'harness/**'
       - 'cmd/harness-eval/**'
-      - 'agent/assembly.go'
-      - 'agent/completion_guard*.go'
+      - 'agent/**'
+      - 'db/**'
+      - 'server/task_llm.go'
+      - 'scripts/ci-export-research-sdk.sh'
       - 'scripts/test-harness-offline.sh'
       - 'docs/autopilot/**'
       - 'docs/research-harness/**'
@@ -78,3 +80,16 @@ jobs:
         run: go test -count=1 -run '^TestGoalCompletion' ./agent
         env:
           GOFLAGS: -mod=readonly
+      - name: One-shot real toolchain and dependency acquisition
+        if: ${{ hashFiles('docs/autopilot/sdk-export-request.txt') != '' && github.event.pull_request.head.repo.full_name == github.repository }}
+        run: sh scripts/ci-export-research-sdk.sh
+        env:
+          GOFLAGS: -mod=readonly
+      - name: Retain bounded public SDK archive
+        if: ${{ success() && hashFiles('docs/autopilot/sdk-export-request.txt') != '' && github.event.pull_request.head.repo.full_name == github.repository }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4, pinned
+        with:
+          name: research-sdk-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/research-sdk-export/
+          if-no-files-found: error
+          retention-days: 1

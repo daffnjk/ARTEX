@@ -3,9 +3,9 @@
   "contract_id": "ARTEX-RESEARCH-V1",
   "contract_sha256": "bb0bf9e10f7d3838b70e7a7e63f8646eba372b743c33f7998d85e3888d9ec349",
   "tasks": [
-    {"id":"GOV.0","dependencies":[],"acceptance":["finite contract, persistent dependencies/state, bounded source-linked CI evidence"],"status":"IN_PROGRESS","attempts":{},"commits":[],"evidence":[]},
-    {"id":"M1a.1","dependencies":["GOV.0"],"acceptance":["trusted acceptance binding regression matrix and compatibility"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
-    {"id":"M1b.1a","dependencies":["M1a.1"],"acceptance":["real schema/API inspection, stable task plan storage and idempotent migration"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
+    {"id":"GOV.0","dependencies":[],"acceptance":["finite contract, persistent dependencies/state, bounded source-linked CI evidence"],"status":"DONE","attempts":{},"commits":["aeb693f6d0b90575eab5e97bb68c6d0f28220da6"],"evidence":["evidence/GOV-0-environment.md","evidence/M1a-1-validation.md#source-acquisition"]},
+    {"id":"M1a.1","dependencies":["GOV.0"],"acceptance":["trusted acceptance binding regression matrix and compatibility"],"status":"DONE","attempts":{"request_selected_criterion":{"strategies":1,"method":"host-owned frozen acceptance lookup and full binding"}},"commits":["be0d4e65ba4d382556ac69f65aefc0899f938d80"],"evidence":["evidence/M1a-1-validation.md","evidence/M1a-1-local-results.json","evidence/M1a-1-ci.json"]},
+    {"id":"M1b.1a","dependencies":["M1a.1"],"acceptance":["real schema/API inspection, stable task plan storage and idempotent migration"],"status":"IN_PROGRESS","attempts":{},"commits":[],"evidence":["task-specs/M1b.1.md"]},
     {"id":"M1b.1b","dependencies":["M1b.1a"],"acceptance":["real SDK and Planner persistence/CAS lifecycle integration"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
     {"id":"M1b.1c","dependencies":["M1b.1b"],"acceptance":["isolated real PG concurrency/restart/delete/archive/error tests and CI"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
     {"id":"M1b.2a","dependencies":["M1b.1c"],"acceptance":["graph write-path inventory and atomic domain operations"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
