@@ -1,5 +1,0 @@
-M1b.1 one-shot real Go toolchain and dependency acquisition.
-Remove this file in the next saved checkpoint after successful acquisition.
-Only public project dependencies; no credentials, unrelated caches or environment dump.
-Existing 15-minute read-only job, 160 MiB archive cap, one-day retention.
-No new paid service or budget increase. Cost/quota unknown.

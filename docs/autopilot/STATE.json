@@ -5,7 +5,7 @@
   "repository": "daffnjk/ARTEX",
   "work_branch": "research/autopilot-v1",
   "observed_main_commit": "674dd067eb4eba7dc95b786a63b7576abb064a48",
-  "checkpoint_parent_commit": "be0d4e65ba4d382556ac69f65aefc0899f938d80",
+  "checkpoint_parent_commit": "46c5798b136ebf6b3137b4880268e073689f5e63",
   "last_verified_code_commit": "be0d4e65ba4d382556ac69f65aefc0899f938d80",
   "historical_verified_commit": "daa01668c7785e1e7ee9824ef3d9fc19668f65e7",
   "historical_verification_scope": "PR #1 scoped core and TestGoalCompletion CI; not rerun here",
@@ -29,9 +29,9 @@
       "id": "ENV-PG",
       "scope": "local PG validation",
       "root_cause": "no psql/postgres/docker or installed PostgreSQL directory found",
-      "strategies_attempted": 0,
-      "next_strategy": "inspect project test conventions; use dedicated isolated CI PostgreSQL if supported",
-      "status": "OPEN"
+      "strategies_attempted": 1,
+      "next_strategy": "Bounded never-started public PostgreSQL image from existing CI; use existing executor permissions only, otherwise dedicated CI service",
+      "status": "ACQUIRING"
     },
     {
       "id": "MODEL-BUDGET",
@@ -45,12 +45,12 @@
       "scope": "full local project-toolchain tests",
       "root_cause": "installed Go 1.23.2 cannot build root Go 1.26.3 module; direct dependencies unavailable",
       "strategies_attempted": 1,
-      "next_strategy": "one-shot public toolchain/vendor artifact from existing bounded CI; remove request after acquisition",
-      "status": "ACQUIRING"
+      "next_strategy": "Verified SDK acquired; real local Go 1.26.3 scoped tests pass; marker removed",
+      "status": "WORKAROUND_VERIFIED"
     }
   ],
   "independent_review": "be0d4e65: completed, no major issues reported; receipt 6236232397; not a security proof",
-  "remote_save": "be0d4e65ba4d382556ac69f65aefc0899f938d80 saved and imported locally with exact object SHA; inspect branch head on resume",
+  "remote_save": "46c5798b136ebf6b3137b4880268e073689f5e63 saved/imported; local M1b.1a implementation is uncommitted and not yet PG-verified",
   "deployment_actions_in_session": false,
   "last_verified_scope": "M1a.1 local red/green, CI 39047329301 under Go 1.26.3 and separate Codex read-only review",
   "local_workdir": "/mnt/data/artex-work/ARTEX"
