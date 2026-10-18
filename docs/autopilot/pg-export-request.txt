@@ -1,0 +1,5 @@
+One-shot PostgreSQL 16 Alpine public image acquisition for isolated local research tests.
+This is the existing repository compose image, never started before export.
+No runtime volumes, credentials, environment dump or extra permissions.
+Existing 15-minute read-only CI job; 512 MiB image and 160 MiB archive caps; one-day retention.
+Remove this request after successful acquisition. No new paid service or budget increase.

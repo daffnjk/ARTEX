@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "task": "M1a.1",
+  "baseline_commit": "aeb693f6d0b90575eab5e97bb68c6d0f28220da6",
+  "tested_code_blobs": {
+    "harness/evaluation.go": "ab7eae9b702d61d0d0afa3c73eeaf20e82446493",
+    "harness/evaluation_test.go": "ce8ddfed973e86750eca5532ed8df211fa25a0ac",
+    "harness/acceptance.go": "8d96a429d7c486085b4df8028115701ff68c71c1",
+    "harness/acceptance_test.go": "15e2fc214cf13b9d447d204c1ac7ac69d84cfbf3",
+    "harness/acceptance_regression_test.go": "3e4da1e945370adfbf00abbcd6bff794be71b51e"
+  },
+  "command": "sh scripts/test-harness-offline.sh",
+  "toolchain": "go1.23.2 linux/amd64; isolated stdlib module only",
+  "baseline": {
+    "exit": 0,
+    "top_level_pass": 15,
+    "including_subtests_pass": 50,
+    "log_sha256": "e6177fd4b3d07f738be9725484a59bed99ed32caf1c09c2afa75f63c1d1dd4de"
+  },
+  "regression_before_fix": {
+    "exit": 1,
+    "failing_subtests": [
+      "TestVerifierRequiresTrustedGoalAcceptance/request_selected_weak_criterion",
+      "TestVerifierRequiresTrustedGoalAcceptance/same_criterion_unrelated_claim"
+    ],
+    "failure": "unbound request reached verifier: called=true disposition=confirm conclusion=supported",
+    "log_sha256": "5be8ffd45c825cda65846c8fc7766ead6507e28849f1080fcb98b878702fd774"
+  },
+  "after_fix": {
+    "exit": 0,
+    "top_level_pass": 25,
+    "including_subtests_pass": 90,
+    "failures": 0,
+    "harness_statement_coverage_percent": 99.4,
+    "cli_statement_coverage_percent": 75.0,
+    "race": "PASS",
+    "vet": "PASS",
+    "build": "PASS",
+    "intact_cli_exit": 2,
+    "intact_cli_disposition": "review",
+    "log_sha256": "b0f69e13d1e867ec51a016253f6f0d51464227e42bcd5b0fa84d9232c8df3990"
+  },
+  "not_verified": [
+    "current-change project-toolchain CI",
+    "real PostgreSQL integration",
+    "common completion transaction",
+    "capture authenticity",
+    "full ARTEX test suite",
+    "UI",
+    "research capability gains"
+  ],
+  "independent_review": "NOT_RUN"
+}

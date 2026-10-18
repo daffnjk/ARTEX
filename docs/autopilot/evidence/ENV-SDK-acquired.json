@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "source_commit": "46c5798b136ebf6b3137b4880268e073689f5e63",
+  "ci_run": 39048395920,
+  "ci_conclusion": "success",
+  "sdk_artifact_id": 12106468826,
+  "sdk_zip_sha256": "d2d33ae910d0195ec257f9d225b63e1196f7408d44f007f7b7cb0e4b359a47a8",
+  "sdk_tar_sha256": "f59e374f2ee906e5b85b513150febaac830bd7610777e2e16c54a450f8551d24",
+  "sdk_source_merge_commit": "d774916a10376c46cc3463eaf47944125eb86d0f",
+  "go": "go1.26.3 linux/amd64",
+  "root_go_mod_and_sum": "byte-identical to repository",
+  "vendor_location": "local-only symlink to verified artifact outside repository; never committed",
+  "local_checks": {
+    "real-go-baseline-core": {
+      "exit": 0,
+      "log_sha256": "86098fa84c763672bb874eb91b72e364fdccbdb148986c70a0046053aebb367c"
+    },
+    "real-go-baseline-agent": {
+      "exit": 0,
+      "log_sha256": "377c45d91012892e863fc4fba2fe54a4994970c7685546bbf1973e762e9f3748"
+    }
+  },
+  "local_scope": "actual project Go and dependencies: core race + TestGoalCompletion, no database/model/target calls",
+  "postgres": "NOT_RUN; image acquisition requested, existing chroot capability observed, no capability increase authorized"
+}

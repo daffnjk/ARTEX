@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "contract_id": "ARTEX-RESEARCH-V1",
+  "contract_sha256": "bb0bf9e10f7d3838b70e7a7e63f8646eba372b743c33f7998d85e3888d9ec349",
+  "repository": "daffnjk/ARTEX",
+  "work_branch": "research/autopilot-v1",
+  "observed_main_commit": "674dd067eb4eba7dc95b786a63b7576abb064a48",
+  "checkpoint_parent_commit": "46c5798b136ebf6b3137b4880268e073689f5e63",
+  "last_verified_code_commit": "be0d4e65ba4d382556ac69f65aefc0899f938d80",
+  "historical_verified_commit": "daa01668c7785e1e7ee9824ef3d9fc19668f65e7",
+  "historical_verification_scope": "PR #1 scoped core and TestGoalCompletion CI; not rerun here",
+  "current_task": "M1b.1a",
+  "next_task": "M1b.1b",
+  "run_state": "WORKING",
+  "writer": "current authorized executor; remote expected-SHA checks required",
+  "external_scheduler": "not configured",
+  "cost": "unknown",
+  "remaining_quota": "unknown",
+  "blockers": [
+    {
+      "id": "ENV-NETWORK",
+      "scope": "direct local git clone/dependency acquisition",
+      "root_cause": "github.com DNS lookup failed in container; archive download not available through viewed URL path",
+      "strategies_attempted": 3,
+      "next_strategy": "No further direct-network retries; use connected API and verified committed-source bundle",
+      "status": "WORKAROUND_VERIFIED"
+    },
+    {
+      "id": "ENV-PG",
+      "scope": "local PG validation",
+      "root_cause": "no psql/postgres/docker or installed PostgreSQL directory found",
+      "strategies_attempted": 1,
+      "next_strategy": "Bounded never-started public PostgreSQL image from existing CI; use existing executor permissions only, otherwise dedicated CI service",
+      "status": "ACQUIRING"
+    },
+    {
+      "id": "MODEL-BUDGET",
+      "scope": "live model baseline/ablation",
+      "root_cause": "no approved configured model credentials or measurable quota in current executor",
+      "strategies_attempted": 0,
+      "status": "NEEDS_INPUT"
+    },
+    {
+      "id": "ENV-GO-SDK",
+      "scope": "full local project-toolchain tests",
+      "root_cause": "installed Go 1.23.2 cannot build root Go 1.26.3 module; direct dependencies unavailable",
+      "strategies_attempted": 1,
+      "next_strategy": "Verified SDK acquired; real local Go 1.26.3 scoped tests pass; marker removed",
+      "status": "WORKAROUND_VERIFIED"
+    }
+  ],
+  "independent_review": "be0d4e65: completed, no major issues reported; receipt 6236232397; not a security proof",
+  "remote_save": "46c5798b136ebf6b3137b4880268e073689f5e63 saved/imported; local M1b.1a implementation is uncommitted and not yet PG-verified",
+  "deployment_actions_in_session": false,
+  "last_verified_scope": "M1a.1 local red/green, CI 39047329301 under Go 1.26.3 and separate Codex read-only review",
+  "local_workdir": "/mnt/data/artex-work/ARTEX"
+}

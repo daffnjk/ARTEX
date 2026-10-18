@@ -19,7 +19,7 @@ func fixture() (EvaluationRequest, Observation) {
 		Payload: []byte(`{"fixture_value":42}`)}
 	r := EvaluationRequest{SchemaVersion: SchemaVersion, ID: "eval-1", TaskID: 7, GoalID: 9,
 		ExperimentID: "exp-1", ContextVersion: "ctx-3", Claim: "fixture value is 42",
-		CriterionID: "fixture-only", CriterionVersion: "1",
+		CriterionID: "fixture-only", CriterionVersion: "1", AcceptanceVersion: "goal-spec-1",
 		Evidence: []EvidenceRef{{ObservationID: o.ID, SHA256: Digest(o.Payload)}}}
 	return r, o
 }
@@ -77,7 +77,7 @@ func TestEvidenceFailuresCannotReachVerifier(t *testing.T) {
 			req, obs := fixture()
 			tc.mutate(&req, &obs)
 			called := false
-			e := NewEvaluator(resolverFunc(func(context.Context, string) (Observation, error) { return obs, nil }),
+			e := fixtureEvaluator(resolverFunc(func(context.Context, string) (Observation, error) { return obs, nil }),
 				map[Criterion]Verifier{{"fixture-only", "1"}: func(context.Context, EvaluationRequest, []Observation) (Verdict, error) {
 					called = true
 					return Verdict{}, nil
@@ -128,7 +128,7 @@ func TestTrustedVerifierResults(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			req, obs := fixture()
-			e := NewEvaluator(resolverFunc(func(context.Context, string) (Observation, error) { return obs, nil }),
+			e := fixtureEvaluator(resolverFunc(func(context.Context, string) (Observation, error) { return obs, nil }),
 				map[Criterion]Verifier{{"fixture-only", "1"}: func(context.Context, EvaluationRequest, []Observation) (Verdict, error) { return tc.verdict, tc.err }})
 			r := e.Evaluate(context.Background(), req)
 			if r.Disposition != tc.want {
@@ -144,7 +144,7 @@ func TestTrustedVerifierResults(t *testing.T) {
 func TestRegistryVersionAndSnapshot(t *testing.T) {
 	req, obs := fixture()
 	registry := map[Criterion]Verifier{{"fixture-only", "1"}: fixtureVerifier}
-	e := NewEvaluator(resolverFunc(func(context.Context, string) (Observation, error) { return obs, nil }), registry)
+	e := fixtureEvaluator(resolverFunc(func(context.Context, string) (Observation, error) { return obs, nil }), registry)
 	delete(registry, Criterion{"fixture-only", "1"})
 	if got := e.Evaluate(context.Background(), req); got.Disposition != Confirm {
 		t.Fatalf("registry not snapshotted: %+v", got)
@@ -158,13 +158,15 @@ func TestRegistryVersionAndSnapshot(t *testing.T) {
 func TestVerifierCannotMutateStoredPayload(t *testing.T) {
 	req, obs := fixture()
 	original := string(obs.Payload)
-	e := NewEvaluator(resolverFunc(func(context.Context, string) (Observation, error) { return obs, nil }),
+	called := false
+	e := fixtureEvaluator(resolverFunc(func(context.Context, string) (Observation, error) { return obs, nil }),
 		map[Criterion]Verifier{{"fixture-only", "1"}: func(_ context.Context, _ EvaluationRequest, observations []Observation) (Verdict, error) {
+			called = true
 			observations[0].Payload[0] = 'X'
 			return Verdict{Validity: ValidityUnknown, Conclusion: Inconclusive, Reason: "test mutation"}, nil
 		}})
 	e.Evaluate(context.Background(), req)
-	if string(obs.Payload) != original {
+	if !called || string(obs.Payload) != original {
 		t.Fatal("checker mutated backing store")
 	}
 }
@@ -172,7 +174,7 @@ func TestVerifierCannotMutateStoredPayload(t *testing.T) {
 func TestPanicAndCancellationFailClosed(t *testing.T) {
 	req, obs := fixture()
 	resolver := resolverFunc(func(context.Context, string) (Observation, error) { return obs, nil })
-	e := NewEvaluator(resolver, map[Criterion]Verifier{{"fixture-only", "1"}: func(context.Context, EvaluationRequest, []Observation) (Verdict, error) { panic("fixture panic") }})
+	e := fixtureEvaluator(resolver, map[Criterion]Verifier{{"fixture-only", "1"}: func(context.Context, EvaluationRequest, []Observation) (Verdict, error) { panic("fixture panic") }})
 	if got := e.Evaluate(context.Background(), req); got.Disposition != Review || got.Issues[0].Code != "verifier_error" {
 		t.Fatalf("panic: %+v", got)
 	}
@@ -183,7 +185,7 @@ func TestPanicAndCancellationFailClosed(t *testing.T) {
 	}
 	ctx, cancel = context.WithCancel(context.Background())
 	defer cancel()
-	e = NewEvaluator(resolver, map[Criterion]Verifier{{"fixture-only", "1"}: func(ctx context.Context, r EvaluationRequest, observations []Observation) (Verdict, error) {
+	e = fixtureEvaluator(resolver, map[Criterion]Verifier{{"fixture-only", "1"}: func(ctx context.Context, r EvaluationRequest, observations []Observation) (Verdict, error) {
 		cancel()
 		return fixtureVerifier(ctx, r, observations)
 	}})

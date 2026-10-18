@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "contract_id": "ARTEX-RESEARCH-V1",
+  "contract_sha256": "bb0bf9e10f7d3838b70e7a7e63f8646eba372b743c33f7998d85e3888d9ec349",
+  "tasks": [
+    {"id":"GOV.0","dependencies":[],"acceptance":["finite contract, persistent dependencies/state, bounded source-linked CI evidence"],"status":"DONE","attempts":{},"commits":["aeb693f6d0b90575eab5e97bb68c6d0f28220da6"],"evidence":["evidence/GOV-0-environment.md","evidence/M1a-1-validation.md#source-acquisition"]},
+    {"id":"M1a.1","dependencies":["GOV.0"],"acceptance":["trusted acceptance binding regression matrix and compatibility"],"status":"DONE","attempts":{"request_selected_criterion":{"strategies":1,"method":"host-owned frozen acceptance lookup and full binding"}},"commits":["be0d4e65ba4d382556ac69f65aefc0899f938d80"],"evidence":["evidence/M1a-1-validation.md","evidence/M1a-1-local-results.json","evidence/M1a-1-ci.json"]},
+    {"id":"M1b.1a","dependencies":["M1a.1"],"acceptance":["real schema/API inspection, stable task plan storage and idempotent migration"],"status":"IN_PROGRESS","attempts":{},"commits":[],"evidence":["task-specs/M1b.1.md"]},
+    {"id":"M1b.1b","dependencies":["M1b.1a"],"acceptance":["real SDK and Planner persistence/CAS lifecycle integration"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
+    {"id":"M1b.1c","dependencies":["M1b.1b"],"acceptance":["isolated real PG concurrency/restart/delete/archive/error tests and CI"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
+    {"id":"M1b.2a","dependencies":["M1b.1c"],"acceptance":["graph write-path inventory and atomic domain operations"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
+    {"id":"M1b.2b","dependencies":["M1b.2a"],"acceptance":["reconciliation, rollback/cancellation/idempotency and unknown effects"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
+    {"id":"M1b.3a","dependencies":["M1a.1"],"acceptance":["all completion paths and authority inventory; no premature release"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
+    {"id":"M1b.3b","dependencies":["M1b.2b","M2.2","M1b.3a"],"acceptance":["shared transactional authorized completion, no bypass and current conditions"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
+    {"id":"M2.1","dependencies":["M1b.1c","M1b.2b"],"acceptance":["real local capture and immutable observation/evaluation storage"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
+    {"id":"M2.2","dependencies":["M2.1","M1a.1"],"acceptance":["authenticated bounded resolver and scoped premise/control verifier"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
+    {"id":"M2.3","dependencies":["M2.2","M1b.3b"],"acceptance":["end-to-end completion integration and read-only inspection API/UI"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
+    {"id":"M0.1","dependencies":["GOV.0"],"acceptance":["versioned local scenario/truth registry and executable replay fixtures"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
+    {"id":"M0.2","dependencies":["M0.1"],"acceptance":["actual fixed-baseline runs, cost/model/tool controls and preregistration"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
+    {"id":"M3.1","dependencies":["M2.3","M0.2"],"acceptance":["conditioned claims/hypotheses/experiments in actual call chain"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
+    {"id":"M3.2","dependencies":["M3.1"],"acceptance":["counterevidence/condition invalidation and Planner wakeup"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
+    {"id":"M3.3","dependencies":["M3.2"],"acceptance":["hard-boundary filter, candidate selection, budgets and auditable decisions"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
+    {"id":"M3.4","dependencies":["M3.3"],"acceptance":["clean-context advisory reviewer with evidence access; no authority"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
+    {"id":"M4.1","dependencies":["M3.4"],"acceptance":["traceable improvement proposals, offline regression and separate approval"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
+    {"id":"M4.2","dependencies":["M4.1","M0.2"],"acceptance":["fixed-budget A/B/C/D held-out repeated evaluation and honest report"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
+    {"id":"FINAL","dependencies":["M1b.1c","M1b.2b","M1b.3b","M2.3","M0.2","M3.4","M4.2"],"acceptance":["all contract invariants, current checks, independent review, runbook/rollback/handoff"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]}
+  ]
+}
