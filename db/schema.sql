@@ -367,6 +367,43 @@ DROP TRIGGER IF EXISTS trg_harness_eval_immutable ON harness_evaluations;
 CREATE TRIGGER trg_harness_eval_immutable BEFORE UPDATE OR DELETE ON harness_evaluations
     FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
 
+-- harness_acceptance (research M2.2)：权威冻结验收规格（按 task/goal 解析，
+-- M1a.1 契约的 PG 实现）。版本化：新版本 = 新行，旧版本保留为历史（UNIQUE
+-- (task_id, goal_id, version) 保证版本号不复用）；仅 is_current 指针可变
+--（触发器禁止改写任何规格字段与 DELETE）。宿主独占写入——模型与请求都不可写。
+CREATE TABLE IF NOT EXISTS harness_acceptance (
+    id                BIGSERIAL PRIMARY KEY,
+    task_id           BIGINT NOT NULL,
+    goal_id           BIGINT NOT NULL,
+    version           TEXT NOT NULL,
+    criterion_id      TEXT NOT NULL,
+    criterion_version TEXT NOT NULL,
+    claim             TEXT NOT NULL,
+    experiment_id     TEXT NOT NULL,
+    context_version   TEXT NOT NULL,
+    is_current        BOOLEAN NOT NULL DEFAULT false,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (task_id, goal_id, version)
+);
+CREATE INDEX IF NOT EXISTS idx_harness_acc_current ON harness_acceptance(task_id, goal_id) WHERE is_current;
+CREATE OR REPLACE FUNCTION forbid_acceptance_rewrite() RETURNS trigger AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'harness_acceptance versions are history (no delete)';
+  END IF;
+  IF NEW.id = OLD.id AND NEW.task_id = OLD.task_id AND NEW.goal_id = OLD.goal_id
+     AND NEW.version = OLD.version AND NEW.criterion_id = OLD.criterion_id
+     AND NEW.criterion_version = OLD.criterion_version AND NEW.claim = OLD.claim
+     AND NEW.experiment_id = OLD.experiment_id AND NEW.context_version = OLD.context_version THEN
+    RETURN NEW;
+  END IF;
+  RAISE EXCEPTION 'harness_acceptance versions are immutable (only is_current may change)';
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_harness_acc_rewrite ON harness_acceptance;
+CREATE TRIGGER trg_harness_acc_rewrite BEFORE UPDATE OR DELETE ON harness_acceptance
+    FOR EACH ROW EXECUTE FUNCTION forbid_acceptance_rewrite();
+
 CREATE TABLE IF NOT EXISTS activity (
     id                 BIGSERIAL PRIMARY KEY,
     exploration_id     BIGINT NOT NULL REFERENCES explorations(id) ON DELETE CASCADE,
