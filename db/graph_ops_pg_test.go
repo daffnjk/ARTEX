@@ -154,9 +154,20 @@ func TestGraphOpsProveGoalAtomic(t *testing.T) {
 	if err := d.QueryRow(`SELECT state FROM exploration_nodes WHERE id=$1`, goal).Scan(&state); err != nil || state != "met" {
 		t.Fatalf("goal must be met after ProveGoal: %q %v", state, err)
 	}
+	var version int64
+	if err := d.QueryRow(`SELECT content_version FROM exploration_nodes WHERE id=$1`, goal).Scan(&version); err != nil {
+		t.Fatal(err)
+	}
 	// 重复证明（同证据）→ 幂等成功，不双跳版本。
 	if err := s.ProveGoal(goal, ev); err != nil {
 		t.Fatalf("repeat proof must be idempotent: %v", err)
+	}
+	var version2 int64
+	if err := d.QueryRow(`SELECT content_version FROM exploration_nodes WHERE id=$1`, goal).Scan(&version2); err != nil {
+		t.Fatal(err)
+	}
+	if version2 != version {
+		t.Fatalf("idempotent repeat proof must not bump content_version again: %d -> %d", version, version2)
 	}
 	// 非 goal 节点 → 显式拒绝。
 	intent, _ := s.AddIntent(map[string]any{"summary": "x"}, 5, nil, "planner")
@@ -181,8 +192,50 @@ func TestGraphOpsProveGoalAtomic(t *testing.T) {
 	}
 }
 
+// TestGraphOpsInheritedParentFromSourceTask 直接来源任务的 fact 可以作为
+// derived_from 父节点（审查 P1：与 GetNodeWithSources 工具层继承语义对齐）；
+// 无任务关系的探索仍被拒（见 IntentParentsAtomic 的 neighbor 用例）。
+func TestGraphOpsInheritedParentFromSourceTask(t *testing.T) {
+	dsn := researchPlanDSN(t)
+	d, err := Open(dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.Close()
+	owner, err := d.CreateTaskWithOptions("owner task", "inherits lineage", TaskCreateOptions{Name: "m1b2a-owner"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	source, err := d.CreateTaskWithOptions("source task", "provides facts", TaskCreateOptions{Name: "m1b2a-source"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = d.Exec(`DELETE FROM task_relations WHERE task_id=$1 OR source_task_id=$1`, owner.ID)
+		_, _ = d.Exec(`DELETE FROM task_relations WHERE task_id=$1 OR source_task_id=$1`, source.ID)
+		_ = d.DeleteTask(owner.ID)
+		_ = d.DeleteTask(source.ID)
+		_, _ = d.Exec(`DELETE FROM explorations WHERE id IN ($1,$2)`, owner.ExplorationID, source.ExplorationID)
+	})
+	if _, err := d.Exec(`INSERT INTO task_relations(task_id, source_task_id) VALUES ($1,$2)`, owner.ID, source.ID); err != nil {
+		t.Fatal(err)
+	}
+	inherited, err := d.Exploration(source.ExplorationID).AddNode(KindFact, map[string]any{"summary": "from source task"}, 1, "confirmed", "worker", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	os := d.Exploration(owner.ExplorationID)
+	id, err := os.AddIntentWithParents(map[string]any{"summary": "builds on inherited fact"}, 5, nil, "planner", []int64{inherited})
+	if err != nil {
+		t.Fatalf("direct-source parent must be accepted (matches tool-layer inheritance): %v", err)
+	}
+	if !hasEdge(t, d, owner.ExplorationID, inherited, RelDerivedFrom, id) {
+		t.Fatal("inherited parent lineage edge must commit")
+	}
+}
+
 // TestGraphOpsFindingMirrorAtomic setFindingCol：findings 行与节点 payload 镜像
-// 同事务提交（正向同步断言；失败回滚路径由 WithEvidenceTx 事务语义保证）。
+// 同事务提交（正向同步断言；失败回滚路径由事务语义保证）。
 func TestGraphOpsFindingMirrorAtomic(t *testing.T) {
 	dsn := researchPlanDSN(t)
 	d, err := Open(dsn)

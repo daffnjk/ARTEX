@@ -709,6 +709,19 @@ func (d *DB) SetFindingReportByNodeID(nodeID int64, report string) (int64, error
 	return d.SetFindingReportVersionByNodeID(context.Background(), nodeID, report, nil)
 }
 
+// withTx 在单个普通事务内执行 fn（不需要证据全局锁时的轻量事务包装）。
+func (d *DB) withTx(ctx context.Context, fn func(*sql.Tx) error) error {
+	tx, err := d.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := fn(tx); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
 // setFindingCol updates one text column on the standalone finding row AND mirrors
 // the new value into the originating exploration node's payload under jsonKey, so the
 // per-task 发现 Tab (which reads the node payload, not this table) stays in sync.
@@ -716,10 +729,10 @@ func (d *DB) SetFindingReportByNodeID(nodeID int64, report string) (int64, error
 // col and jsonKey MUST be trusted constants (they are interpolated into SQL) — never
 // pass user input.
 func (d *DB) setFindingCol(id int64, col, jsonKey, val string) (int64, error) {
-	// M1b.2a C5：findings 行与节点 payload 镜像同一事务（WithEvidenceTx）——
-	// 镜像失败整体回滚，不再留下两侧漂移的 best-effort 吞错。
+	// M1b.2a C5：findings 行与节点 payload 镜像同一事务（普通事务即可，不占用
+	// 全局证据 advisory 锁——审查 P2）；镜像失败整体回滚，不再留两侧漂移。
 	var affected int64
-	err := d.WithEvidenceTx(context.Background(), func(tx *sql.Tx) error {
+	err := d.withTx(context.Background(), func(tx *sql.Tx) error {
 		var nodeID *int64
 		if err := tx.QueryRow(`UPDATE findings SET `+col+`=$1 WHERE id=$2 RETURNING node_id`, val, id).Scan(&nodeID); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {

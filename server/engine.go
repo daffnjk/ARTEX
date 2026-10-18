@@ -1146,14 +1146,20 @@ func (e *Engine) runIntent(ctx context.Context, t *Task, name string, worker *ag
 	if state == "blocked" && isTaskLLMChainExhausted(err) {
 		_ = t.Store.SetIntentBlockedReason(intent.ID, db.IntentBlockedLLMQuota)
 	} else {
-		// M1b.2a C7：终态落库是单语句 CAS（本身原子）；DB 抖动做有限重试，仍
-		// 失败留 running，由启动期 ResetRunningIntents 兜底（语义不变，仅收敛窗口）。
+		// M1b.2a C7：终态落库是单语句 CAS（本身原子）；DB 抖动做有限重试（CAS
+		// 冲突不重试——状态已变即他方裁决），仍失败留 running，由启动期
+		// ResetRunningIntents 兜底（语义不变，仅收敛窗口）。
 		var stateErr error
 		for attempt := 0; attempt < 3; attempt++ {
 			if stateErr = transitionIntentState(t.Store, intent.ID, "running", state); stateErr == nil {
 				break
 			}
-			time.Sleep(time.Duration(attempt+1) * 200 * time.Millisecond)
+			if errors.Is(stateErr, db.ErrIntentStateConflict) {
+				break
+			}
+			if attempt < 2 {
+				time.Sleep(time.Duration(attempt+1) * 200 * time.Millisecond)
+			}
 		}
 		if stateErr != nil {
 			log.Printf("[worker %s] task %s 意图 #%d 终态 %s 落库失败(已重试): %v", name, t.ID, intent.ID, state, stateErr)

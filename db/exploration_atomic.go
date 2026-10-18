@@ -50,12 +50,26 @@ VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
 		if e.Other <= 0 {
 			continue
 		}
-		// 任务边界：血缘对端必须在本探索内（防跨任务误连）。
-		var belong int64
-		if err := tx.QueryRow(`SELECT id FROM exploration_nodes WHERE id=$1 AND exploration_id=$2`, e.Other, s.expID).Scan(&belong); err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return 0, fmt.Errorf("%w: node %d (rel %s)", errNodeBoundary, e.Other, e.Rel)
-			}
+		// 任务边界：血缘对端必须属于本探索，或属于本任务的【直接来源任务】的
+		// 探索（与 GetNodeWithSources 的继承语义对齐——审查 P1：工具层校验允许
+		// 直接关联任务的 fact/finding 作为锚点，此处判定必须与其一致）。
+		var allowed int64
+		err := tx.QueryRow(`
+SELECT n.id FROM exploration_nodes n
+WHERE n.id=$1 AND (
+  n.exploration_id=$2
+  OR EXISTS (
+    SELECT 1 FROM tasks owner
+    JOIN task_relations relation ON relation.task_id=owner.id
+    JOIN tasks src ON src.id=relation.source_task_id AND src.deleted_at IS NULL
+    WHERE owner.exploration_id=$2 AND owner.deleted_at IS NULL
+      AND src.exploration_id=n.exploration_id
+  )
+)`, e.Other, s.expID).Scan(&allowed)
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, fmt.Errorf("%w: node %d (rel %s)", errNodeBoundary, e.Other, e.Rel)
+		}
+		if err != nil {
 			return 0, err
 		}
 		src, dst := e.Other, id
