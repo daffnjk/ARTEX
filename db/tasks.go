@@ -665,6 +665,12 @@ DELETE FROM assets a USING deletable d WHERE a.id=d.id`, id, expID)
 //     在同一事务内临时 DISABLE 这两个触发器——DDL 事务性保证任何失败整体
 //     回滚，触发器不会留在禁用态。
 func dropCognitionHistory(tx *sql.Tx, expID int64) error {
+	// 批审 P2：先取 experiments/hypothesis_reviews 的 ACCESS EXCLUSIVE（与后续
+	// DISABLE TRIGGER 同级）再碰 hypotheses 行——固定锁序，避免与并发
+	// RecordExperimentOutcome（先持 experiments 行锁、后改 hypotheses）成环死锁。
+	if _, err := tx.Exec(`LOCK TABLE experiments, hypothesis_reviews IN ACCESS EXCLUSIVE MODE`); err != nil {
+		return err
+	}
 	rows, err := tx.Query(`SELECT DISTINCT h.id FROM hypotheses h
 		JOIN exploration_nodes n ON n.exploration_id=$1
 		WHERE h.status='supported' AND h.exploration_id<>$1 AND n.id=ANY(h.basis_node_ids)`, expID)

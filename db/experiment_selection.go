@@ -1,6 +1,7 @@
 package db
 
 import (
+	"database/sql"
 	"fmt"
 	"sort"
 	"strings"
@@ -13,6 +14,11 @@ import (
 // 黑盒评分。硬边界过滤：action 与任务 deny 约束冲突的候选被显式排除并给出
 // 排除理由（不静默）。决策可审计：推荐与排除的理由随候选一起返回，供渲染
 // 与存档。
+
+// queryer 是 denyConflictOn 的最小执行面（*sql.DB 与 *sql.Tx 都满足）。
+type queryer interface {
+	Query(query string, args ...any) (*sql.Rows, error)
+}
 
 // ExperimentCandidate 是一个可解释的实验候选（含推荐/排除理由）。
 type ExperimentCandidate struct {
@@ -29,7 +35,13 @@ type ExperimentCandidate struct {
 // 推荐排序（提示层）与 DispatchExperiment（强制层）共用同一判据——审查 P2：
 // 边界不能只靠渲染提示，派发路径必须有硬拒绝。
 func (s *ExplorationStore) denyConflict(action string) (string, error) {
-	rows, err := s.db.Query(`SELECT text FROM task_constraints WHERE exploration_id=$1 AND kind='deny'`, s.expID)
+	return denyConflictOn(s.db, s.expID, action)
+}
+
+// denyConflictOn 在指定执行器（连接或事务）上做同一判据——派发路径在单事务内
+// 检查+更新，堵住跨连接 check-then-act 窗口（批审 P2）。
+func denyConflictOn(q queryer, expID int64, action string) (string, error) {
+	rows, err := q.Query(`SELECT text FROM task_constraints WHERE exploration_id=$1 AND kind='deny'`, expID)
 	if err != nil {
 		return "", err
 	}

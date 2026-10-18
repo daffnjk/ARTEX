@@ -275,26 +275,31 @@ func (s *ExplorationStore) DispatchExperiment(experimentID, intentID int64) erro
 	if intentExpl != s.expID {
 		return fmt.Errorf("intent %d belongs to another exploration", intentID)
 	}
-	// 硬边界（审查 P2）：deny 约束在派发路径强制拒绝，与推荐排除同一判据。
+	// 硬边界（审查 P2 + 批审 P2）：deny 判定与状态迁移同一事务——堵住跨连接
+	// check-then-act（检查后、更新前插入的 deny 约束会被漏掉）。
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 	var action string
-	if err := s.db.QueryRow(`SELECT action FROM experiments WHERE id=$1 AND exploration_id=$2`, experimentID, s.expID).Scan(&action); err != nil {
+	if err := tx.QueryRow(`SELECT action FROM experiments WHERE id=$1 AND exploration_id=$2 FOR UPDATE`, experimentID, s.expID).Scan(&action); err != nil {
 		return fmt.Errorf("experiment %d not found: %w", experimentID, err)
 	}
-	if deny, err := s.denyConflict(action); err != nil {
+	if deny, err := denyConflictOn(tx, s.expID, action); err != nil {
 		return err
 	} else if deny != "" {
 		return fmt.Errorf("实验操作与任务 deny 约束冲突，拒绝派发：「%s」", deny)
 	}
-	res, err := s.db.Exec(`UPDATE experiments SET intent_id=$2, status='dispatched', dispatched_at=now()
+	res, err := tx.Exec(`UPDATE experiments SET intent_id=$2, status='dispatched', dispatched_at=now()
 		WHERE id=$1 AND exploration_id=$3 AND status='declared'`, experimentID, intentID, s.expID)
 	if err != nil {
 		return err
 	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
+	if n, _ := res.RowsAffected(); n == 0 {
 		return fmt.Errorf("experiment %d not in declared state", experimentID)
 	}
-	return nil
+	return tx.Commit()
 }
 
 // ExperimentOutcome 是一次实验结果的判定。
@@ -372,10 +377,30 @@ func (s *ExplorationStore) RecordExperimentOutcome(experimentID int64, observed 
 				// 审查 P1（M3.2–M4.1 批审）：区分性证据并入胜者 basis。失效监测
 				// 按 basis_node_ids 检索——不并的话，空 basis 的 supported 假设
 				// 在其真正支撑证据被撤回（false_positive/删除）后仍永久 supported。
+				// 批审 P1（M4.2–M4.5）：factID 来自模型上报，并入前必须过与
+				// UpsertHypotheses 相同的血缘校验（存在/fact/同探索或直接来源），
+				// 且不越 basis 上限——否则跨探索嫁接/幻影 id 恰好破坏 basis 不变量。
 				if to == "supported" && factID > 0 {
-					if _, err := tx.Exec(`UPDATE hypotheses SET basis_node_ids = array_append(basis_node_ids, $2)
-						WHERE id=$1 AND NOT ($2 = ANY(basis_node_ids))`, hypID, factID); err != nil {
+					var owned, card int64
+					if err := tx.QueryRow(`SELECT
+  (SELECT count(*) FROM exploration_nodes n WHERE n.id=$2 AND n.kind='fact' AND (
+     n.exploration_id=$3 OR EXISTS (
+       SELECT 1 FROM tasks owner
+       JOIN task_relations r ON r.task_id=owner.id
+       JOIN tasks src ON src.id=r.source_task_id AND src.deleted_at IS NULL
+       WHERE owner.exploration_id=$3 AND owner.deleted_at IS NULL
+         AND src.exploration_id=n.exploration_id))),
+  (SELECT cardinality(basis_node_ids) FROM hypotheses WHERE id=$1)`,
+						hypID, factID, s.expID).Scan(&owned, &card); err != nil {
 						return ExperimentOutcome{}, err
+					}
+					if owned == 1 && card < 32 { // 与 ValidateHypothesis 的 basis 上限一致（32）
+						if _, err := tx.Exec(`UPDATE hypotheses SET basis_node_ids = array_append(basis_node_ids, $2)
+							WHERE id=$1 AND NOT ($2 = ANY(basis_node_ids))`, hypID, factID); err != nil {
+							return ExperimentOutcome{}, err
+						}
+					} else {
+						out.Reason = "discriminated, but reported fact_id failed lineage/cap validation — basis not extended"
 					}
 				}
 			}

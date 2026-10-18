@@ -36,6 +36,7 @@ import (
 )
 
 type profileRow struct {
+	Name                                                          string
 	Format, BaseURL, APIKey, Model, ThinkingType, ReasoningEffort string
 }
 
@@ -56,6 +57,7 @@ func loadProfile(dsn, name string) (profileRow, error) {
 	if p.APIKey == "" {
 		return profileRow{}, fmt.Errorf("profile %q has no api key configured", name)
 	}
+	p.Name = name
 	return p, nil
 }
 
@@ -194,6 +196,11 @@ func run() error {
 	if *mode == "hunt" {
 		ss = []string{"hunt"} // 判别性场景独立设计，不吃 pos/neg
 	} else {
+		for _, v := range vs {
+			if v == "E" {
+				return fmt.Errorf("variant E（纪律指令）只在 hunt 模式有定义——single 模式下会静默按 B 装配，拒绝（批审 P2）")
+			}
+		}
 		for _, sc := range ss {
 			if sc != "pos" && sc != "neg" {
 				return fmt.Errorf("scenario must be pos|neg, got %q", sc)
@@ -327,7 +334,7 @@ func oneRun(d *db.DB, gm *globalMetered, prof profileRow, variant, scenario stri
 		fmt.Sprintf("M4.2 ablation %s %s r%d", variant, scenario, repeat), goal, db.TaskCreateOptions{Name: "m4-2-" + variant + "-" + scenario})
 	rec := map[string]any{
 		"record": "run", "variant": variant, "scenario": scenario, "repeat": repeat, "order": order,
-		"marker": marker, "profile": map[string]any{"name": "GLM-5.3-Flash", "model": prof.Model},
+		"marker": marker, "profile": map[string]any{"name": prof.Name, "model": prof.Model},
 		"run_budget": map[string]any{"max_requests": runMaxReqs, "max_tokens": runMaxTokens},
 	}
 	if err != nil {
@@ -338,8 +345,13 @@ func oneRun(d *db.DB, gm *globalMetered, prof profileRow, variant, scenario stri
 		defer func() {
 			// DeleteTaskCascade 内置认知史处置（追加式触发器 owner 级旁路）——
 			// 裸 DELETE explorations 会被 experiments/reviews 触发器整体拦下。
-			_, _ = d.Exec(`DELETE FROM task_archives WHERE task_id=$1`, task.ID)
-			_, _ = d.DeleteTaskCascade(task.ID, false, false)
+			// 批审 P2：清理失败不得静默（研究库会再度累积残留而无信号）。
+			if _, err := d.Exec(`DELETE FROM task_archives WHERE task_id=$1`, task.ID); err != nil {
+				rec["cleanup_error"] = err.Error()
+			}
+			if _, err := d.DeleteTaskCascade(task.ID, false, false); err != nil {
+				rec["cleanup_error"] = fmt.Sprint(rec["cleanup_error"], "; ", err.Error())
+			}
 		}()
 	}
 	store := d.Exploration(task.ExplorationID)
@@ -454,8 +466,13 @@ func oneHuntRun(d *db.DB, gm *globalMetered, prof profileRow, variant string, re
 	}
 	if !keep {
 		defer func() {
-			_, _ = d.Exec(`DELETE FROM task_archives WHERE task_id=$1`, task.ID)
-			_, _ = d.DeleteTaskCascade(task.ID, false, false)
+			// 批审 P2：清理失败上报，不静默。
+			if _, err := d.Exec(`DELETE FROM task_archives WHERE task_id=$1`, task.ID); err != nil {
+				rec["cleanup_error"] = err.Error()
+			}
+			if _, err := d.DeleteTaskCascade(task.ID, false, false); err != nil {
+				rec["cleanup_error"] = fmt.Sprint(rec["cleanup_error"], "; ", err.Error())
+			}
 		}()
 	}
 	store := d.Exploration(task.ExplorationID)
@@ -539,12 +556,14 @@ func oneHuntRun(d *db.DB, gm *globalMetered, prof profileRow, variant string, re
 		rows.Close()
 	}
 	rec["evidence_summaries"] = evidenceSummaries
-	grounded := false
-	for _, sum := range evidenceSummaries {
-		if strings.Contains(sum, marker) {
-			grounded = true
-		}
-	}
+	// 批审 P2：Contains 口径可被自记事实伪造——加固为【环境产出】证据：
+	// summary 与标记全等，且该 fact 经 yields 边来自一个 done 探测意图。
+	var envGrounded int64
+	_ = d.QueryRow(`SELECT count(*) FROM exploration_nodes f
+		JOIN exploration_edges y ON y.rel='yields' AND y.dst_id=f.id
+		JOIN exploration_nodes i ON i.id=y.src_id AND i.kind='intent' AND i.state='done'
+		WHERE f.exploration_id=$1 AND f.kind='fact' AND f.payload->>'summary'=$2`, eid, marker).Scan(&envGrounded)
+	grounded := envGrounded > 0
 	var factsTotal, executedProbes int64
 	_ = d.QueryRow(`SELECT count(*) FROM exploration_nodes WHERE exploration_id=$1 AND kind='fact'`, eid).Scan(&factsTotal)
 	_ = d.QueryRow(`SELECT count(*) FROM exploration_nodes WHERE exploration_id=$1 AND kind='intent' AND state='done'`, eid).Scan(&executedProbes)

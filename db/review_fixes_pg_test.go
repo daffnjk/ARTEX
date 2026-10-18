@@ -125,6 +125,69 @@ func TestDispatchExperimentEnforcesDenyConstraint(t *testing.T) {
 	}
 }
 
+// 批审 P1（M4.2–M4.5）：模型上报的 factID 未过血缘校验前不得并入 basis——
+// 跨探索（非直接来源）的 fact 即使真实存在也不并入；判定仍进行。
+func TestBasisUnionRejectsForeignFactID(t *testing.T) {
+	d, s := m31Store(t)
+	if err := s.UpsertHypotheses("foreign fact?", []Hypothesis{
+		{Statement: "f1"}, {Statement: "f2"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	hyps, _ := s.ListHypotheses()
+	expID, err := s.DeclareExperiment(Experiment{
+		Question: "foreign fact?", Action: "probe", HypothesisIDs: []int64{hyps[0].ID, hyps[1].ID},
+		Expectations: map[int64]string{hyps[0].ID: "obs-a", hyps[1].ID: "obs-b"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	intent, err := s.AddIntentWithParents(map[string]any{"summary": "run"}, 5, nil, "planner", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.DispatchExperiment(expID, intent); err != nil {
+		t.Fatal(err)
+	}
+	// 另一个无关探索里的 fact 节点（无 task_relations 血缘）。
+	other, err := d.CreateTaskWithOptions("foreign", "no lineage", TaskCreateOptions{Name: "m31foreign"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = d.Exec(`DELETE FROM task_archives WHERE task_id=$1`, other.ID)
+		_, _ = d.DeleteTaskCascade(other.ID, false, false)
+	})
+	os := d.Exploration(other.ExplorationID)
+	oIntent, err := os.AddIntentWithParents(map[string]any{"summary": "o"}, 5, nil, "planner", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	foreignFact, err := os.AddFactWithYields(map[string]any{"summary": "foreign obs-a"}, nil, "worker", oIntent)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := s.RecordExperimentOutcome(expID, "obs-a", foreignFact)
+	if err != nil || out.Status != "observed" || out.Discriminated != hyps[0].ID {
+		t.Fatalf("discrimination must proceed, got %+v %v", out, err)
+	}
+	after, _ := s.ListHypotheses()
+	for _, h := range after {
+		if h.ID == hyps[0].ID {
+			if h.Status != "supported" {
+				t.Fatalf("winner must still be supported: %q", h.Status)
+			}
+			if containsID(h.BasisNodeIDs, foreignFact) {
+				t.Fatalf("P1: foreign fact %d must NOT be grafted into basis, got %v", foreignFact, h.BasisNodeIDs)
+			}
+		}
+	}
+	if !strings.Contains(out.Reason, "lineage") {
+		t.Fatalf("rejection must be visible in outcome reason, got %q", out.Reason)
+	}
+}
+
 func containsID(ids []int64, want int64) bool {
 	for _, id := range ids {
 		if id == want {
