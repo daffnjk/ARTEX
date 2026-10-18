@@ -295,6 +295,30 @@ CREATE TABLE IF NOT EXISTS task_constraints (
 );
 CREATE INDEX IF NOT EXISTS idx_task_constraints_exp ON task_constraints(exploration_id);
 
+-- task_plans (research M1b.1): the planner's per-task plan scratchpad, promoted from
+-- a process-local map to authoritative PostgreSQL storage. One plan per exploration
+-- (tasks.exploration_id is UNIQUE → 1:1). revision is a CAS counter: a writer must
+-- present the revision it loaded; a stale or concurrent writer gets an explicit
+-- conflict from SaveTaskPlan — never last-write-wins. steps carry host-assigned
+-- stable step ids, optional basis_node_ids (exploration nodes the step derives from)
+-- and an expected_output placeholder; model_notes is plan-level free text. Plan
+-- status is a model note only — no acceptance or completion path reads this table.
+-- Archive purge deletes the row alongside activity/exploration_nodes; it is not part
+-- of the archive payload (regenerable working artifact; restored tasks hydrate an
+-- explicit empty plan).
+CREATE TABLE IF NOT EXISTS task_plans (
+    id              BIGSERIAL PRIMARY KEY,
+    exploration_id  BIGINT NOT NULL UNIQUE REFERENCES explorations(id) ON DELETE CASCADE,
+    revision        BIGINT NOT NULL DEFAULT 1 CHECK (revision >= 1),
+    steps           JSONB NOT NULL DEFAULT '[]',
+    model_notes     TEXT NOT NULL DEFAULT '',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+DROP TRIGGER IF EXISTS trg_task_plans_upd ON task_plans;
+CREATE TRIGGER trg_task_plans_upd BEFORE UPDATE ON task_plans
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
 CREATE TABLE IF NOT EXISTS activity (
     id                 BIGSERIAL PRIMARY KEY,
     exploration_id     BIGINT NOT NULL REFERENCES explorations(id) ON DELETE CASCADE,
