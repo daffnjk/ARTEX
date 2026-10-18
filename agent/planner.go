@@ -57,6 +57,10 @@ type Planner struct {
 	// cogToolsOff：不注册 M3 假设/实验工具；cogRenderOff：不渲染信念态与实验推荐。
 	cogToolsOff  bool
 	cogRenderOff bool
+
+	// cogDiscipline（M4.4 研究变体 E）：在 belief block 追加显式认知纪律
+	// 指令（证明前先假设→预注册实验→派发）。生产装配不设置。
+	cogDiscipline bool
 }
 
 func NewPlanner(prov llm.Provider, model, workDir string, tx *transcript.Store, window, maxTurns int) *Planner {
@@ -133,6 +137,10 @@ func (p *Planner) todoFor(expID int64) *actool.TodoStore {
 func (p *Planner) SetCognition(tools, render bool) {
 	p.cogToolsOff, p.cogRenderOff = !tools, !render
 }
+
+// SetCognitionDiscipline 开启 belief block 的显式认知纪律指令（M4.4 变体 E
+// 专用；仅当认知渲染开启时生效）。
+func (p *Planner) SetCognitionDiscipline(on bool) { p.cogDiscipline = on }
 
 // SetPlanStore wires the authoritative task-plan persistence backend (M1b.1).
 // Once set, the planner hydrates its cross-round plan from storage at the start
@@ -523,6 +531,9 @@ func (p *Planner) Plan(ctx context.Context, taskID int64, as *db.AssetStore, ts 
 		recs, recErr = ts.RecommendExperiments()
 		if recErr == nil {
 			beliefBlock += renderExperimentRecommendations(recs)
+		}
+		if p.cogDiscipline {
+			beliefBlock += "\n\n【认知纪律（本任务流程要求）】：在用 prove_goal 证明目标前，先对未决问题用 state_hypotheses 声明 ≥2 条竞争假设（如：真实标记在各端点上的分布），用 declare_experiment 预注册区分性实验（期望=环境契约中该探测返回的标记串原文），再 dispatch_experiment 把实验绑定到对应探测意图——环境执行探测后实验结果会自动判定假设（唯一精确匹配才判定）。之后据信念态决定证明或继续实验。"
 		}
 	}
 	if hypErr != nil || expErr != nil || recErr != nil {

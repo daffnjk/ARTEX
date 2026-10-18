@@ -184,8 +184,8 @@ func run() error {
 	vs := strings.Split(*variants, ",")
 	ss := strings.Split(*scenarios, ",")
 	for _, v := range vs {
-		if v != "A" && v != "B" && v != "C" && v != "D" {
-			return fmt.Errorf("variant must be A|B|C|D, got %q", v)
+		if v != "A" && v != "B" && v != "C" && v != "D" && v != "E" {
+			return fmt.Errorf("variant must be A|B|C|D|E (E=D+纪律指令, M4.4), got %q", v)
 		}
 	}
 	if *mode != "single" && *mode != "hunt" {
@@ -476,7 +476,8 @@ func oneHuntRun(d *db.DB, gm *globalMetered, prof profileRow, variant string, re
 	if variant != "A" {
 		pl.SetPlanStore(d)
 	}
-	pl.SetCognition(variant == "C" || variant == "D", variant == "D")
+	pl.SetCognition(variant == "C" || variant == "D" || variant == "E", variant == "D" || variant == "E")
+	pl.SetCognitionDiscipline(variant == "E")
 	pl.SetNonStreaming(func() bool { return true })
 
 	var toolCalls []string
