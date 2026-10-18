@@ -319,6 +319,54 @@ DROP TRIGGER IF EXISTS trg_task_plans_upd ON task_plans;
 CREATE TRIGGER trg_task_plans_upd BEFORE UPDATE ON task_plans
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+-- harness_observations / harness_evaluations (research M2.1): the trusted
+-- local capture store for the evaluation harness. 观察是控制器的反馈信号：
+-- 只追加、不可变（触发器拒绝 UPDATE/DELETE，非约定），仅宿主可写（模型永远
+-- 不写观察）；payload 写入时即钉 digest，评估内核读取时再校验。读取按任务
+-- 范围（Resolver 实现调用方/任务访问边界，M1a 契约）。
+CREATE TABLE IF NOT EXISTS harness_observations (
+    id              TEXT PRIMARY KEY,
+    task_id         BIGINT NOT NULL,
+    experiment_id   TEXT NOT NULL,
+    execution_id    TEXT NOT NULL,
+    context_version TEXT NOT NULL,
+    subject_ref     TEXT NOT NULL,
+    object_ref      TEXT NOT NULL,
+    observed_at     TIMESTAMPTZ NOT NULL,
+    complete        BOOLEAN NOT NULL,
+    payload         BYTEA NOT NULL,
+    payload_sha256  TEXT NOT NULL,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_harness_obs_task ON harness_observations(task_id, experiment_id);
+-- 评估报告存档：append-only（与观察同等不可变），report 存完整 JSONB。
+CREATE TABLE IF NOT EXISTS harness_evaluations (
+    id                BIGSERIAL PRIMARY KEY,
+    request_id        TEXT NOT NULL,
+    task_id           BIGINT NOT NULL,
+    goal_id           BIGINT NOT NULL,
+    experiment_id     TEXT NOT NULL,
+    context_version   TEXT NOT NULL,
+    criterion_id      TEXT NOT NULL,
+    criterion_version TEXT NOT NULL,
+    validity          TEXT NOT NULL,
+    conclusion        TEXT NOT NULL,
+    disposition       TEXT NOT NULL,
+    report            JSONB NOT NULL,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_harness_eval_task ON harness_evaluations(task_id, id);
+-- 不可变强制：两张表拒绝 UPDATE/DELETE（append-only）。
+CREATE OR REPLACE FUNCTION forbid_mutation() RETURNS trigger AS $$
+BEGIN RAISE EXCEPTION '% is append-only (trusted harness storage)', TG_TABLE_NAME; END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_harness_obs_immutable ON harness_observations;
+CREATE TRIGGER trg_harness_obs_immutable BEFORE UPDATE OR DELETE ON harness_observations
+    FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
+DROP TRIGGER IF EXISTS trg_harness_eval_immutable ON harness_evaluations;
+CREATE TRIGGER trg_harness_eval_immutable BEFORE UPDATE OR DELETE ON harness_evaluations
+    FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
+
 CREATE TABLE IF NOT EXISTS activity (
     id                 BIGSERIAL PRIMARY KEY,
     exploration_id     BIGINT NOT NULL REFERENCES explorations(id) ON DELETE CASCADE,

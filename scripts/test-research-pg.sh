@@ -48,7 +48,7 @@ echo "dsn target: host=${host:-local-socket} db=$db"
 cd "$root"
 
 # 专用非跳过套件（-race）。
-ARTEX_TEST_PG_DSN="$DSN" go test -race -count=1 -v -run 'TestTaskPlanPG|TestGraphOps|TestGraphIntegrity|TestSoftDeleteRepeat' ./db
+ARTEX_TEST_PG_DSN="$DSN" go test -race -count=1 -v -run 'TestTaskPlanPG|TestGraphOps|TestGraphIntegrity|TestSoftDeleteRepeat|TestHarnessObservation|TestHarnessResolver' ./db
 
 # 既有归档回归（testDSN 读 ARTEX_PG_DSN）：专用 runner 里 SKIP = 失败。
 ARTEX_PG_DSN="$DSN" go test -count=1 -v -run 'TestTaskArchiveDatabaseRoundTrip' ./db > /tmp/artex-research-pg-archive.log 2>&1 || {
