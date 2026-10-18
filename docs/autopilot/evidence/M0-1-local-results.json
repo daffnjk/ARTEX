@@ -30,5 +30,11 @@
     "domain verifiers beyond the deterministic scenario family (M2)",
     "criterion/experiment/context variants of acceptance-binding-mismatch (same spec.matches code path; variants deferred to M2)"
   ],
-  "independent_review": "COMPLETED (agent_c26c0094, 2026-10-18, together with M1b.2a): no issues found in the scenario registry/replay (production kernel confirmed, no circularity, no injection surface); see evidence/M1b-2a-review.md"
+  "independent_review": "COMPLETED (agent_c26c0094, 2026-10-18, together with M1b.2a): no issues found in the scenario registry/replay (production kernel confirmed, no circularity, no injection surface); see evidence/M1b-2a-review.md",
+  "ci": {
+    "run_id": 39130370327,
+    "commit": "ecadba40cc036d91b3ab2b0107ca078d53540b5e",
+    "result": "all 3 jobs success (offline-core, research-postgres on postgres:16-alpine service container — first real run, agent-integration)",
+    "url": "https://github.com/daffnjk/ARTEX/actions/runs/39130370327"
+  }
 }

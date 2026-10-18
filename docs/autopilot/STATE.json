@@ -19,14 +19,6 @@
   "remaining_quota": "unknown",
   "blockers": [
     {
-      "id": "PUSH-AUTH",
-      "scope": "push research branch / open draft PR / run CI",
-      "root_cause": "gh CLI not authenticated; user chose local-only commits for this session",
-      "strategies_attempted": 0,
-      "next_strategy": "on user-provided auth (gh auth login or token): push research/autopilot-v2, open draft PR, confirm research-postgres job runs; until then all 'CI NOT_RUN' entries stay NOT_RUN",
-      "status": "WAITING_FOR_INPUT"
-    },
-    {
       "id": "ENV-PG",
       "scope": "local PG validation",
       "root_cause": "resolved: local PostgreSQL 17.11 with dedicated artex_research_test validated the full M1b.1 matrix",
@@ -43,7 +35,7 @@
     }
   ],
   "independent_review": "M1b.2a+M0.1 COMPLETED 2026-10-18 (agent_c26c0094): APPROVE_WITH_P1, fixed in c2c1833, re-verified; M1b.1 earlier (agent_fdb4fd4e); reports in evidence/",
-  "remote_save": "nothing pushed this session; local commits (24a6337, d12f2ff, wrap-up) exist only in the local clone — loss risk until push auth is provided",
+  "remote_save": "research/autopilot-v2 pushed through ecadba4 (15 commits); draft PR #3 open; CI run 39130370327 all green incl. first real research-postgres run",
   "deployment_actions_in_session": false,
   "last_verified_scope": "M1b.1 storage + planner CAS lifecycle on real isolated PostgreSQL; full regression battery",
   "local_workdir": "/Users/admin/Documents/渗透测试/ARTEX"

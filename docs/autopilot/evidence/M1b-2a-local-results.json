@@ -27,5 +27,11 @@
     "mirror-failure rollback injection (covered by WithEvidenceTx semantics + positive sync test; no natural injection point without destructive schema tricks)",
     "full LLM-loop end-to-end (unchanged boundary as M1b.1)"
   ],
-  "independent_review": "COMPLETED (agent_c26c0094, 2026-10-18): APPROVE_WITH_P1 — P1 lineage-boundary/inheritance mismatch and P2s fixed in c2c1833, re-verified 18/18 PG matrix; report evidence/M1b-2a-review.md"
+  "independent_review": "COMPLETED (agent_c26c0094, 2026-10-18): APPROVE_WITH_P1 — P1 lineage-boundary/inheritance mismatch and P2s fixed in c2c1833, re-verified 18/18 PG matrix; report evidence/M1b-2a-review.md",
+  "ci": {
+    "run_id": 39130370327,
+    "commit": "ecadba40cc036d91b3ab2b0107ca078d53540b5e",
+    "result": "all 3 jobs success (offline-core, research-postgres on postgres:16-alpine service container — first real run, agent-integration)",
+    "url": "https://github.com/daffnjk/ARTEX/actions/runs/39130370327"
+  }
 }

@@ -83,10 +83,15 @@
     "todo-completed-not-a-credential": "PASS by construction — no acceptance/completion path reads task_plans (prove_goal/completion guard operate on evidence + frozen acceptance; verified by code inspection and grep)"
   },
   "not_verified": [
-    "CI research-postgres job run (workflow added, YAML validated locally; NOT_RUN — branch not pushed per user instruction, no gh auth)",
     "end-to-end planner recovery inside a live LLM loop (storage/tool-level recovery semantics verified; full-loop deferred to M2.3/M3 integration)",
     "full ARTEX test suite beyond the listed packages",
     "UI"
   ],
-  "independent_review": "COMPLETED (read-only subagent agent_fdb4fd4e, 2026-10-18): APPROVE_WITH_P1; both P1 CAS holes (stale-writer resurrection via INSERT branch; delete-recreate revision ABA) and all P2s (DSN query-param bypass, silent-skip in runner, missing matrix cases) fixed and re-verified — matrix extended to 11 cases, all PASS. Full report: evidence/M1b-1-review.md"
+  "independent_review": "COMPLETED (read-only subagent agent_fdb4fd4e, 2026-10-18): APPROVE_WITH_P1; both P1 CAS holes (stale-writer resurrection via INSERT branch; delete-recreate revision ABA) and all P2s (DSN query-param bypass, silent-skip in runner, missing matrix cases) fixed and re-verified — matrix extended to 11 cases, all PASS. Full report: evidence/M1b-1-review.md",
+  "ci": {
+    "run_id": 39130370327,
+    "commit": "ecadba40cc036d91b3ab2b0107ca078d53540b5e",
+    "result": "all 3 jobs success (offline-core, research-postgres on postgres:16-alpine service container — first real run, agent-integration)",
+    "url": "https://github.com/daffnjk/ARTEX/actions/runs/39130370327"
+  }
 }
