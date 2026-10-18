@@ -100,7 +100,7 @@ jobs:
         run: sh scripts/ci-export-research-postgres.sh
       - name: Retain bounded public PostgreSQL image
         if: ${{ success() && hashFiles('docs/autopilot/pg-export-request.txt') != '' && github.event.pull_request.head.repo.full_name == github.repository }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f3607fa02 # v4, pinned
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4, pinned
         with:
           name: research-postgres-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/research-pg-export/
@@ -144,7 +144,7 @@ jobs:
           GOFLAGS: -mod=readonly
       - name: Retain PG matrix log
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f3607fa02 # v4, pinned
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4, pinned
         with:
           name: research-pg-matrix-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/research-pg-matrix.log
