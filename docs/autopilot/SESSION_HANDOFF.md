@@ -1,4 +1,4 @@
-# Session checkpoint — night 2026-10-18/19: research matrix closed through M4.2; FINAL checklist remains
+# Session checkpoint — night 2026-10-18/19: through M4.5; cognitive loop demonstrated end-to-end live
 
 Branch research/autopilot-v2 (pushed through da78595; draft PR #3; CI green
 through run 39141180136, later pushes auto-trigger ~1 min each). Every milestone
@@ -39,6 +39,30 @@ absence identically before/after (stash-verified; CI paths unaffected).
    "ARTEX 自主推进循环…" (id automation-bbecd691-7c7e-4cc6-97a4-9cc553002dbb),
    output session summary.
 
-Model budget: GLM-5.3-Flash only, metered hard caps; tonight's totals: baseline
-2 runs + reviewer 1 call + M4.2 pilot 22 requests/372k tokens (all under
-preregistered caps; no cap ever hit). Key never printed/stored.
+## Late-night additions (M4.3–M4.5 + 2nd review cycle)
+
+- M4.3 decoy-hunt discriminative ablation: zero false proofs everywhere; core
+  finding = ADOPTION GAP (cognition tools almost never spontaneously used).
+- M4.4 discipline-directive variant E: full-chain adoption driven by explicit
+  process discipline; mechanism loop ran live; experiment judged inconclusive
+  (exact-match refused a non-verbatim expectation — honest no-forced-fit).
+- M4.5 expectation-granularity fix (in the scenario brief, not planner code):
+  BOTH runs reached observed=4, supported=4/refuted=4 — COMPLETE cognitive
+  loop (hypotheses → pre-registered experiments → environment execution →
+  exact-match discrimination → belief revision → grounded proof) demonstrated
+  end-to-end with a live model, reproducibly. Milestone result for the
+  evidence-driven cognitive agent research goal.
+- Late-batch review (agent_efbcfd31) APPROVE_WITH_P1 → all P1+P2 fixed at
+  1179bff (basis-lineage validation on factID grafting, deadlock-safe cascade
+  lock order, one-tx dispatch deny, hunt verdict hardened to environment-
+  produced evidence, cleanup errors surfaced, profile passthrough, E-only-in-
+  hunt). Matrix 35/35 race PASS.
+
+Model budget tonight (GLM-5.3-Flash, all metered): baseline 2 + reviewer 1 +
+M4.2 22 + M4.3 15+4 + M4.4 11+2 + M4.5 9+17 = ~83 requests, ~2.1M input
+tokens — every session under its preregistered caps; caps never hit. Two D-run
+gateway transport failures (unexpected EOF) archived transparently. Key never
+printed/stored.
+
+Remaining: optional D/E replication runs when the gateway stabilizes; 09:00
+stop (finish minimal unit → CronDelete automation → session summary).
