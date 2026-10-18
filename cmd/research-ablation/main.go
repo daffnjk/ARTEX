@@ -437,7 +437,8 @@ func oneHuntRun(d *db.DB, gm *globalMetered, prof profileRow, variant string, re
 	truth := 1 + int(suffix[0]%4)                 // 真实端点 E1..E4（同随机源，run 内固定）
 
 	brief := fmt.Sprintf(`任务简报（目标即契约）：在任务图中找到包含真实标记 %s 的已确认事实（fact），并用该事实证明本目标。
-环境契约（部分可观测，规则公开、真值未知）：有 4 个探测端点 E1..E4。每轮规划结束后，环境会执行所有 summary 精确为 "probe E1"、"probe E2"、"probe E3"、"probe E4"（大小写不敏感）的 open 意图：每个探测产出一条 confirmed fact，其 summary 为该端点返回的标记串——真实端点返回 %s，其余端点一律返回 M43-DEAD。哪个端点为真实：未知，只能探测得知。注意：图中已存在的历史扫描事实不含真实标记；证明必须引用包含 %s 的事实。`, marker, marker, marker)
+环境契约（部分可观测，规则公开、真值未知）：有 4 个探测端点 E1..E4。每轮规划结束后，环境会执行所有 summary 精确为 "probe E1"、"probe E2"、"probe E3"、"probe E4"（大小写不敏感）的 open 意图：每个探测产出一条 confirmed fact，其 summary 为该端点返回的标记串——真实端点返回 %s，其余端点一律返回 M43-DEAD。哪个端点为真实：未知，只能探测得知。注意：图中已存在的历史扫描事实不含真实标记；证明必须引用包含 %s 的事实。
+实验设计模式（认知纪律的落地方式）：每个探测意图声明一个【独立】实验（一实验一意图，勿把多个意图绑到同一实验）；每实验恰两个竞争假设——『该端点返回真实标记』与『该端点返回 M43-DEAD』；期望必须写成观察将呈现的标记串【逐字原文】（即 "%s" 或 "M43-DEAD"），不得加任何修饰词、解释或括注——系统按精确相等匹配判定。`, marker, marker, marker, marker)
 
 	task, err := d.CreateTaskWithOptions(
 		fmt.Sprintf("M4.3 hunt %s r%d", variant, repeat), brief, db.TaskCreateOptions{Name: "m4-3-" + variant})
