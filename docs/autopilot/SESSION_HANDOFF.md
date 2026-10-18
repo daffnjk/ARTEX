@@ -1,32 +1,30 @@
-# Session checkpoint — M1b.1 implemented & locally verified on research/autopilot-v2
+# Session checkpoint — M1b.1 / M0.1 / M1b.2a complete; next M1b.2b
 
-Branch research/autopilot-v2 (local only). Baseline main cc8acc9d (PR #2 merged:
-M1a.1 + autopilot state files in-repo). M1b.1a storage committed as 24a6337,
-M1b.1b planner integration as d12f2ff; M1b.1c (CI job + runbook + evidence +
-state) in the wrap-up commit of 2026-10-18. Always compare real Git heads,
-dirty files, CI and frozen state before resuming. No main write, merge or
-deployment.
+Branch research/autopilot-v2 (local only, 10 commits ahead of cc8acc9d):
+24a6337+9f37f2e+177098c (M1b.1 plan persistence & CAS), d12f2ff (planner
+integration), 7762813 (M0.1 scenario registry), f316a16+c2c1833 (M1b.2a atomic
+graph writes), plus state commits. Working tree clean. Always compare real Git
+heads, dirty files and frozen state before resuming.
 
-Real local PostgreSQL 17.11 (isolated artex_research_test) validated the full
-matrix: 8/8 PASS with race (migration-twice, roundtrip, concurrent first-write,
-stale-write rejection without LWW, isolation + basis ownership, delete cascade,
-error surfacing, archive purge) plus the existing archive round-trip
-regression. Agent tool unit 6/6 PASS (persist-before-ack, explicit conflict,
-validation caps, store-error stop, hydration propagation, stable ids). Full
-regression green (build, vet, race harness/cmd, TestGoalCompletion, ./agent).
+Verified this session on isolated local PostgreSQL 17.11 (artex_research_test,
+runner scripts/test-research-pg.sh — now 18 cases incl. graph-ops): CAS matrix
+(row identity, no resurrection, ABA), scenario replay (16 scenarios/19 subtests
+through the production kernel), atomic lineage writes with boundary semantics
+aligned to GetNodeWithSources inheritance. Two independent read-only reviews
+(agent_fdb4fd4e, agent_c26c0094) both APPROVE_WITH_P1 — every P1/P2 fixed and
+re-verified; reports in docs/autopilot/evidence/.
 
-NOT verified (do not claim): CI research-postgres job run (workflow added,
-branch not pushed — no gh auth, user chose local-only commits; push + draft PR
-are the first step once auth exists); end-to-end planner recovery inside a live
-LLM loop (deferred to M2.3/M3); full ARTEX suite; UI.
+NOT verified / not claimed: CI research-postgres job (added, NOT_RUN until
+push), full LLM-loop end-to-end, M0.2 live-model baseline (NEEDS_INPUT: no
+approved model credentials/budget), UI.
 
-Remote save state: NOTHING from this session is on the remote. Local commits
-24a6337 + d12f2ff (+ wrap-up) exist only in
-/Users/admin/Documents/渗透测试/ARTEX on this machine — risk of loss until
-pushed. Previous session's uncommitted container workdir (/mnt/data/artex-work)
-is gone; this session reimplemented M1b.1 from cc8acc9d rather than reusing it.
+Remote save: NOTHING pushed — no gh auth, user chose local-only. All commits
+exist only in /Users/admin/Documents/渗透测试/ARTEX (loss risk until push).
+On auth: push branch, open draft PR, confirm CI (incl. new research-postgres
+job), then close the CI-NOT_RUN entries in evidence.
 
-Next tasks (dependency-ready): M0.1 scenario/truth registry (independent of
-PG), M1b.2a graph write-path inventory (depends on M1b.1c). Reviewer pass on
-M1b.1 diff before or right after wrap-up commit. Live model baseline remains
-NEEDS_INPUT (no approved model credentials).
+Next tasks: M1b.2b (reconciliation / rollback / cancellation idempotency /
+unknown-effect accounting — design from the inventory in task-specs/M1b.2a.md,
+C7/C9/C10 notes are the seeds); M1b.3a completion-path inventory is
+independent and can interleave. State files are the scheduling truth; do not
+treat checkboxes as completion evidence.
