@@ -104,3 +104,15 @@ func (s *Server) taskResearchInspection(w http.ResponseWriter, r *http.Request) 
 	}
 	writeJSON(w, 200, out)
 }
+
+// wakeTaskOfFinding 在 finding 证据被撤回（误报/删除）后唤醒其所属任务的
+// planner（M3.2 条件失效唤醒）。查不到任务则静默（finding 可能无归属）。
+func (s *Server) wakeTaskOfFinding(findingID int64) {
+	var taskID sql.NullInt64
+	if err := s.m.pg.QueryRow(`SELECT task_id FROM findings WHERE id=$1`, findingID).Scan(&taskID); err != nil || !taskID.Valid {
+		return // 已删除的行拿不到归属——用删除前的副本也行，但这里唤醒是尽力而为
+	}
+	if t, ok := s.m.Task(fmt.Sprint(taskID.Int64)); ok {
+		t.Notify()
+	}
+}

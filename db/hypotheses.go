@@ -147,7 +147,22 @@ func (s *ExplorationStore) UpsertHypotheses(question string, items []Hypothesis)
 			s.expID, question, h.Statement).Scan(&existing)
 		switch {
 		case err == nil:
-			if _, err := tx.Exec(`UPDATE hypotheses SET notes=$2, basis_node_ids=$3, updated_at=now() WHERE id=$1`,
+			// M3.2：重述【invalidated】假设 = 复活为 active（条件失效后的重估入口，
+			// 事件留痕）；superseded/supported/refuted 不经重述复活。
+			var curStatus string
+			if err := tx.QueryRow(`SELECT status FROM hypotheses WHERE id=$1`, existing).Scan(&curStatus); err != nil {
+				return err
+			}
+			if curStatus == "invalidated" {
+				if _, err := tx.Exec(`UPDATE hypotheses SET status='active', notes=$2, basis_node_ids=$3, updated_at=now() WHERE id=$1`,
+					existing, h.Notes, h.BasisNodeIDs); err != nil {
+					return err
+				}
+				if _, err := tx.Exec(`INSERT INTO hypothesis_events(hypothesis_id, from_status, to_status, reason)
+					VALUES ($1,'invalidated','active',$2)`, existing, "restated after condition invalidation — re-estimation"); err != nil {
+					return err
+				}
+			} else if _, err := tx.Exec(`UPDATE hypotheses SET notes=$2, basis_node_ids=$3, updated_at=now() WHERE id=$1`,
 				existing, h.Notes, h.BasisNodeIDs); err != nil {
 				return err
 			}
@@ -385,4 +400,38 @@ func (s *ExplorationStore) OpenExperiments() ([]Experiment, error) {
 		out = append(out, e)
 	}
 	return out, rows.Err()
+}
+
+// InvalidateHypothesesOnNodeTx 在调用方事务内把 basis 含 nodeID 的 supported
+// 假设降级为 invalidated（M3.2 条件失效：反证时刻与状态翻转原子）。返回被
+// 失效的假设 id。active/refuted/superseded 不动——只有"依据该事实成立"的
+// supported 判定才被反证波及。
+func InvalidateHypothesesOnNodeTx(tx *sql.Tx, nodeID int64, reason string) ([]int64, error) {
+	rows, err := tx.Query(`SELECT id FROM hypotheses WHERE status='supported' AND $1=ANY(basis_node_ids)`, nodeID)
+	if err != nil {
+		return nil, err
+	}
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	for _, id := range ids {
+		if _, err := tx.Exec(`UPDATE hypotheses SET status='invalidated', updated_at=now() WHERE id=$1 AND status='supported'`, id); err != nil {
+			return nil, err
+		}
+		if _, err := tx.Exec(`INSERT INTO hypothesis_events(hypothesis_id, from_status, to_status, reason)
+			VALUES ($1,'supported','invalidated',$2)`, id, reason); err != nil {
+			return nil, err
+		}
+	}
+	return ids, nil
 }

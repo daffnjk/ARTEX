@@ -166,13 +166,16 @@ func (t *ToolSet) reportExperimentOutcome() actool.CoreTool {
 // renderHypothesesBlock 把当前信念态渲染进 planner 唤醒提示（与
 // renderPlannerTodos 同一模式）：活跃假设（按问题分组）+ 开放实验。
 func renderHypothesesBlock(hyps []db.Hypothesis, experiments []db.Experiment) string {
-	var active []db.Hypothesis
+	var active, invalidated []db.Hypothesis
 	for _, h := range hyps {
-		if h.Status == "active" {
+		switch h.Status {
+		case "active":
 			active = append(active, h)
+		case "invalidated":
+			invalidated = append(invalidated, h)
 		}
 	}
-	if len(active) == 0 && len(experiments) == 0 {
+	if len(active) == 0 && len(experiments) == 0 && len(invalidated) == 0 {
 		return ""
 	}
 	var b strings.Builder
@@ -188,6 +191,12 @@ func renderHypothesesBlock(hyps []db.Hypothesis, experiments []db.Experiment) st
 	for _, q := range order {
 		b.WriteString(fmt.Sprintf("  问题「%s」：\n", q))
 		for _, h := range byQ[q] {
+			b.WriteString(fmt.Sprintf("    #%d %s\n", h.ID, h.Statement))
+		}
+	}
+	if len(invalidated) > 0 {
+		b.WriteString("  ⚠ 条件失效（依据被反证/撤回，需重估）——重述同名假设即可复活为 active 再实验：\n")
+		for _, h := range invalidated {
 			b.WriteString(fmt.Sprintf("    #%d %s\n", h.ID, h.Statement))
 		}
 	}

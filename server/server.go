@@ -2283,6 +2283,10 @@ func (s *Server) patchFinding(w http.ResponseWriter, r *http.Request) {
 		// 避免出现状态已改而推送事件丢失的窗口。事件登记失败不影响状态更新，
 		// 所以只记日志、不向调用方报错。
 		from, found, notified, err := s.m.pg.SetFindingStatusWithNotify(r.Context(), id, *body.Status)
+		// M3.2 条件失效唤醒：误报撤回会（同事务）失效依赖假设——唤醒 planner 重估。
+		if err == nil && found && *body.Status == db.FindingFalsePositive {
+			s.wakeTaskOfFinding(id)
+		}
 		if err != nil {
 			writeErr(w, 500, err.Error())
 			return
@@ -2352,7 +2356,15 @@ func (s *Server) deleteFinding(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, "bad finding id")
 		return
 	}
+	// M3.2：删除 finding = 证据撤回，可能失效了依赖假设——先记归属再删，删后唤醒 planner 重估。
+	var ownerTaskID int64
+	_ = s.m.pg.QueryRow(`SELECT COALESCE(task_id,0) FROM findings WHERE id=$1`, id).Scan(&ownerTaskID)
 	n, err := s.m.pg.DeleteFinding(id)
+	if err == nil && n > 0 && ownerTaskID > 0 {
+		if t, ok := s.m.Task(fmt.Sprint(ownerTaskID)); ok {
+			t.Notify()
+		}
+	}
 	if err != nil {
 		writeErr(w, 500, err.Error())
 		return

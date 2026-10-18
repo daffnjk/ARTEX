@@ -668,6 +668,11 @@ func (d *DB) DeleteFinding(id int64) (n int64, err error) {
 			return err
 		}
 		if nodeID.Valid {
+			// M3.2：finding 被删除 = 其证据撤回——同事务失效依赖它的 supported
+			// 假设，再删节点（事件留痕）。
+			if _, err := InvalidateHypothesesOnNodeTx(tx, nodeID.Int64, "basis finding deleted"); err != nil {
+				return err
+			}
 			if _, err := tx.Exec(`DELETE FROM exploration_nodes WHERE id=$1 AND kind='finding'`, nodeID.Int64); err != nil {
 				return err
 			}
@@ -691,8 +696,10 @@ func (d *DB) DeleteFindingsByTask(taskID int64) (int64, error) {
 
 // SetFindingStatus updates one finding's triage state. Returns rows affected.
 //
-// 底层 setter：只改状态、不登记推送事件。生产代码改状态请走
-// SetFindingStatusWithNotify —— 直接调本函数会让「状态变更推送」静默失效。
+// 底层 setter：只改状态、不登记推送事件，也【不】触发 M3.2 条件失效级联
+// （InvalidateHypothesesOnNodeTx 只挂在 SetFindingStatusTx 语义路径上）。生产
+// 代码改状态请走 SetFindingStatusWithNotify —— 直接调本函数会让「状态变更
+// 推送」与「依赖假设失效」同时静默失效。
 // 保留它是为了让不关心通知的用例（参数校验、复测流程）能单独驱动状态。
 func (d *DB) SetFindingStatus(id int64, status string) (int64, error) {
 	res, err := d.Exec(`UPDATE findings SET status=$1 WHERE id=$2`, status, id)

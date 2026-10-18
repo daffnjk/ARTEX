@@ -435,6 +435,21 @@ CREATE TABLE IF NOT EXISTS hypotheses (
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_hypotheses_exp ON hypotheses(exploration_id, status);
+-- M3.2：条件失效态（basis 事实被反证 → supported 假设降级 invalidated，等待
+-- 重估；重述同名假设可复活为 active）。幂等地把旧 CHECK 换成含新值的版本。
+DO $$
+DECLARE cname text;
+BEGIN
+    SELECT conname INTO cname FROM pg_constraint
+     WHERE conrelid='hypotheses'::regclass AND contype='c'
+       AND pg_get_constraintdef(oid) LIKE '%active%'
+       AND pg_get_constraintdef(oid) NOT LIKE '%invalidated%';
+    IF cname IS NOT NULL THEN
+        EXECUTE 'ALTER TABLE hypotheses DROP CONSTRAINT '||quote_ident(cname);
+        ALTER TABLE hypotheses ADD CONSTRAINT ck_hyp_status CHECK (
+            status IN ('active','supported','refuted','superseded','invalidated'));
+    END IF;
+END $$;
 DROP TRIGGER IF EXISTS trg_hypotheses_upd ON hypotheses;
 CREATE TRIGGER trg_hypotheses_upd BEFORE UPDATE ON hypotheses
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
