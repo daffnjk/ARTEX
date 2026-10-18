@@ -129,7 +129,7 @@ jobs:
           --health-timeout 5s
           --health-retries 12
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af67726e # v4, pinned
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, pinned
         with:
           persist-credentials: false
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
