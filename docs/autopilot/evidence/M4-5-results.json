@@ -1,0 +1,32 @@
+{
+ "schema_version": 1,
+ "milestone": "M4.5",
+ "timestamp": "2026-10-19T01:10..01:25 +08:00",
+ "claim": "期望书写粒度修复后的闭环判定实验（E r=2）——命题成立",
+ "preregistration": "docs/autopilot/task-specs/M4.5.md（诊断与修复先于重跑提交，052b238）",
+ "raw": [
+  "evidence/M4-5-diagnostic-raw.jsonl",
+  "evidence/M4-5-runs-raw.jsonl"
+ ],
+ "matrix": {
+  "run1": "grounded_completion；state_hypotheses×4、declare×4、dispatch×4（一实验一意图，简报模式被准确遵循）；experiments observed=4；hypotheses supported=4/refuted=4（每实验精确区分一个方向）；7 请求；零假证明",
+  "run2": "同构：observed=4、supported=4/refuted=4、grounded_completion；10 请求；零假证明",
+  "loop_integrity": "完全成立 ×2：假设声明→预注册（期望=标记串逐字原文）→派发→环境执行→精确匹配判定→信念修订（supported/refuted）→有据证明"
+ },
+ "usage_total": {
+  "requests": 17,
+  "tokens_in": 232016,
+  "tokens_out": 16915,
+  "global_capped": false
+ },
+ "interpretation": [
+  "M4.4 的 inconclusive 根因（期望写成描述句 + mega 实验）经简报粒度修复后消失——采用与判定全链路可复现走通。",
+  "认知闭环的完整 live 演示达成：这是本研究（证据驱动认知智能体）机制层的里程碑结果——假设-实验-判定-修订链在真实模型驱动下端到端运行且结果可审计。",
+  "诚实性全程保持：所有 prove_goal 证据均为环境产出的真实标记事实（tool_calls 无 record_finding/伪造路径）。",
+  "效率无增益（仍全探 4 端点）——与 M4.3 结论一致：确定性契约下认知层价值在可审计性与纪律，非效率。"
+ ],
+ "honest_limits": [
+  "n=2；确定性脚本环境；结论限定为机制可行性演示。",
+  "批审（agent_efbcfd31）同期指出 grounded 判定的 Contains 口径可被 record_fact 伪造——本批两 run 的 tool_calls 证明未走伪造路径，但判定口径已在下一提交加固为『summary=标记串全等 + yields 边来自 done 探测意图』。"
+ ]
+}
