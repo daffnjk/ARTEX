@@ -21,7 +21,7 @@
     {"id":"M3.2","dependencies":["M3.1"],"acceptance":["counterevidence/condition invalidation and Planner wakeup"],"status":"DONE","attempts":{},"commits":["9e93a6c"],"evidence":["task-specs/M3.2.md"]},
     {"id":"M3.3","dependencies":["M3.2"],"acceptance":["hard-boundary filter, candidate selection, budgets and auditable decisions"],"status":"DONE","attempts":{},"commits":["b385358"],"evidence":["db/experiment_selection_pg_test.go"],"notes":"budgets = open-experiment cap (16, M3.1) + preregistered model budget; selection advisory to planner with rendered reasons"},
     {"id":"M3.4","dependencies":["M3.3"],"acceptance":["clean-context advisory reviewer with evidence access; no authority"],"status":"DONE","attempts":{},"commits":["c7c75c4"],"evidence":["evidence/M3-3-4-local-results.json"]},
-    {"id":"M4.1","dependencies":["M3.4"],"acceptance":["traceable improvement proposals, offline regression and separate approval"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
+    {"id":"M4.1","dependencies":["M3.4"],"acceptance":["traceable improvement proposals, offline regression and separate approval"],"status":"DONE","attempts":{},"commits":["a7bc19b"],"evidence":["db/proposal_mining_pg_test.go"]},
     {"id":"M4.2","dependencies":["M4.1","M0.2"],"acceptance":["fixed-budget A/B/C/D held-out repeated evaluation and honest report"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
     {"id":"FINAL","dependencies":["M1b.1c","M1b.2b","M1b.3b","M2.3","M0.2","M3.4","M4.2"],"acceptance":["all contract invariants, current checks, independent review, runbook/rollback/handoff"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]}
   ]
