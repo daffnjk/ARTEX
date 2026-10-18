@@ -55,3 +55,11 @@
 - The real second failure was my own transposed checkout pin in the new job (...67726e vs ...677262) — caught by CI, confirmed via API. All pins in research-harness.yml are now identical across jobs and verified resolvable.
 - Push/PR used the macOS keychain git credential via GH_TOKEN injection (gh CLI login remains unconfigured; ~/.config/gh is sandbox-writable-blocked). Token never printed or persisted to disk by the executor.
 - CI run 39130370327 (commit ecadba4): all three jobs green — research-postgres ran for real on a postgres:16-alpine service container, closing the CI-NOT_RUN entries in evidence.
+
+## 2026-10-18 23:55 M4.2 记录（诚实零效应）
+- Pilot r=1：四变体 pos 全有据完成、neg 全拒判，零假确认；认知工具在 C/D 已注册仍零调用
+  → 场景对认知层无区分力。按预注册"不追加运行凑方向"条款，r=3 不执行。
+- 教训（观察 vs 解释）：消融场景设计必须让被测机制成为完成的【必要路径】，
+  否则得到的是无区分力的零效应（本 pilot 即实例）。
+- M3.2–M4.1 独立审查（agent_068cba5d）APPROVE_WITH_P1：P1=supported 假设不合并
+  区分性证据 fact 到 basis_node_ids，失效监测漏网；P2×7 见 evidence/M3-2-M4-1-review.md。

@@ -1,0 +1,35 @@
+{
+ "schema_version": 1,
+ "milestone": "M4.2",
+ "timestamp": "2026-10-18T23:35+08:00/2026-10-18T23:52+08:00",
+ "claim": "固定预算消融（pilot r=1，A/B/C/D × pos/neg）：诚实的零效应结果",
+ "preregistration": "docs/autopilot/task-specs/M4.2.md（先于任何模型调用提交，commit 6aa8d2f）",
+ "raw": "M4-2-pilot-raw.jsonl",
+ "matrix": {
+  "pos_grounded_completion": "A 1/1, B 1/1, C 1/1, D 1/1",
+  "neg_false_confirmation": "A 0/1, B 0/1, C 0/1, D 0/1",
+  "neg_correct_refusal": "A/B/C/D 全部 correct_refusal（各产出 1 个 add_intent 推进意图，未编造证据）"
+ },
+ "cognition_tool_engagement": {
+  "state_hypotheses": 0,
+  "declare_experiment": 0,
+  "dispatch_experiment": 0,
+  "note": "C/D 变体已注册认知工具但模型全程未调用——单轮可判定场景不触发假设机制"
+ },
+ "usage_total": {
+  "requests": 22,
+  "tokens_all_kinds": 371944,
+  "global_capped": false
+ },
+ "interpretation": [
+  "正场景：四变体均一步 node_detail→prove_goal 有据完成，无差异。",
+  "负场景：四变体均拒判并产出推进意图，无假确认，无差异。",
+  "可证伪命题在本设定下未被支持也未被反驳方向性证据——场景对认知层无区分力（工具零调用）。",
+  "按预注册不追加 r=3：效应机制未被触发，重复只会复制零效应；预算不用于凑方向。"
+ ],
+ "honest_limits": [
+  "单 planner 轮次，worker 实验观察→期望匹配→信念修订闭环未 exercised（预注册已声明）。",
+  "对认知层有区分力的场景需要：多轮、模糊/竞争证据、或需要区分性实验才能判定的目标——留作后续研究。"
+ ],
+ "verdicts_honest": "pos grounded_completion×4 / neg correct_refusal×4；无 inconclusive_error；无熔断"
+}
