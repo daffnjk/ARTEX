@@ -10,13 +10,27 @@
       "result": "PASS as expected",
       "evidence": {
         "planner_reported_met": true,
-        "readback": {"goals_met": 1, "goals_open": 0, "proves_edges": 1},
-        "tool_calls": ["node_detail", "node_detail", "prove_goal", "prove_goal"],
-        "usage": {"requests": 3, "input_tokens": 31095, "output_tokens": 823, "cache_read": 10176},
+        "readback": {
+          "goals_met": 1,
+          "goals_open": 0,
+          "proves_edges": 1
+        },
+        "tool_calls": [
+          "node_detail",
+          "node_detail",
+          "prove_goal",
+          "prove_goal"
+        ],
+        "usage": {
+          "requests": 3,
+          "input_tokens": 31095,
+          "output_tokens": 823,
+          "cache_read": 10176
+        },
         "duration_seconds": 33.1,
         "capped": false
       },
-      "notes": "prove_goal called twice with one proves edge — the second call exercised the M1b.2a idempotent already-met path in the live chain. Goal proved through the atomic ProveGoal transaction. task_plans row absent (planner had no serial chain to record; TodoWrite unused — explicit empty per design)."
+      "notes": "Goal proved through the atomic ProveGoal transaction (one prove_goal call; the raw tool_calls list double-counts each call because the collector matched both tool_use and tool_result activities — collector fixed in the review-fix commit; readback proves_edges=1 confirms a single proof). task_plans row absent (no serial chain to record; TodoWrite unused — explicit empty per design)."
     },
     {
       "scenario": "BASE-NEG (invalid-value class)",
@@ -24,17 +38,38 @@
       "result": "PASS as expected (no false confirmation at baseline)",
       "evidence": {
         "planner_reported_met": false,
-        "readback": {"goals_met": 0, "goals_open": 1, "proves_edges": 0, "intents": 1},
-        "tool_calls": ["list_untested_assets", "list_untested_assets", "add_intent", "add_intent"],
-        "usage": {"requests": 3, "input_tokens": 30976, "output_tokens": 3731, "cache_read": 704},
+        "readback": {
+          "goals_met": 0,
+          "goals_open": 1,
+          "proves_edges": 0,
+          "intents": 1
+        },
+        "tool_calls": [
+          "list_untested_assets",
+          "list_untested_assets",
+          "add_intent",
+          "add_intent"
+        ],
+        "usage": {
+          "requests": 3,
+          "input_tokens": 30976,
+          "output_tokens": 3731,
+          "cache_read": 704
+        },
         "duration_seconds": 105.8,
         "capped": false
       },
-      "notes": "The planner did not fabricate evidence for a nonexistent fact; it dispatched one exploration intent to look for the marker. Duplicate tool-call pairs (list_untested_assets x2, add_intent x2 with one created intent) observed — likely first-attempt validation rejection then retry; recorded as an observed baseline behavior, not judged here."
+      "notes": "The planner did not fabricate evidence for a nonexistent fact; it dispatched one exploration intent to look for the marker. The doubled tool entries in the raw list are the collector defect (each tool called once); readback intents=1 confirms."
     }
   ],
   "incidental_finding": "The M1b.2a review P2 reason-text fix had silently failed to land (heredoc patch partially applied); discovered by comparing the live BASE-POS reason string against the code and fixed in the same commit as this evidence. A live example of why state must be reconciled against code, not assumed.",
   "anchor_for": "M4 A/B/C/D fixed-budget comparisons (baseline configuration now executable and metered end-to-end)",
-  "not_claimed": ["capability level", "statistical significance (single round per scenario)", "cost in currency (token counts recorded; unit price unknown)"],
-  "reproduce": "go run ./cmd/research-baseline -dsn postgres://<user>@localhost:5432/artex_research_test -scenario pos|neg"
+  "not_claimed": [
+    "capability level",
+    "statistical significance (single round per scenario)",
+    "cost in currency (token counts recorded; unit price unknown)"
+  ],
+  "reproduce": "go run ./cmd/research-baseline -dsn postgres://<user>@localhost:5432/artex_research_test -scenario pos|neg",
+  "review_correction": "2026-10-18 batch review (agent_062a7276) caught that the original notes misread the doubled tool_calls entries as repeat calls ('idempotent repeat observed live' was WRONG — each tool was called once); notes corrected, collector fixed to count tool_use only. Original raw run data retained.",
+  "independent_review": "COMPLETED (agent_062a7276, 2026-10-18): APPROVE_WITH_P1 — both P1s fixed (runner single-exit cleanup; tool_calls double-count + evidence misreading corrected); P2s fixed (URL-form DSN guard, per-request output cap, tool return text semantics, integrity LIMIT-suffix guard, NULL tool_use_id filter); report preserved in evidence/M0-2-M1b2b-review.md"
 }

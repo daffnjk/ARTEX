@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"strings"
 )
 
 // M1b.2b（research）：图一致性只读诊断。
@@ -73,7 +74,7 @@ SELECT u.exploration_id, 0, u.id
 FROM activity u
 LEFT JOIN activity r ON r.exploration_id=u.exploration_id
   AND r.tool_use_id=u.tool_use_id AND r.kind='tool_result'
-WHERE u.kind='tool_use' AND r.id IS NULL
+WHERE u.kind='tool_use' AND r.id IS NULL AND u.tool_use_id IS NOT NULL
 LIMIT 200`,
 }
 
@@ -89,7 +90,11 @@ func (d *DB) GraphIntegrityReport() (findings []IntegrityFinding, counts map[Int
 	findings = make([]IntegrityFinding, 0, 32)
 	for _, check := range integrityOrder {
 		query := integrityQueries[check]
-		// 计数：把 LIMIT 去掉换成 COUNT(*) 包裹。
+		// 计数：把尾部的 LIMIT 去掉换成 COUNT(*) 包裹。任何一条 SQL 不再以
+		// 字面 LIMIT 200 结尾时立刻报错（响亮失败，不静默错计——审查 P2）。
+		if !strings.HasSuffix(query, "LIMIT 200") {
+			return nil, nil, fmt.Errorf("integrity query %s must end with LIMIT 200", check)
+		}
 		countQuery := "SELECT count(*) FROM (" + query[:len(query)-len("LIMIT 200")] + ") c"
 		var cnt int64
 		if qerr := d.QueryRow(countQuery).Scan(&cnt); qerr != nil {

@@ -1180,7 +1180,7 @@ func (t *ToolSet) proveGoal() actool.CoreTool {
 				t.GoalMet = true
 				// 完成判定语义是"无 open 目标"（abandoned 也算了结），文案如实陈述。
 				t.Reason = fmt.Sprintf("本任务已无未了结（open）的目标（最后由 goal %d 触发；abandoned 目标视为已了结）", goal)
-				return actool.Text(fmt.Sprintf("goal %d marked met；本任务所有目标均已达成，任务自动判定完成", goal)), nil
+				return actool.Text(fmt.Sprintf("goal %d marked met；本任务已无未了结（open）的目标，任务自动判定完成（abandoned 目标视为已了结）", goal)), nil
 			}
 			return actool.Text(fmt.Sprintf("goal %d marked met", goal)), nil
 		})

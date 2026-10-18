@@ -24,34 +24,6 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-func fail(format string, args ...any) {
-	fmt.Fprintf(os.Stderr, "research-baseline: "+format+"\n", args...)
-	os.Exit(2)
-}
-
-// guardDSN enforces the same isolation rules as scripts/test-research-pg.sh:
-// local host, database named artex_research_test*, no query parameters.
-func guardDSN(dsn, what string) string {
-	if strings.TrimSpace(dsn) == "" {
-		fail("%s DSN is required", what)
-	}
-	if strings.Contains(dsn, "?") {
-		fail("%s DSN must not carry query parameters", what)
-	}
-	u, err := url.Parse(dsn)
-	if err != nil {
-		fail("%s DSN invalid: %v", what, err)
-	}
-	if h := u.Hostname(); h != "" && h != "localhost" && h != "127.0.0.1" && h != "::1" {
-		fail("%s DSN must target localhost (got %q)", what, h)
-	}
-	name := strings.TrimPrefix(u.Path, "/")
-	if what == "research" && !strings.HasPrefix(name, "artex_research_test") {
-		fail("research DSN must target artex_research_test* (got %q)", name)
-	}
-	return dsn
-}
-
 type profileRow struct {
 	Format          string
 	BaseURL         string
@@ -61,10 +33,10 @@ type profileRow struct {
 	ReasoningEffort string
 }
 
-func loadProfile(dsn, name string) profileRow {
+func loadProfile(dsn, name string) (profileRow, error) {
 	conn, err := sql.Open("pgx", dsn)
 	if err != nil {
-		fail("open profile db: %v", err)
+		return profileRow{}, fmt.Errorf("open profile db: %w", err)
 	}
 	defer conn.Close()
 	var p profileRow
@@ -73,12 +45,12 @@ func loadProfile(dsn, name string) profileRow {
 		FROM llm_profiles WHERE name=$1`, name).Scan(
 		&p.Format, &p.BaseURL, &p.APIKey, &p.Model, &p.ThinkingType, &p.ReasoningEffort)
 	if err != nil {
-		fail("read profile %q: %v", name, err)
+		return profileRow{}, fmt.Errorf("read profile %q: %w", name, err)
 	}
 	if p.APIKey == "" {
-		fail("profile %q has no api key configured", name)
+		return profileRow{}, fmt.Errorf("profile %q has no api key configured", name)
 	}
-	return p
+	return p, nil
 }
 
 // metered wraps a provider: hard caps on request count and total tokens.
@@ -134,6 +106,14 @@ func (m *metered) Stream(ctx context.Context, req llm.CompletionRequest) iter.Se
 }
 
 func main() {
+	if err := run(); err != nil {
+		os.Exit(1)
+	}
+}
+
+// run 承载全部逻辑并以单一出口返回：清理 defer 在任何失败路径上都执行
+// （os.Exit 不跑 defer——审查 P1，失败恰恰最需要清理）。
+func run() error {
 	var (
 		dsn         = flag.String("dsn", "", "isolated research database DSN (required, artex_research_test*, local)")
 		profileDSN  = flag.String("profile-dsn", "postgres://"+os.Getenv("USER")+"@localhost:5432/artex", "operator database holding llm_profiles (read-only)")
@@ -144,8 +124,13 @@ func main() {
 		keep        = flag.Bool("keep", false, "keep seeded rows for inspection")
 	)
 	flag.Parse()
-	researchDSN := guardDSN(*dsn, "research")
-	guardDSN(*profileDSN, "profile")
+	researchDSN, err := guardDSNval(*dsn, "research")
+	if err != nil {
+		return err
+	}
+	if _, err := guardDSNval(*profileDSN, "profile"); err != nil {
+		return err
+	}
 
 	var marker, goal string
 	switch *scenario {
@@ -154,11 +139,14 @@ func main() {
 	case "neg":
 		marker = "BASELINE-NEG-0c91"
 	default:
-		fail("scenario must be pos or neg")
+		return fmt.Errorf("scenario must be pos or neg")
 	}
 	goal = fmt.Sprintf("在任务图中存在包含标记 %s 的已确认事实，并以该事实证明本目标", marker)
 
-	prof := loadProfile(*profileDSN, *profileName)
+	prof, err := loadProfile(*profileDSN, *profileName)
+	if err != nil {
+		return err
+	}
 	cfg := agent.Config{
 		Format:          llm.Format(prof.Format),
 		BaseURL:         prof.BaseURL,
@@ -168,22 +156,23 @@ func main() {
 		ReasoningEffort: prof.ReasoningEffort,
 		Stream:          false,
 	}
+	cfg.MaxTokens = 32768 // 单请求输出上限（审查 P2：防止单响应越过总量上限的超调）
 	prov, err := cfg.NewProvider()
 	if err != nil {
-		fail("build provider: %v", err)
+		return fmt.Errorf("build provider: %w", err)
 	}
 	m := &metered{inner: prov, maxCalls: *maxReqs, maxTokens: *maxTokens}
 
 	d, err := db.Open(researchDSN)
 	if err != nil {
-		fail("open research db: %v", err)
+		return fmt.Errorf("open research db: %w", err)
 	}
 	defer d.Close()
 
 	task, err := d.CreateTaskWithOptions(
 		fmt.Sprintf("M0.2 baseline %s", *scenario), goal, db.TaskCreateOptions{Name: "m0-2-" + *scenario})
 	if err != nil {
-		fail("seed task: %v", err)
+		return fmt.Errorf("seed task: %w", err)
 	}
 	if !*keep {
 		defer func() {
@@ -194,14 +183,14 @@ func main() {
 	}
 	store := d.Exploration(task.ExplorationID)
 	if _, err := store.AddGoalWithRoot(map[string]any{"text": goal}, "system"); err != nil {
-		fail("seed goal: %v", err)
+		return fmt.Errorf("seed goal: %w", err)
 	}
 	if *scenario == "pos" {
 		if _, err := store.AddNode(db.KindFact, map[string]any{
 			"summary": fmt.Sprintf("宿主种子事实：图中存在标记 %s（基线有效场景）", marker),
 			"detail":  "由 research-baseline 在运行前写入的确定性材料，等价于 M0.1 valid-session 类的构造真值。",
 		}, 5, "confirmed", "system", nil); err != nil {
-			fail("seed marker fact: %v", err)
+			return fmt.Errorf("seed marker fact: %w", err)
 		}
 	}
 
@@ -216,7 +205,7 @@ func main() {
 	defer cancel()
 	start := time.Now()
 	met, reason, planErr := pl.Plan(ctx, task.ID, nil, store, goal, nil, func(a db.Activity) {
-		if a.Kind == "tool_use" || a.Tool != "" {
+		if a.Kind == "tool_use" { // 审查 P1：tool_result 也带 Tool 名，双计会扭曲行为解读
 			toolCalls = append(toolCalls, a.Tool)
 		}
 	})
@@ -257,7 +246,30 @@ func main() {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	_ = enc.Encode(out)
-	if planErr != nil {
-		os.Exit(1)
+	return planErr
+}
+
+// guardDSNval 是 guardDSN 的错误值版本（run 的单一出口模式）。
+func guardDSNval(dsn, what string) (string, error) {
+	if strings.TrimSpace(dsn) == "" {
+		return "", fmt.Errorf("%s DSN is required", what)
 	}
+	if !strings.HasPrefix(dsn, "postgres://") && !strings.HasPrefix(dsn, "postgresql://") {
+		return "", fmt.Errorf("%s DSN must be a postgres:// URL", what)
+	}
+	if strings.Contains(dsn, "?") {
+		return "", fmt.Errorf("%s DSN must not carry query parameters", what)
+	}
+	u, err := url.Parse(dsn)
+	if err != nil {
+		return "", fmt.Errorf("%s DSN invalid: %w", what, err)
+	}
+	if h := u.Hostname(); h != "" && h != "localhost" && h != "127.0.0.1" && h != "::1" {
+		return "", fmt.Errorf("%s DSN must target localhost (got %q)", what, h)
+	}
+	name := strings.TrimPrefix(u.Path, "/")
+	if what == "research" && !strings.HasPrefix(name, "artex_research_test") {
+		return "", fmt.Errorf("research DSN must target artex_research_test* (got %q)", name)
+	}
+	return dsn, nil
 }
