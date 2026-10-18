@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "task": "M1b.1",
+  "baseline_commit": "cc8acc9da541c902e332d608833c461d40a26966",
+  "implementation_commits": {
+    "M1b.1a_storage": "24a6337",
+    "M1b.1b_planner_integration": "d12f2ff"
+  },
+  "tested_code_blobs": {
+    "db/task_plans.go": "79a6d8108c56e89a250c881fb1eb8176f4814681",
+    "db/task_plans_test.go": "cba538acd594f3808c16a0c2e3931ba26a49853a",
+    "db/task_plans_pg_test.go": "b7fbc4d53f90706388c99bd7c618b853aa1665e1",
+    "agent/plantodo.go": "2929c7e57fb79f98d5aa5650e3959033e9b28c44",
+    "agent/plantodo_test.go": "f05e3d3341ab4d3f86a18522c3e220c4ba32f39b",
+    "agent/planner.go": "a053f8a71aac9a2dc4e37cfe625987c7bc00b0c8",
+    "server/task_llm.go": "8977975dc60c1767a854297f9a247a0da6e993ec",
+    "scripts/test-research-pg.sh": "b9bbeb034ef7fee8161fb5116c11a63d7c92501a"
+  },
+  "environment": {
+    "postgres": "PostgreSQL 17.11 (Homebrew) on aarch64 darwin, isolated database artex_research_test (localhost:5432)",
+    "go": "go1.27.0 darwin/arm64 (project toolchain go 1.26.3 per go.mod)",
+    "session_scope": "local-only commits on research/autopilot-v2; nothing pushed"
+  },
+  "results": {
+    "pg_matrix": {
+      "command": "ARTEX_TEST_PG_DSN=postgres://<local-user>@localhost:5432/artex_research_test sh scripts/test-research-pg.sh",
+      "exit": 0,
+      "top_level_pass": 8,
+      "cases": [
+        "TestTaskPlanPGMigrationIdempotent",
+        "TestTaskPlanPGRoundTrip",
+        "TestTaskPlanPGConcurrentFirstWrite",
+        "TestTaskPlanPGStaleWriteRejected",
+        "TestTaskPlanPGIsolationAndBasisOwnership",
+        "TestTaskPlanPGDeleteCascases",
+        "TestTaskPlanPGErrorSurfaces",
+        "TestTaskPlanPGArchivePurgeRemovesPlan"
+      ],
+      "plus_regression": "TestTaskArchiveDatabaseRoundTrip PASS",
+      "race": "PASS (-race on the matrix run)",
+      "log_sha256": "ac40f3371d67337eaa7aa763dbe8c50375d6de9556b002a3bff523e3b0644ab6"
+    },
+    "db_unit": {
+      "command": "go test -race -count=1 -run 'TestMergePlanSteps|TestValidatePlanSteps' ./db",
+      "exit": 0,
+      "log_sha256": "b584b643a8bcaca714dbec7426ef526b32b6412d4b81e0a8cfc431e0cdb811e8"
+    },
+    "agent_unit": {
+      "command": "go test -race -count=1 -run 'TestPlannerTodo|TestLoadPlannerPlanState|TestPlannerTodosProjection' ./agent",
+      "exit": 0,
+      "top_level_pass": 6,
+      "log_sha256": "1bc25a9e26c42b5bbaba1fc6b60a00342eb8b6199c60d19d48e2443a3050a37f"
+    },
+    "harness_regression": {
+      "command": "go test -race -count=1 ./harness ./cmd/harness-eval",
+      "exit": 0,
+      "log_sha256": "faca8eb0b871e1cdfccfd2bb3e91a9daffb4121d4bad36219dd6a277955feaf7"
+    },
+    "completion_gate_regression": {
+      "command": "go test -count=1 -run '^TestGoalCompletion' ./agent",
+      "exit": 0,
+      "log_sha256": "a2c3aeb357172308e6b82de652e2a9b92d7249b7fcebe1ce31eee2d93c31b954"
+    },
+    "full_build_and_vet": "PASS (go build ./... ; go vet ./agent/ ./db/ ./server/)"
+  },
+  "acceptance_matrix_mapping": {
+    "same-instance-multi-round": "PASS — store roundtrip + tool second-save expects persisted revision (agent unit)",
+    "new-planner-instance-hydration": "PASS — loadPlannerPlanState hydrates verbatim; absent = explicit empty; error stops the round (unit + PG reopen)",
+    "process-restart-reopen": "PASS — TestTaskPlanPGMigrationIdempotent (Open twice, plan survives, not overwritten)",
+    "same-revision-double-write": "PASS — TestTaskPlanPGConcurrentFirstWrite exactly one winner, other explicit *PlanConflictError",
+    "late-write-rejected": "PASS — TestTaskPlanPGStaleWriteRejected keeps B's data (no last-write-wins)",
+    "task-isolation": "PASS — TestTaskPlanPGIsolationAndBasisOwnership",
+    "task-delete-archive": "PASS — TestTaskPlanPGDeleteCascases + TestTaskPlanPGArchivePurgeRemovesPlan (purge enumerates task_plans; restored task = explicit empty plan)",
+    "db-error-surfaces": "PASS — TestTaskPlanPGErrorSurfaces + TestPlannerTodoToolStoreErrorStopsNotAcks",
+    "old-blank-history-plan": "PASS — absent row hydrates explicit empty, no fabricated basis (LoadTaskPlan nil,nil)",
+    "migration-twice-idempotent": "PASS — TestTaskPlanPGMigrationIdempotent",
+    "todo-completed-not-a-credential": "PASS by construction — no acceptance/completion path reads task_plans (prove_goal/completion guard operate on evidence + frozen acceptance; verified by code inspection and grep)"
+  },
+  "not_verified": [
+    "CI research-postgres job run (workflow added, YAML validated locally; NOT_RUN — branch not pushed per user instruction, no gh auth)",
+    "end-to-end planner recovery inside a live LLM loop (storage/tool-level recovery semantics verified; full-loop deferred to M2.3/M3 integration)",
+    "full ARTEX test suite beyond the listed packages",
+    "UI"
+  ],
+  "independent_review": "PENDING (read-only reviewer scheduled before M1b.1 wrap-up commit)"
+}

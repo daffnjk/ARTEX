@@ -11,6 +11,7 @@ on:
       - 'scripts/ci-export-research-sdk.sh'
       - 'scripts/ci-export-research-postgres.sh'
       - 'scripts/test-harness-offline.sh'
+      - 'scripts/test-research-pg.sh'
       - 'docs/autopilot/**'
       - 'docs/research-harness/**'
       - '.github/workflows/research-harness.yml'
@@ -99,9 +100,53 @@ jobs:
         run: sh scripts/ci-export-research-postgres.sh
       - name: Retain bounded public PostgreSQL image
         if: ${{ success() && hashFiles('docs/autopilot/pg-export-request.txt') != '' && github.event.pull_request.head.repo.full_name == github.repository }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4, pinned
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f3607fa02 # v4, pinned
         with:
           name: research-postgres-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/research-pg-export/
           if-no-files-found: error
           retention-days: 1
+
+  # M1b.1c: real isolated PostgreSQL matrix for task-plan persistence (CAS,
+  # recovery, delete/archive, error surfacing). Ephemeral service container; the
+  # runner script itself rejects missing DSN and any non-local /
+  # non-artex_research_test target, and the suite never silently skips.
+  research-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: research
+          POSTGRES_PASSWORD: research
+          POSTGRES_DB: artex_research_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U research -d artex_research_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af67726e # v4, pinned
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5, pinned
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Isolated PG matrix (task plans CAS/recovery/archive)
+        run: sh scripts/test-research-pg.sh 2>&1 | tee "$RUNNER_TEMP/research-pg-matrix.log"
+        env:
+          ARTEX_TEST_PG_DSN: postgres://research:research@localhost:5432/artex_research_test
+          GOFLAGS: -mod=readonly
+      - name: Retain PG matrix log
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f3607fa02 # v4, pinned
+        with:
+          name: research-pg-matrix-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/research-pg-matrix.log
+          if-no-files-found: error
+          retention-days: 3

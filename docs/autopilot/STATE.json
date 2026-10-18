@@ -3,35 +3,36 @@
   "contract_id": "ARTEX-RESEARCH-V1",
   "contract_sha256": "bb0bf9e10f7d3838b70e7a7e63f8646eba372b743c33f7998d85e3888d9ec349",
   "repository": "daffnjk/ARTEX",
-  "work_branch": "research/autopilot-v1",
-  "observed_main_commit": "674dd067eb4eba7dc95b786a63b7576abb064a48",
-  "checkpoint_parent_commit": "46c5798b136ebf6b3137b4880268e073689f5e63",
-  "last_verified_code_commit": "be0d4e65ba4d382556ac69f65aefc0899f938d80",
-  "historical_verified_commit": "daa01668c7785e1e7ee9824ef3d9fc19668f65e7",
-  "historical_verification_scope": "PR #1 scoped core and TestGoalCompletion CI; not rerun here",
-  "current_task": "M1b.1a",
-  "next_task": "M1b.1b",
+  "work_branch": "research/autopilot-v2",
+  "observed_main_commit": "cc8acc9da541c902e332d608833c461d40a26966",
+  "checkpoint_parent_commit": "cc8acc9da541c902e332d608833c461d40a26966",
+  "last_verified_code_commit": "d12f2ff47e915420f8240ce95db3ffebe29c15d3",
+  "verified_scope_note": "M1b.1a storage 24a6337 + M1b.1b planner integration d12f2ff: real isolated PostgreSQL 17.11 matrix 8/8 PASS with race; agent tool unit 6/6; full regression (build/vet/race harness/cmd/TestGoalCompletion/agent pkg) PASS; see evidence/M1b-1-local-results.json",
+  "historical_verified_commit": "be0d4e65ba4d382556ac69f65aefc0899f938d80",
+  "historical_verification_scope": "M1a.1 via PR #2; baseline re-run locally this session before M1b.1 work",
+  "current_task": "M1b.1 wrap-up (reviewer pass + state commit)",
+  "next_task": "M0.1 scenario/truth registry (PG-independent); then M1b.2a",
   "run_state": "WORKING",
-  "writer": "current authorized executor; remote expected-SHA checks required",
+  "writer": "current authorized executor; single writer on research/autopilot-v2",
   "external_scheduler": "not configured",
   "cost": "unknown",
   "remaining_quota": "unknown",
   "blockers": [
     {
-      "id": "ENV-NETWORK",
-      "scope": "direct local git clone/dependency acquisition",
-      "root_cause": "github.com DNS lookup failed in container; archive download not available through viewed URL path",
-      "strategies_attempted": 3,
-      "next_strategy": "No further direct-network retries; use connected API and verified committed-source bundle",
-      "status": "WORKAROUND_VERIFIED"
+      "id": "PUSH-AUTH",
+      "scope": "push research branch / open draft PR / run CI",
+      "root_cause": "gh CLI not authenticated; user chose local-only commits for this session",
+      "strategies_attempted": 0,
+      "next_strategy": "on user-provided auth (gh auth login or token): push research/autopilot-v2, open draft PR, confirm research-postgres job runs; until then all 'CI NOT_RUN' entries stay NOT_RUN",
+      "status": "WAITING_FOR_INPUT"
     },
     {
       "id": "ENV-PG",
       "scope": "local PG validation",
-      "root_cause": "no psql/postgres/docker or installed PostgreSQL directory found",
+      "root_cause": "resolved: local PostgreSQL 17.11 with dedicated artex_research_test validated the full M1b.1 matrix",
       "strategies_attempted": 1,
-      "next_strategy": "Bounded never-started public PostgreSQL image from existing CI; use existing executor permissions only, otherwise dedicated CI service",
-      "status": "ACQUIRING"
+      "next_strategy": "none; keep using the isolated local test database only",
+      "status": "RESOLVED_LOCAL"
     },
     {
       "id": "MODEL-BUDGET",
@@ -39,19 +40,11 @@
       "root_cause": "no approved configured model credentials or measurable quota in current executor",
       "strategies_attempted": 0,
       "status": "NEEDS_INPUT"
-    },
-    {
-      "id": "ENV-GO-SDK",
-      "scope": "full local project-toolchain tests",
-      "root_cause": "installed Go 1.23.2 cannot build root Go 1.26.3 module; direct dependencies unavailable",
-      "strategies_attempted": 1,
-      "next_strategy": "Verified SDK acquired; real local Go 1.26.3 scoped tests pass; marker removed",
-      "status": "WORKAROUND_VERIFIED"
     }
   ],
-  "independent_review": "be0d4e65: completed, no major issues reported; receipt 6236232397; not a security proof",
-  "remote_save": "46c5798b136ebf6b3137b4880268e073689f5e63 saved/imported; local M1b.1a implementation is uncommitted and not yet PG-verified",
+  "independent_review": "M1b.1: PENDING — read-only reviewer scheduled on cc8acc9d..d12f2ff before wrap-up closes; previous receipt 6236232397 covered M1a.1 only",
+  "remote_save": "nothing pushed this session; local commits (24a6337, d12f2ff, wrap-up) exist only in the local clone — loss risk until push auth is provided",
   "deployment_actions_in_session": false,
-  "last_verified_scope": "M1a.1 local red/green, CI 39047329301 under Go 1.26.3 and separate Codex read-only review",
-  "local_workdir": "/mnt/data/artex-work/ARTEX"
+  "last_verified_scope": "M1b.1 storage + planner CAS lifecycle on real isolated PostgreSQL; full regression battery",
+  "local_workdir": "/Users/admin/Documents/渗透测试/ARTEX"
 }
