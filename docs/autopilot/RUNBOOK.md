@@ -20,7 +20,7 @@ go build ./... && go vet ./... && go test -race ./harness ./cmd/harness-eval ./a
 # 研究矩阵（真实 PG；脚本内置 DSN 门卫，拒绝非本地/非 artex_research_test*）
 ARTREX_TEST_DSN='postgres://'$USER'@localhost:5432/artex_research_test' \
   scripts/test-research-pg.sh
-# 当前基线：31 db cases PASS（含 archive 回归，skip=fail）
+# 当前基线：34 db cases PASS（含 archive 回归，skip=fail）
 
 # 计量研究运行器（预算硬顶，见 task-specs/M4.2.md 预注册）
 go build -o /tmp/research-baseline ./cmd/research-baseline
@@ -45,6 +45,9 @@ go build -o /tmp/research-ablation  ./cmd/research-ablation
 | 干净上下文审查（M3.4） | db/review_packet.go, cmd/research-reviewer | TestReviewPacket + live evidence |
 | 提案挖掘（M4.1） | db/proposal_mining.go | TestMineChangeProposals |
 | 固定预算消融（M4.2） | cmd/research-ablation, agent SetCognition | evidence/M4-2-*.json |
+| 证据链闭合（批审 P1） | db/hypotheses.go RecordExperimentOutcome | TestSupportedHypothesisInherits* |
+| 派发边界硬拒绝（批审 P2） | db/experiment_selection.go denyConflict, db/hypotheses.go DispatchExperiment | TestDispatchExperimentEnforces* |
+| 级联删除处置认知史（批审 P2） | db/tasks.go dropCognitionHistory | TestDeleteTaskCascadeHandlesCognitionHistory |
 
 ## 4. 回滚
 
