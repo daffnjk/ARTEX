@@ -25,6 +25,29 @@ type ExperimentCandidate struct {
 	ExclusionReason  string   `json:"exclusion_reason,omitempty"`
 }
 
+// denyConflict 返回与 action 冲突的 deny 约束原文（互含判定；无冲突返回 ""）。
+// 推荐排序（提示层）与 DispatchExperiment（强制层）共用同一判据——审查 P2：
+// 边界不能只靠渲染提示，派发路径必须有硬拒绝。
+func (s *ExplorationStore) denyConflict(action string) (string, error) {
+	rows, err := s.db.Query(`SELECT text FROM task_constraints WHERE exploration_id=$1 AND kind='deny'`, s.expID)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	actLower := strings.ToLower(action)
+	for rows.Next() {
+		var text string
+		if err := rows.Scan(&text); err != nil {
+			return "", err
+		}
+		norm := strings.ToLower(strings.TrimSpace(text))
+		if norm != "" && (strings.Contains(actLower, norm) || strings.Contains(norm, actLower)) {
+			return text, nil
+		}
+	}
+	return "", rows.Err()
+}
+
 // RecommendExperiments 返回开放实验的可解释排序（含被硬边界排除者，显式标注）。
 // 已派发(dispatched)优先于已声明(declared)——在跑的先看结果；同级按区分潜力降序。
 // deny 约束（task_constraints kind='deny'）与 action 文本互含即视为边界冲突。
@@ -59,6 +82,9 @@ func (s *ExplorationStore) RecommendExperiments() ([]ExperimentCandidate, error)
 		denies[strings.ToLower(strings.TrimSpace(text))] = text
 	}
 	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	out := make([]ExperimentCandidate, 0, len(exps))
 	for _, e := range exps {
 		c := ExperimentCandidate{Experiment: e}

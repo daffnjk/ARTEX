@@ -21,8 +21,10 @@ func m31Store(t *testing.T) (*DB, *ExplorationStore) {
 	}
 	t.Cleanup(func() {
 		_, _ = d.Exec(`DELETE FROM task_archives WHERE task_id=$1`, task.ID)
-		_ = d.DeleteTask(task.ID)
-		_, _ = d.Exec(`DELETE FROM explorations WHERE id=$1`, task.ExplorationID)
+		// DeleteTaskCascade 处置认知史（experiments/reviews 触发器旁路）——
+		// 此前裸 DELETE explorations 被追加式触发器拦下且错误被丢弃，测试
+		// 残留在研究库里累积（批审 P2#8 实测确认）。
+		_, _ = d.DeleteTaskCascade(task.ID, false, false)
 	})
 	return d, d.Exploration(task.ExplorationID)
 }

@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/Autumn-27/artex/harness"
 )
@@ -39,6 +40,9 @@ GROUP BY e.reason ORDER BY count(*) DESC LIMIT 10`, s.expID)
 		inversions = append(inversions, t)
 	}
 	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 
 	// 2) 不区分实验：设计缺陷信号（期望无法区分、层级混淆等）。
 	var inconclusiveIDs []string
@@ -56,6 +60,9 @@ GROUP BY e.reason ORDER BY count(*) DESC LIMIT 10`, s.expID)
 		inconclusiveIDs = append(inconclusiveIDs, id)
 	}
 	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 
 	// 3) 评议 high 问题（存档 advisory 的结构化引用）。
 	var reviewIDs []string
@@ -73,6 +80,9 @@ GROUP BY e.reason ORDER BY count(*) DESC LIMIT 10`, s.expID)
 		reviewIDs = append(reviewIDs, id)
 	}
 	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 
 	// 回放参考：优先评议存档；无评议时用可重放的轨迹引用本身（实验 id /
 	// 失效事件描述都是可复演的报告来源）。
@@ -100,7 +110,11 @@ GROUP BY e.reason ORDER BY count(*) DESC LIMIT 10`, s.expID)
 			ReplayReportRefs:      invRefs,
 			RequiresHumanApproval: true,
 		}
-		if err := p.Validate(); err == nil {
+		if err := p.Validate(); err != nil {
+			// 静默丢弃会掩盖挖掘器自身的结构缺陷（M4.1 曾静默返回 0 条）——
+			// 记日志留痕；提案本身仍不入列。
+			log.Printf("proposal_mining: basis-hardening proposal invalid: %v", err)
+		} else {
 			proposals = append(proposals, p)
 		}
 	}
@@ -115,7 +129,9 @@ GROUP BY e.reason ORDER BY count(*) DESC LIMIT 10`, s.expID)
 			ReplayReportRefs:      replayRefs,
 			RequiresHumanApproval: true,
 		}
-		if err := p.Validate(); err == nil {
+		if err := p.Validate(); err != nil {
+			log.Printf("proposal_mining: discrimination proposal invalid: %v", err)
+		} else {
 			proposals = append(proposals, p)
 		}
 	}

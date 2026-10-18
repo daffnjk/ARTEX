@@ -305,7 +305,12 @@ func oneRun(d *db.DB, gm *globalMetered, prof profileRow, variant, scenario stri
 		return rec
 	}
 	if !keep {
-		defer cleanupResearchRows(d, task.ExplorationID, task.ID)
+		defer func() {
+			// DeleteTaskCascade 内置认知史处置（追加式触发器 owner 级旁路）——
+			// 裸 DELETE explorations 会被 experiments/reviews 触发器整体拦下。
+			_, _ = d.Exec(`DELETE FROM task_archives WHERE task_id=$1`, task.ID)
+			_, _ = d.DeleteTaskCascade(task.ID, false, false)
+		}()
 	}
 	store := d.Exploration(task.ExplorationID)
 	if _, err := store.AddGoalWithRoot(map[string]any{"text": goal}, "system"); err != nil {
@@ -434,21 +439,6 @@ func countNames(calls []string, names ...string) map[string]int {
 		}
 	}
 	return out
-}
-
-// cleanupResearchRows 尽力清理本 run 的研究行。hypotheses/experiments/hypothesis_events
-// 是追加式表（BEFORE DELETE 触发器），清理走 session_replication_role=replica
-// （仅隔离研究库；先例见 DECISIONS M2.1 去重）。SET/DELETE/RESET 必须落在同一条
-// 池化连接上——拼成单条无参 Exec 走 simple 协议（db.go 注释确认支持多语句）。
-func cleanupResearchRows(d *db.DB, explorationID, taskID int64) {
-	_, _ = d.Exec(fmt.Sprintf(`SET session_replication_role = replica;
-DELETE FROM hypothesis_events WHERE hypothesis_id IN (SELECT id FROM hypotheses WHERE exploration_id=%d);
-DELETE FROM hypotheses WHERE exploration_id=%d;
-DELETE FROM experiments WHERE exploration_id=%d;
-RESET session_replication_role;`, explorationID, explorationID, explorationID))
-	_, _ = d.Exec(`DELETE FROM task_plans WHERE exploration_id=$1`, explorationID)
-	_ = d.DeleteTask(taskID)
-	_, _ = d.Exec(`DELETE FROM explorations WHERE id=$1`, explorationID)
 }
 
 // guardDSNval 与 research-baseline 相同的 DSN 门卫（错误值版本）。

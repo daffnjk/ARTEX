@@ -68,9 +68,11 @@ func run() error {
 	}
 	if !*keep {
 		defer func() {
-			_, _ = d.Exec(`DELETE FROM hypothesis_reviews WHERE exploration_id=$1`, task.ExplorationID)
-			_ = d.DeleteTask(task.ID)
-			_, _ = d.Exec(`DELETE FROM explorations WHERE id=$1`, task.ExplorationID)
+			// 审查 P2：认知史表（experiments/hypothesis_reviews）是触发器保护的
+			// 追加式表，裸 DELETE 会被拦且错误曾被丢弃（报告却声称已清理，不实）。
+			// DeleteTaskCascade 现已内置认知史处置（owner 级触发器旁路）。
+			_, _ = d.Exec(`DELETE FROM task_archives WHERE task_id=$1`, task.ID)
+			_, _ = d.DeleteTaskCascade(task.ID, false, false)
 		}()
 	}
 	s := d.Exploration(task.ExplorationID)

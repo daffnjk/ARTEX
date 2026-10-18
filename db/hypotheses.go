@@ -275,6 +275,16 @@ func (s *ExplorationStore) DispatchExperiment(experimentID, intentID int64) erro
 	if intentExpl != s.expID {
 		return fmt.Errorf("intent %d belongs to another exploration", intentID)
 	}
+	// 硬边界（审查 P2）：deny 约束在派发路径强制拒绝，与推荐排除同一判据。
+	var action string
+	if err := s.db.QueryRow(`SELECT action FROM experiments WHERE id=$1 AND exploration_id=$2`, experimentID, s.expID).Scan(&action); err != nil {
+		return fmt.Errorf("experiment %d not found: %w", experimentID, err)
+	}
+	if deny, err := s.denyConflict(action); err != nil {
+		return err
+	} else if deny != "" {
+		return fmt.Errorf("实验操作与任务 deny 约束冲突，拒绝派发：「%s」", deny)
+	}
 	res, err := s.db.Exec(`UPDATE experiments SET intent_id=$2, status='dispatched', dispatched_at=now()
 		WHERE id=$1 AND exploration_id=$3 AND status='declared'`, experimentID, intentID, s.expID)
 	if err != nil {
@@ -359,6 +369,15 @@ func (s *ExplorationStore) RecordExperimentOutcome(experimentID int64, observed 
 					VALUES ($1,'active',$2,$3,$4)`, hypID, to, "discriminated by experiment outcome", experimentID); err != nil {
 					return ExperimentOutcome{}, err
 				}
+				// 审查 P1（M3.2–M4.1 批审）：区分性证据并入胜者 basis。失效监测
+				// 按 basis_node_ids 检索——不并的话，空 basis 的 supported 假设
+				// 在其真正支撑证据被撤回（false_positive/删除）后仍永久 supported。
+				if to == "supported" && factID > 0 {
+					if _, err := tx.Exec(`UPDATE hypotheses SET basis_node_ids = array_append(basis_node_ids, $2)
+						WHERE id=$1 AND NOT ($2 = ANY(basis_node_ids))`, hypID, factID); err != nil {
+						return ExperimentOutcome{}, err
+					}
+				}
 			}
 		}
 	default:
@@ -426,14 +445,20 @@ func InvalidateHypothesesOnNodeTx(tx *sql.Tx, nodeID int64, reason string) ([]in
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+	demoted := make([]int64, 0, len(ids))
 	for _, id := range ids {
-		if _, err := tx.Exec(`UPDATE hypotheses SET status='invalidated', updated_at=now() WHERE id=$1 AND status='supported'`, id); err != nil {
+		res, err := tx.Exec(`UPDATE hypotheses SET status='invalidated', updated_at=now() WHERE id=$1 AND status='supported'`, id)
+		if err != nil {
 			return nil, err
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			continue // 审查 P2：并发迁移过的行不再失效——不伪造 from_status='supported' 事件
 		}
 		if _, err := tx.Exec(`INSERT INTO hypothesis_events(hypothesis_id, from_status, to_status, reason)
 			VALUES ($1,'supported','invalidated',$2)`, id, reason); err != nil {
 			return nil, err
 		}
+		demoted = append(demoted, id)
 	}
-	return ids, nil
+	return demoted, nil
 }

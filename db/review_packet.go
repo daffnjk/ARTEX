@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
@@ -88,6 +89,9 @@ WHERE h.exploration_id=$1 ORDER BY e.id DESC LIMIT 100`, s.expID)
 		exps = append(exps, e)
 	}
 	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	recentRows, err := s.db.Query(`SELECT payload->>'summary' FROM exploration_nodes
 		WHERE exploration_id=$1 AND kind='fact' AND state='confirmed' ORDER BY id DESC LIMIT 10`, s.expID)
 	if err != nil {
@@ -103,16 +107,25 @@ WHERE h.exploration_id=$1 ORDER BY e.id DESC LIMIT 100`, s.expID)
 		facts = append(facts, sum)
 	}
 	recentRows.Close()
+	if err := recentRows.Err(); err != nil {
+		return nil, err
+	}
 	recs, err := s.RecommendExperiments()
 	if err != nil {
 		return nil, err
 	}
 	var integrity *IntegrityReportScoped
-	// 任务范围内诊断（探索级）；探索无任务时略过。
+	// 任务范围内诊断（探索级）。审查 P2：读取失败不静默省略——完整性报告是
+	// reviewer 的审计输入，读不到就整个包失败（fail-closed），不能悄悄变干净。
 	var taskID int64
-	_ = s.db.QueryRow(`SELECT id FROM tasks WHERE exploration_id=$1 AND deleted_at IS NULL`, s.expID).Scan(&taskID)
-	if taskID > 0 {
-		_ = s.db.TaskIntegrityReportScoped(taskID, &integrity)
+	switch err := s.db.QueryRow(`SELECT id FROM tasks WHERE exploration_id=$1 AND deleted_at IS NULL`, s.expID).Scan(&taskID); {
+	case errors.Is(err, sql.ErrNoRows): // 探索无任务：合法略过
+	case err != nil:
+		return nil, err
+	default:
+		if err := s.db.TaskIntegrityReportScoped(taskID, &integrity); err != nil {
+			return nil, err
+		}
 	}
 	return &ReviewPacket{
 		ExplorationID: s.expID, Hypotheses: hyps, Events: events, Experiments: exps,
