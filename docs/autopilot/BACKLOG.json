@@ -429,6 +429,27 @@
    "acceptance": [
     "判别性场景下的固定预算 A/B/C/D 对照：认知层成为完成必要路径，多轮信念修订闭环（脚本化环境执行+实验观察上报），诚实报告"
    ],
+   "status": "DONE",
+   "attempts": {
+    "1": "pilot r=1 完成：零假证明、四变体全部有据完成；核心发现=认知工具采用缺口（仅 D 声明过假设，实验全零）→ 立项 M4.4 纪律指令采用实验"
+   },
+   "commits": [
+    "a174400"
+   ],
+   "evidence": [
+    "evidence/M4-3-pilot-raw.jsonl",
+    "evidence/M4-3-pilot-D-rerun.jsonl",
+    "evidence/M4-3-pilot-results.json"
+   ]
+  },
+  {
+   "id": "M4.4",
+   "dependencies": [
+    "M4.3"
+   ],
+   "acceptance": [
+    "纪律指令变体（E）认知工具采用与完整闭环 live 演示，诚实报告"
+   ],
    "status": "DRAFT",
    "attempts": {},
    "commits": [],
