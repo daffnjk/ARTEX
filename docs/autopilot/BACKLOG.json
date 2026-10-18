@@ -385,7 +385,7 @@
    ],
    "status": "DONE",
    "attempts": {
-    "1": "pilot r=1 完成：诚实零效应（认知工具零调用，A≈B≈C≈D）；按预注册不追加 r=3"
+    "1": "pilot r=1 诚实零效应（认知工具零调用，A≈B≈C≈D）；按预注册不追加 r=3（防凑方向）。后续：M4.3 以有区分力场景重答可证伪命题"
    },
    "commits": [
     "5b22eaa",
@@ -409,6 +409,25 @@
    ],
    "acceptance": [
     "all contract invariants, current checks, independent review, runbook/rollback/handoff"
+   ],
+   "status": "DONE",
+   "attempts": {
+    "1": "不变量↔检查对照表入 RUNBOOK §3（34 矩阵 case 钉死）；证据指针全量审计通过（修正 1 处误指）；CI da78595 绿。09:00 定时器自删与会话总结为计划内收尾动作。"
+   },
+   "commits": [],
+   "evidence": [
+    "RUNBOOK.md（环境/验证命令/构件地图 17 行/回滚/交接）",
+    "evidence/ 五轮独立审查记录（M1b-1-review / M1b-2a-review / M0-2-M1b2b-review / M2-M3-review / M3-2-M4-1-review）",
+    "SESSION_HANDOFF.md"
+   ]
+  },
+  {
+   "id": "M4.3",
+   "dependencies": [
+    "M4.2"
+   ],
+   "acceptance": [
+    "判别性场景下的固定预算 A/B/C/D 对照：认知层成为完成必要路径，多轮信念修订闭环（脚本化环境执行+实验观察上报），诚实报告"
    ],
    "status": "DRAFT",
    "attempts": {},
