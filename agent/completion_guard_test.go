@@ -62,16 +62,24 @@ func TestGoalCompletionAssemblyAfterResolve(t *testing.T) {
 	oldResolve, oldAugment := ToolResolve, ToolAugment
 	t.Cleanup(func() { ToolResolve, ToolAugment = oldResolve, oldAugment })
 	ToolAugment = nil
+	// M1b.3a：两个完成工具都要在 DB 绑定解析之后仍被拦（含 goal_met 被人为
+	// 绑回 planner 的场景）。
+	for _, name := range []string{"prove_goal", "goal_met"} {
+		probe := &completionProbe{name: name}
+		ToolResolve = func(context.Context, string, []actool.CoreTool) []actool.CoreTool { return []actool.CoreTool{probe} }
+		tools, _, cleanup := AugmentTools(context.Background(), "planner", nil)
+		if len(tools) != 1 {
+			cleanup()
+			t.Fatal("resolved tool lost")
+		}
+		_, err := tools[0].Call(context.Background(), nil, nil)
+		cleanup()
+		if err != nil || probe.calls != 0 {
+			t.Fatalf("%s resolved tool bypassed gate: %v", name, err)
+		}
+	}
 	probe := &completionProbe{name: "prove_goal"}
 	ToolResolve = func(context.Context, string, []actool.CoreTool) []actool.CoreTool { return []actool.CoreTool{probe} }
-	tools, _, cleanup := AugmentTools(context.Background(), "planner", nil)
-	defer cleanup()
-	if len(tools) != 1 {
-		t.Fatal("resolved tool lost")
-	}
-	if _, err := tools[0].Call(context.Background(), nil, nil); err != nil || probe.calls != 0 {
-		t.Fatalf("resolved tool bypassed gate: %v", err)
-	}
 	ToolResolve = func(context.Context, string, []actool.CoreTool) []actool.CoreTool { return nil }
 	tools, _, cleanup2 := AugmentTools(context.Background(), "planner", []actool.CoreTool{probe})
 	defer cleanup2()
