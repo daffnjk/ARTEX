@@ -3818,7 +3818,8 @@ func (s *Server) fallbackChat(t *Task, msg string) string {
 	switch {
 	case strings.HasPrefix(m, "意图") || strings.HasPrefix(lower, "intent"):
 		text := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(m, "意图"), "intent"))
-		_, _ = t.Store.AddIntent(map[string]any{"summary": text}, 9, nil, "human")
+		// M1b.2b：走原子原语（节点+任务根血缘边同事务），不再产生无边意图。
+		_, _ = t.Store.AddIntentWithParents(map[string]any{"summary": text}, 9, nil, "human", nil)
 		return "已注入一条高优先级意图：" + text
 	case strings.HasPrefix(m, "提示") || strings.HasPrefix(lower, "hint"):
 		text := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(m, "提示"), "hint"))
