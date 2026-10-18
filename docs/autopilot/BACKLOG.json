@@ -450,10 +450,18 @@
    "acceptance": [
     "纪律指令变体（E）认知工具采用与完整闭环 live 演示，诚实报告"
    ],
-   "status": "DRAFT",
-   "attempts": {},
-   "commits": [],
-   "evidence": []
+   "status": "DONE",
+   "attempts": {
+    "1": "E 全链路采用+机制闭环（实验判定 inconclusive=精确匹配拒绝强拟合，诚实性保持）；D 两次网关传输失败存档，对照取 M4.3 成功 D"
+   },
+   "commits": [
+    "dd36b78"
+   ],
+   "evidence": [
+    "evidence/M4-4-pilot-raw.jsonl",
+    "evidence/M4-4-pilot-D-rerun.jsonl",
+    "evidence/M4-4-pilot-results.json"
+   ]
   }
  ]
 }
