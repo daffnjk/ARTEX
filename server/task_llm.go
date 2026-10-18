@@ -582,6 +582,10 @@ func (s *Server) agentsForTask(t *Task) *taskAgentBundle {
 	pl.SetProxy(s.m.ProxyAddr(), s.m.ProxyCACert())
 	pl.SetWebSearch(s.webSearchFor("planner"))
 	pl.SetConstraintInject(s.constraintInjectPlanner) // 操作约束注入 planner(可配置,默认开)
+	// research M1b.1: planner 计划权威落盘。每轮 Plan() 从 PostgreSQL hydrate
+	//（失败即停轮，不回退空内存），TodoWrite 先 CAS 落盘后确认；bundle 重建/
+	// 进程重启后计划不丢，旧实例迟到写入被显式拒绝。
+	pl.SetPlanStore(s.m.pg)
 	// cold-digest §7: 冷节点后台压缩。引擎经权威解析器实际驱动的就是这套 per-task planner
 	// (agentsForTask),Compactor 必须接在这里。走任务路由的 planner provider(§4:与 agent
 	// 同模型,随任务 LLM 链解析),压缩用 Complete 一次性生成 body。

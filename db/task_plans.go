@@ -50,14 +50,14 @@ func (e *PlanConflictError) Error() string {
 
 // 计划输入的边界（防畸形/超大材料，M1b.1 验收矩阵的 malformed/bounded 行）。
 const (
-	PlanMaxSteps          = 100
-	PlanMaxContentBytes   = 8 << 10
-	PlanMaxExpectBytes    = 2 << 10
-	PlanMaxNotesBytes     = 16 << 10
-	PlanMaxBasisPerStep   = 32
-	planStatusPending     = "pending"
-	planStatusInProgress  = "in_progress"
-	planStatusCompleted   = "completed"
+	PlanMaxSteps         = 100
+	PlanMaxContentBytes  = 8 << 10
+	PlanMaxExpectBytes   = 2 << 10
+	PlanMaxNotesBytes    = 16 << 10
+	PlanMaxBasisPerStep  = 32
+	planStatusPending    = "pending"
+	planStatusInProgress = "in_progress"
+	planStatusCompleted  = "completed"
 )
 
 // ValidatePlanSteps 校验一组（尚无 ID 的）步骤输入：状态合法、内容非空且在界内、
@@ -221,4 +221,9 @@ func (d *DB) PlanBasisNodesOwned(explorationID int64, nodeIDs []int64) ([]int64,
 		}
 	}
 	return missing, nil
+}
+
+// PlanBasisNodesOwned 是探索视图的便捷封装：按本探索校验 basis 节点归属。
+func (s *ExplorationStore) PlanBasisNodesOwned(nodeIDs []int64) ([]int64, error) {
+	return s.db.PlanBasisNodesOwned(s.expID, nodeIDs)
 }
