@@ -2,7 +2,7 @@
   "schema_version": 1,
   "task": "M2.2",
   "baseline_commit": "35bb667",
-  "implementation_commits": ["PENDING_AFTER_COMMIT"],
+  "implementation_commits": ["d2bbf1c"],
   "results": {
     "pg_matrix": {
       "command": "ARTEX_TEST_PG_DSN=<local-isolated> sh scripts/test-research-pg.sh (now 24 cases)",
