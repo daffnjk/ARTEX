@@ -397,10 +397,8 @@ func (s *Server) createGoals(ctx context.Context, t *Task, emit func(db.Activity
 		// only path that writes here — decomposed goals are already persisted by the tool.
 		if g := strings.TrimSpace(t.Goal); g != "" {
 			log.Printf("[goals] task %s: LLM 目标拆解无产出，回退为「原始目标作为单目标」", t.ID)
-			origin, _ := t.Store.OriginFactID()
-			id, _ := t.Store.AddNode(db.KindGoal, map[string]any{"text": g}, 0, "open", "system", nil)
-			if origin > 0 && id > 0 {
-				_ = t.Store.Link(origin, db.RelSpawns, id) // goal descends from the task root (origin fact)
+			if _, err := t.Store.AddGoalWithRoot(map[string]any{"text": g}, "system"); err != nil {
+				log.Printf("[goals] task %s: 回退目标落库失败: %v", t.ID, err)
 			}
 			specs = []goalSpec{{Text: g}}
 		}

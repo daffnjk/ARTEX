@@ -716,20 +716,28 @@ func (d *DB) SetFindingReportByNodeID(nodeID int64, report string) (int64, error
 // col and jsonKey MUST be trusted constants (they are interpolated into SQL) — never
 // pass user input.
 func (d *DB) setFindingCol(id int64, col, jsonKey, val string) (int64, error) {
-	var nodeID *int64
-	err := d.QueryRow(`UPDATE findings SET `+col+`=$1 WHERE id=$2 RETURNING node_id`, val, id).Scan(&nodeID)
-	if err == sql.ErrNoRows {
-		return 0, nil
-	}
-	if err != nil {
-		return 0, err
-	}
-	if nodeID != nil {
-		_, _ = d.Exec(`UPDATE exploration_nodes
-			SET payload = jsonb_set(payload, '{`+jsonKey+`}', to_jsonb($1::text))
-			WHERE id = $2`, val, *nodeID)
-	}
-	return 1, nil
+	// M1b.2a C5：findings 行与节点 payload 镜像同一事务（WithEvidenceTx）——
+	// 镜像失败整体回滚，不再留下两侧漂移的 best-effort 吞错。
+	var affected int64
+	err := d.WithEvidenceTx(context.Background(), func(tx *sql.Tx) error {
+		var nodeID *int64
+		if err := tx.QueryRow(`UPDATE findings SET `+col+`=$1 WHERE id=$2 RETURNING node_id`, val, id).Scan(&nodeID); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil
+			}
+			return err
+		}
+		affected = 1
+		if nodeID != nil {
+			if _, err := tx.Exec(`UPDATE exploration_nodes
+				SET payload = jsonb_set(payload, '{`+jsonKey+`}', to_jsonb($1::text))
+				WHERE id = $2`, val, *nodeID); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return affected, err
 }
 
 // SetFindingSeverity updates one finding's severity (+ node payload sync). Returns
