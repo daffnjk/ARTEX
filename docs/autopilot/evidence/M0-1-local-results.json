@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "task": "M0.1",
+  "baseline_commit": "177098c",
+  "tested_code_blobs": {
+    "harness/scenarios.go": "bfda04c72810b1c289ffcc078cf6e5865f115120",
+    "harness/scenarios_test.go": "2c0534bee3d0f35db9791d66a05607d78630175f"
+  },
+  "deliverable": "versioned scenario/truth registry (16 immutable id@version fixtures covering all 14 registered sample classes) + executable replay through the production evaluation kernel",
+  "results": {
+    "registry_and_replay": {
+      "command": "go test -race -count=1 -run 'TestScenario' -v ./harness",
+      "exit": 0,
+      "top_level_pass": 3,
+      "including_subtests_pass": 19,
+      "scenarios_replayed": 16,
+      "log_sha256": "196f803cd97761bdd9ee5aca22bb219575fc00df04c629a357ce0d00a11df985"
+    },
+    "offline_equivalent": {
+      "command": "sh scripts/test-harness-offline.sh",
+      "exit": 0,
+      "note": "isolated Go 1.23 module, GOPROXY=off — embed-based registry works offline; intact fixture still REVIEW (exit 2)"
+    },
+    "full_harness_regression": "PASS (go test -race ./harness ./cmd/harness-eval; PG suites unaffected)"
+  },
+  "truth_labeling": "constructed fixtures; expected verdicts derived from the kernel contract (harness/evaluation.go path map), asserted per step; NOT model self-assessment",
+  "not_verified": [
+    "live model runs (M0.2 — blocked on MODEL-BUDGET NEEDS_INPUT)",
+    "real target capture (M2 trusted channel)",
+    "domain verifiers beyond the deterministic scenario family (M2)",
+    "criterion/experiment/context variants of acceptance-binding-mismatch (same spec.matches code path; variants deferred to M2)"
+  ],
+  "independent_review": "PENDING (scheduled with next batch review)"
+}

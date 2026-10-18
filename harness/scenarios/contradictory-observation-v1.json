@@ -1,0 +1,95 @@
+{
+ "schema_version": "1",
+ "id": "contradictory-observation",
+ "version": "1",
+ "sample_class": "contradictory-observation",
+ "description": "Two intact captures disagree; the verifier must not pick a winner",
+ "allowed_actions": [
+  "evaluate_only"
+ ],
+ "stop_conditions": [
+  "all_steps_evaluated"
+ ],
+ "controls": {
+  "model": "none-required",
+  "tool_budget": "none",
+  "target": "none"
+ },
+ "truth": {
+  "source": "constructed fixture: payload bytes are author-controlled",
+  "condition": "offline evaluation against the M1a.1 acceptance kernel only; no target, no model"
+ },
+ "acceptance": {
+  "TaskID": 101,
+  "GoalID": 201,
+  "Version": "acc-v1",
+  "Criterion": {
+   "ID": "fixture-value",
+   "Version": "1"
+  },
+  "Claim": "Local fixture value equals 42.",
+  "ExperimentID": "experiment-local-1",
+  "ContextVersion": "context-1"
+ },
+ "verifier": {
+  "kind": "payload-equals",
+  "expect": "eyJmaXh0dXJlX3ZhbHVlIjo0Mn0="
+ },
+ "steps": [
+  {
+   "name": "evaluate",
+   "request": {
+    "schema_version": "1",
+    "id": "contradictory-req",
+    "task_id": 101,
+    "goal_id": 201,
+    "experiment_id": "experiment-local-1",
+    "context_version": "context-1",
+    "claim": "Local fixture value equals 42.",
+    "criterion_id": "fixture-value",
+    "criterion_version": "1",
+    "acceptance_version": "acc-v1",
+    "evidence": [
+     {
+      "observation_id": "o-42",
+      "sha256": "20487b17d02df41fdbcf98c96e046392974d9565991260aafd60d476d91bcc6a"
+     },
+     {
+      "observation_id": "o-13",
+      "sha256": "f15782be1c6b96e386406dbb1808caf827e9b6c3846319b2880842fef6781e81"
+     }
+    ]
+   },
+   "observations": [
+    {
+     "id": "o-42",
+     "task_id": 101,
+     "experiment_id": "experiment-local-1",
+     "execution_id": "exec-1",
+     "context_version": "context-1",
+     "subject_ref": "fixture-user",
+     "object_ref": "fixture-object",
+     "observed_at": "2026-10-18T00:00:00Z",
+     "complete": true,
+     "payload": "eyJmaXh0dXJlX3ZhbHVlIjo0Mn0="
+    },
+    {
+     "id": "o-13",
+     "task_id": 101,
+     "experiment_id": "experiment-local-1",
+     "execution_id": "exec-1",
+     "context_version": "context-1",
+     "subject_ref": "fixture-user",
+     "object_ref": "fixture-object",
+     "observed_at": "2026-10-18T00:00:00Z",
+     "complete": true,
+     "payload": "eyJmaXh0dXJlX3ZhbHVlIjoxM30="
+    }
+   ],
+   "expect": {
+    "conclusion": "inconclusive",
+    "disposition": "review"
+   }
+  }
+ ]
+}
