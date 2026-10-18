@@ -504,6 +504,25 @@ DROP TRIGGER IF EXISTS trg_experiments_spec ON experiments;
 CREATE TRIGGER trg_experiments_spec BEFORE UPDATE OR DELETE ON experiments
     FOR EACH ROW EXECUTE FUNCTION forbid_experiment_spec_rewrite();
 
+-- hypothesis_reviews (research M3.4)：干净上下文 Reviewer 的评议存档。
+-- 只追加：评议是建议性输出（advisory），永不反写假设/目标/实验状态——
+-- Reviewer 无工具、无权限，输出仅记录与展示。
+CREATE TABLE IF NOT EXISTS hypothesis_reviews (
+    id              BIGSERIAL PRIMARY KEY,
+    exploration_id  BIGINT NOT NULL REFERENCES explorations(id) ON DELETE CASCADE,
+    model           TEXT NOT NULL,
+    advisory        JSONB NOT NULL,
+    usage           JSONB NOT NULL DEFAULT '{}',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_hyp_reviews ON hypothesis_reviews(exploration_id, id);
+DROP TRIGGER IF EXISTS trg_hyp_reviews_immutable ON hypothesis_reviews;
+CREATE TRIGGER trg_hyp_reviews_immutable BEFORE UPDATE OR DELETE ON hypothesis_reviews
+    FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
+DROP TRIGGER IF EXISTS trg_hyp_reviews_trunc ON hypothesis_reviews;
+CREATE TRIGGER trg_hyp_reviews_trunc BEFORE TRUNCATE ON hypothesis_reviews
+    FOR EACH STATEMENT EXECUTE FUNCTION forbid_mutation();
+
 CREATE TABLE IF NOT EXISTS activity (
     id                 BIGSERIAL PRIMARY KEY,
     exploration_id     BIGINT NOT NULL REFERENCES explorations(id) ON DELETE CASCADE,
