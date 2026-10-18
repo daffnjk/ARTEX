@@ -48,7 +48,7 @@ echo "dsn target: host=${host:-local-socket} db=$db"
 cd "$root"
 
 # 专用非跳过套件（-race）。
-ARTEX_TEST_PG_DSN="$DSN" go test -race -count=1 -v -run 'TestTaskPlanPG|TestGraphOps|TestGraphIntegrity|TestSoftDeleteRepeat|TestHarnessObservation|TestHarnessResolver|TestHarnessAcceptance|TestCompleteTaskGuarded|TestHypothesisLifecycle|TestExperimentPreRegistration|TestConditionInvalidationLoop|TestExperimentSelection|TestReviewPacket' ./db
+ARTEX_TEST_PG_DSN="$DSN" go test -race -count=1 -v -run 'TestTaskPlanPG|TestGraphOps|TestGraphIntegrity|TestSoftDeleteRepeat|TestHarnessObservation|TestHarnessResolver|TestHarnessAcceptance|TestCompleteTaskGuarded|TestHypothesisLifecycle|TestExperimentPreRegistration|TestConditionInvalidationLoop|TestExperimentSelection|TestReviewPacket|TestMineChangeProposals' ./db
 
 # M2.3 只读检查面装配（server 包，同 DSN 激活）。
 ARTEX_TEST_PG_DSN="$DSN" ARTEX_PG_DSN="$DSN" go test -count=1 -run 'TestBuildResearchInspection' ./server > /tmp/artex-research-inspect.log 2>&1 || {
