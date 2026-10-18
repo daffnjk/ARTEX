@@ -207,6 +207,33 @@ func renderHypothesesBlock(hyps []db.Hypothesis, experiments []db.Experiment) st
 		}
 	}
 	b.WriteString("纪律：问题未定时保持 ≥2 条可区分假设（state_hypotheses 整体重述）；为待区分问题用 declare_experiment 预注册实验（期望=与观察同粒度的【精确一行】，系统按精确相等匹配）；单一匹配才判定，歧义不判定。假设不是证据——prove_goal 仍只认 fact/finding。")
+	return b.String()
+}
+
+// renderExperimentRecommendations 渲染可解释实验推荐（M3.3）：排序理由与
+// 边界排除显式呈现给 planner（决策可审计；推荐是建议，派发仍由 planner 决定）。
+func renderExperimentRecommendations(cands []db.ExperimentCandidate) string {
+	if len(cands) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString("\n\n【实验推荐（可解释排序；被排除者标注理由）】：\n")
+	shown := 0
+	for _, c := range cands {
+		if c.Excluded {
+			fmt.Fprintf(&b, "  ✗ #%d %s —— 排除：%s\n", c.ID, c.Action, c.ExclusionReason)
+			continue
+		}
+		if shown >= 5 {
+			break
+		}
+		shown++
+		fmt.Fprintf(&b, "  → #%d [%s] %s —— %s\n", c.ID, c.Status, c.Action, strings.Join(c.Reasons, "；"))
+	}
+	if shown == 0 {
+		b.WriteString("  （所有开放实验都被边界排除——不要派发它们；考虑 state_hypotheses 重述或收敛问题）\n")
+	}
+	return b.String()
 	// 体积上限（审查 P2）：截断不静默。
 	if b.Len() > 16<<10 {
 		return b.String()[:16<<10] + "\n…（假设态渲染超上限已截断——用 state_hypotheses 收敛问题集）"

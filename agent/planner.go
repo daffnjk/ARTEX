@@ -501,6 +501,10 @@ func (p *Planner) Plan(ctx context.Context, taskID int64, as *db.AssetStore, ts 
 	hyps, hypErr := ts.ListHypotheses()
 	openExps, expErr := ts.OpenExperiments()
 	beliefBlock := renderHypothesesBlock(hyps, openExps)
+	recs, recErr := ts.RecommendExperiments()
+	if recErr == nil {
+		beliefBlock += renderExperimentRecommendations(recs)
+	}
 	if hypErr != nil || expErr != nil {
 		// 信念态读取失败不静默（审查 P2）——模型必须知道当前假设态不可用。
 		beliefBlock += "\n【假设态读取失败——当前竞争假设不可见，谨慎行事，勿据未知信念态判定】"

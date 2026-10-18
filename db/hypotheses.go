@@ -389,9 +389,11 @@ func (s *ExplorationStore) OpenExperiments() ([]Experiment, error) {
 		var e Experiment
 		var expRaw, outRaw []byte
 		var hypRaw string
-		if err := rows.Scan(&e.ID, &e.ExplorationID, &e.Question, &e.Action, &hypRaw, &expRaw, &e.IntentID, &e.Status, &outRaw, &e.StopCondition); err != nil {
+		var intentID sql.NullInt64
+		if err := rows.Scan(&e.ID, &e.ExplorationID, &e.Question, &e.Action, &hypRaw, &expRaw, &intentID, &e.Status, &outRaw, &e.StopCondition); err != nil {
 			return nil, err
 		}
+		e.IntentID = intentID.Int64
 		_ = json.Unmarshal([]byte(hypRaw), &e.HypothesisIDs)
 		_ = json.Unmarshal(expRaw, &e.Expectations)
 		if len(outRaw) > 0 {
