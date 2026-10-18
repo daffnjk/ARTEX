@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "task": "M1b.2a",
+  "baseline_commit": "177098c",
+  "implementation_commits": [
+    "f316a16"
+  ],
+  "tested_code_blobs_note": "see git show f316a16 for the authoritative blob list",
+  "inventory": "read-only Explore agent report preserved as the appendix of task-specs/M1b.2a.md; 4 HIGH gaps (C1 prove_goal, C2 add_intent, C3 record_fact, C4 goal+spawns x3 entrances) all one root cause: separate autocommit node/edge writes with swallowed errors; MEDIUM C5 finding mirror, C6 allMet race, C7 terminal-state retry; no network/exec inside DB transactions found (fs I/O inside evidence tx is documented deliberate design)",
+  "results": {
+    "pg_matrix": {
+      "command": "ARTEX_TEST_PG_DSN=<local-isolated> sh scripts/test-research-pg.sh (now includes TestGraphOps)",
+      "exit": 0,
+      "pass_cases": 18,
+      "new_cases": [
+        "TestGraphOpsIntentParentsAtomic (edge rollback incl. cross-exploration and ghost parents)",
+        "TestGraphOpsFactYieldsAtomic",
+        "TestGraphOpsGoalRootAtomic",
+        "TestGraphOpsProveGoalAtomic (atomic flip, idempotent repeat, non-goal, cross-exploration, non-open typed error)",
+        "TestGraphOpsFindingMirrorAtomic (row+payload mirror same tx)"
+      ],
+      "log_sha256": "7861cc64b5a6dc694074a0892a8ee91840c6b60281618cba7640ed1ca4441188"
+    },
+    "regression": "PASS: go build ./...; vet agent/db/server; ./agent; -race harness+cmd; TestGoalCompletion"
+  },
+  "not_verified": [
+    "mirror-failure rollback injection (covered by WithEvidenceTx semantics + positive sync test; no natural injection point without destructive schema tricks)",
+    "full LLM-loop end-to-end (unchanged boundary as M1b.1)"
+  ],
+  "independent_review": "COMPLETED (agent_c26c0094, 2026-10-18): APPROVE_WITH_P1 — P1 lineage-boundary/inheritance mismatch and P2s fixed in c2c1833, re-verified 18/18 PG matrix; report evidence/M1b-2a-review.md"
+}
