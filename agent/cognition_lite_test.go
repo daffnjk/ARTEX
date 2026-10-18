@@ -6,7 +6,7 @@ import (
 	actool "github.com/Autumn-27/norma/tool"
 )
 
-// M4.2 消融开关的注册面契约：cogLite 必须恰好摘除 3 个 M3 认知工具
+// M4.2 消融开关的注册面契约：cogAblated 必须恰好摘除 3 个 M3 认知工具
 // （假设声明/实验预注册/实验派发），其余 planner 工具一个不少；
 // worker 侧的 report_experiment_outcome 不消融——观察上报是环境回路，不是认知层。
 func TestCognitionLiteAblatesExactlyHypothesisTools(t *testing.T) {
@@ -20,7 +20,7 @@ func TestCognitionLiteAblatesExactlyHypothesisTools(t *testing.T) {
 	full := names(NewToolSet(nil, "planner").PlannerTools())
 
 	liteSet := NewToolSet(nil, "planner")
-	liteSet.cogLite = true
+	liteSet.cogAblated = true
 	lite := names(liteSet.PlannerTools())
 
 	for _, cog := range []string{"state_hypotheses", "declare_experiment", "dispatch_experiment"} {
@@ -28,7 +28,7 @@ func TestCognitionLiteAblatesExactlyHypothesisTools(t *testing.T) {
 			t.Errorf("full planner must register %s", cog)
 		}
 		if lite[cog] {
-			t.Errorf("cogLite planner must NOT register %s", cog)
+			t.Errorf("cogAblated planner must NOT register %s", cog)
 		}
 	}
 	if want := len(full) - 3; len(lite) != want {
@@ -38,13 +38,13 @@ func TestCognitionLiteAblatesExactlyHypothesisTools(t *testing.T) {
 		t.Errorf("lite must keep the non-cognition write path (report_finding/prove_goal)")
 	}
 
-	// worker 侧不受 cogLite 影响（同一 ToolSet 工厂，避免误消融观察回路）。
+	// worker 侧不受消融影响（同一 ToolSet 工厂，避免误消融观察回路）。
 	wn := names(NewToolSet(nil, "worker").WorkerTools())
 	if !wn["report_experiment_outcome"] {
 		t.Errorf("worker must always register report_experiment_outcome")
 	}
 	liteWorker := NewToolSet(nil, "worker")
-	liteWorker.cogLite = true
+	liteWorker.cogAblated = true
 	if lwn := names(liteWorker.WorkerTools()); !lwn["report_experiment_outcome"] {
 		t.Errorf("worker experiment reporting is the environment loop, not ablated")
 	}

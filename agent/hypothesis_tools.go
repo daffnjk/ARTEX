@@ -233,10 +233,9 @@ func renderExperimentRecommendations(cands []db.ExperimentCandidate) string {
 	if shown == 0 {
 		b.WriteString("  （所有开放实验都被边界排除——不要派发它们；考虑 state_hypotheses 重述或收敛问题）\n")
 	}
-	return b.String()
 	// 体积上限（审查 P2）：截断不静默。
 	if b.Len() > 16<<10 {
-		return b.String()[:16<<10] + "\n…（假设态渲染超上限已截断——用 state_hypotheses 收敛问题集）"
+		return b.String()[:16<<10] + "\n…（实验推荐渲染超上限已截断）"
 	}
 	return b.String()
 }

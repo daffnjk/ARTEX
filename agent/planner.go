@@ -53,9 +53,10 @@ type Planner struct {
 	// Options.Todos 置 nil、改用 plantodo.go 的持久化工具。nil = 内存模式原行为。
 	plans PlanPersister
 
-	// cogLite 关闭 M3 认知层（M4.2 消融变体专用，生产不设）：不注册假设/实验
-	// 工具、不渲染信念态与实验推荐。
-	cogLite bool
+	// M4.2 消融开关（倒置存储：零值=全开，生产装配不调用 SetCognition）。
+	// cogToolsOff：不注册 M3 假设/实验工具；cogRenderOff：不渲染信念态与实验推荐。
+	cogToolsOff  bool
+	cogRenderOff bool
 }
 
 func NewPlanner(prov llm.Provider, model, workDir string, tx *transcript.Store, window, maxTurns int) *Planner {
@@ -126,9 +127,12 @@ func (p *Planner) todoFor(expID int64) *actool.TodoStore {
 	return s
 }
 
-// SetCognitionLite 关闭 M3 认知层（假设/实验工具与信念渲染）——M4.2 消融
-// 变体专用；生产装配不调用。
-func (p *Planner) SetCognitionLite(lite bool) { p.cogLite = lite }
+// SetCognition 配置 M3 认知层（M4.2 消融变体专用；生产装配不调用，保持全开）。
+// tools=注册假设/实验工具；render=在态势 prompt 中渲染信念态与实验推荐。
+// 两参独立：C 变体=tools 且 !render，D 变体（全量）=tools 且 render。
+func (p *Planner) SetCognition(tools, render bool) {
+	p.cogToolsOff, p.cogRenderOff = !tools, !render
+}
 
 // SetPlanStore wires the authoritative task-plan persistence backend (M1b.1).
 // Once set, the planner hydrates its cross-round plan from storage at the start
@@ -379,7 +383,7 @@ func (p *Planner) Plan(ctx context.Context, taskID int64, as *db.AssetStore, ts 
 	// runs in a detached goroutine so it never adds latency to this round.
 	p.compactor.OnPlannerRound(ctx, ts)
 	tsx := NewToolSet(ts, "planner")
-	tsx.cogLite = p.cogLite
+	tsx.cogAblated = p.cogToolsOff
 	tsx.SetFindingRecorder(p.findingRecorder)
 	if as != nil {
 		tsx.SetAssetStore(as, as.Companies())
@@ -511,7 +515,7 @@ func (p *Planner) Plan(ctx context.Context, taskID int64, as *db.AssetStore, ts 
 	var openExps []db.Experiment
 	var hypErr, expErr error
 	beliefBlock := ""
-	if !p.cogLite {
+	if !p.cogRenderOff {
 		hyps, hypErr = ts.ListHypotheses()
 		openExps, expErr = ts.OpenExperiments()
 		beliefBlock = renderHypothesesBlock(hyps, openExps)
