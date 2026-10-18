@@ -60,6 +60,13 @@ if grep -Eq "SKIP" /tmp/artex-research-inspect.log; then
   fail "inspection assembly SKIPPED — not acceptable in the dedicated runner"
 fi
 
+# M4.3 脚本化环境契约（cmd/research-ablation，同 DSN 激活）。
+ARTEX_TEST_PG_DSN="$DSN" go test -count=1 -run 'TestHuntEnvironmentContract' ./cmd/research-ablation > /tmp/artex-research-hunt.log 2>&1 || {
+  cat /tmp/artex-research-hunt.log
+  fail "hunt environment contract FAILED"
+}
+cat /tmp/artex-research-hunt.log
+
 # 既有归档回归（testDSN 读 ARTEX_PG_DSN）：专用 runner 里 SKIP = 失败。
 ARTEX_PG_DSN="$DSN" go test -count=1 -v -run 'TestTaskArchiveDatabaseRoundTrip' ./db > /tmp/artex-research-pg-archive.log 2>&1 || {
   cat /tmp/artex-research-pg-archive.log

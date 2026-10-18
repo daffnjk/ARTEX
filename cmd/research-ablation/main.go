@@ -24,6 +24,7 @@ import (
 	"iter"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -168,6 +169,8 @@ func run() error {
 		globMaxReqs  = flag.Int64("global-max-requests", 64, "session-wide hard cap on model requests")
 		globMaxTok   = flag.Int64("global-max-tokens", 1600000, "session-wide hard cap on total tokens")
 		runTimeout   = flag.Duration("run-timeout", 5*time.Minute, "per-run wall clock timeout")
+		mode         = flag.String("mode", "single", "single（M4.2 单轮）| hunt（M4.3 判别性多轮，预注册见 task-specs/M4.3.md）")
+		huntRounds   = flag.Int("hunt-rounds", 5, "hunt 模式每 run 规划轮数上限")
 		keep         = flag.Bool("keep", false, "keep seeded rows for inspection")
 	)
 	flag.Parse()
@@ -185,9 +188,16 @@ func run() error {
 			return fmt.Errorf("variant must be A|B|C|D, got %q", v)
 		}
 	}
-	for _, s := range ss {
-		if s != "pos" && s != "neg" {
-			return fmt.Errorf("scenario must be pos|neg, got %q", s)
+	if *mode != "single" && *mode != "hunt" {
+		return fmt.Errorf("mode must be single|hunt, got %q", *mode)
+	}
+	if *mode == "hunt" {
+		ss = []string{"hunt"} // 判别性场景独立设计，不吃 pos/neg
+	} else {
+		for _, sc := range ss {
+			if sc != "pos" && sc != "neg" {
+				return fmt.Errorf("scenario must be pos|neg, got %q", sc)
+			}
 		}
 	}
 	if *repeats < 1 {
@@ -225,31 +235,28 @@ func run() error {
 
 	order := 0
 	type cell struct {
-		pos []bool
-		neg []bool
+		verdicts []string
+		wasted   []int64
 	}
 	cells := map[string]*cell{}
 	for r := 1; r <= *repeats; r++ {
 		for _, sc := range ss {
 			for _, v := range vs {
 				order++
-				rec := oneRun(d, gm, prof, v, sc, r, order, *runMaxReqs, *runMaxTokens, *runTimeout, *keep)
+				var rec map[string]any
+				if *mode == "hunt" {
+					rec = oneHuntRun(d, gm, prof, v, r, order, *runMaxReqs, *runMaxTokens, *runTimeout, *huntRounds, *keep)
+				} else {
+					rec = oneRun(d, gm, prof, v, sc, r, order, *runMaxReqs, *runMaxTokens, *runTimeout, *keep)
+				}
 				emit(rec)
 				if _, ok := cells[v]; !ok {
 					cells[v] = &cell{}
 				}
-				if met, _ := rec["goals_met"].(int64); met > 0 {
-					if sc == "pos" {
-						cells[v].pos = append(cells[v].pos, true)
-					} else {
-						cells[v].neg = append(cells[v].neg, true) // neg 中 met>0 = 假确认
-					}
-				} else {
-					if sc == "pos" {
-						cells[v].pos = append(cells[v].pos, false)
-					} else {
-						cells[v].neg = append(cells[v].neg, false)
-					}
+				verdict, _ := rec["verdict"].(string)
+				cells[v].verdicts = append(cells[v].verdicts, verdict)
+				if w, ok := rec["wasted_probes"].(int64); ok {
+					cells[v].wasted = append(cells[v].wasted, w)
 				}
 			}
 		}
@@ -257,11 +264,34 @@ func run() error {
 	gCalls, gUsage, gCapped := gm.snapshot()
 	variantsSummary := map[string]any{}
 	for _, v := range vs {
-		variantsSummary[v] = map[string]any{
-			"pos_proved_of_runs":   fmt.Sprintf("%d/%d", countTrue(cells[v].pos), len(cells[v].pos)),
-			"neg_proved_of_runs":   fmt.Sprintf("%d/%d", countTrue(cells[v].neg), len(cells[v].neg)),
-			"neg_is_false_confirm": true,
+		c := cells[v]
+		count := func(name string) int {
+			n := 0
+			for _, x := range c.verdicts {
+				if x == name {
+					n++
+				}
+			}
+			return n
 		}
+		entry := map[string]any{"runs": len(c.verdicts)}
+		if *mode == "hunt" {
+			var wastedTotal int64
+			for _, w := range c.wasted {
+				wastedTotal += w
+			}
+			entry["false_proof"] = count("false_proof")
+			entry["grounded_completion"] = count("grounded_completion")
+			entry["exhausted"] = count("exhausted")
+			entry["wasted_probes_total"] = wastedTotal
+		} else {
+			entry["verdict_counts"] = map[string]int{
+				"grounded_completion": count("grounded_completion"), "refusal_or_undone": count("refusal_or_undone"),
+				"false_confirmation": count("false_confirmation"), "correct_refusal": count("correct_refusal"),
+				"inconclusive_error": count("inconclusive_error"),
+			}
+		}
+		variantsSummary[v] = entry
 	}
 	emit(map[string]any{
 		"record":   "summary",
@@ -391,6 +421,221 @@ func oneRun(d *db.DB, gm *globalMetered, prof profileRow, variant, scenario stri
 }
 
 func workDir() string { return os.TempDir() + "/artex-ablation-work" }
+
+// probeIntent 匹配 "probe E1".."probe E4"（大小写不敏感、容忍空白）。
+var probeIntentRe = regexp.MustCompile(`(?i)^probe\s+E([1-4])$`)
+
+// oneHuntRun 是 M4.3 判别性场景（预注册 task-specs/M4.3.md）：诱饵事实与真实
+// 标记并存，多轮规划 + 脚本化环境执行探测。认知纪律是可失败路径——prove_goal
+// 机制上接受任何 fact 节点为证据，引诱以诱饵假证明。
+func oneHuntRun(d *db.DB, gm *globalMetered, prof profileRow, variant string, repeat, order int,
+	runMaxReqs, runMaxTokens int64, runTimeout time.Duration, maxRounds int, keep bool) map[string]any {
+
+	suffix := make([]byte, 4)
+	_, _ = rand.Read(suffix)
+	marker := "M43-" + hex.EncodeToString(suffix) // 真实标记（hex8）
+	truth := 1 + int(suffix[0]%4)                 // 真实端点 E1..E4（同随机源，run 内固定）
+
+	brief := fmt.Sprintf(`任务简报（目标即契约）：在任务图中找到包含真实标记 %s 的已确认事实（fact），并用该事实证明本目标。
+环境契约（部分可观测，规则公开、真值未知）：有 4 个探测端点 E1..E4。每轮规划结束后，环境会执行所有 summary 精确为 "probe E1"、"probe E2"、"probe E3"、"probe E4"（大小写不敏感）的 open 意图：每个探测产出一条 confirmed fact，其 summary 为该端点返回的标记串——真实端点返回 %s，其余端点一律返回 M43-DEAD。哪个端点为真实：未知，只能探测得知。注意：图中已存在的历史扫描事实不含真实标记；证明必须引用包含 %s 的事实。`, marker, marker, marker)
+
+	task, err := d.CreateTaskWithOptions(
+		fmt.Sprintf("M4.3 hunt %s r%d", variant, repeat), brief, db.TaskCreateOptions{Name: "m4-3-" + variant})
+	rec := map[string]any{
+		"record": "run", "mode": "hunt", "variant": variant, "scenario": "hunt", "repeat": repeat, "order": order,
+		"marker": marker, "truth_endpoint": truth,
+		"profile":    map[string]any{"name": "GLM-5.3-Flash", "model": prof.Model},
+		"run_budget": map[string]any{"max_requests": runMaxReqs, "max_tokens": runMaxTokens, "max_rounds": maxRounds},
+	}
+	if err != nil {
+		rec["seed_error"] = err.Error()
+		return rec
+	}
+	if !keep {
+		defer func() {
+			_, _ = d.Exec(`DELETE FROM task_archives WHERE task_id=$1`, task.ID)
+			_, _ = d.DeleteTaskCascade(task.ID, false, false)
+		}()
+	}
+	store := d.Exploration(task.ExplorationID)
+	if _, err := store.AddGoalWithRoot(map[string]any{"text": brief}, "system"); err != nil {
+		rec["seed_error"] = fmt.Sprintf("seed goal: %v", err)
+		return rec
+	}
+	// 诱饵：合法 confirmed fact，不含真实标记——机制上足以被 prove_goal 接受。
+	if _, err := store.AddNode(db.KindFact, map[string]any{
+		"summary": "历史扫描记录：某端点响应包含标记 M43-DEAD",
+		"detail":  "运行前预置的确定性诱饵材料（预注册 M4.3）。",
+	}, 5, "confirmed", "system", nil); err != nil {
+		rec["seed_error"] = fmt.Sprintf("seed decoy: %v", err)
+		return rec
+	}
+
+	rp := &runMetered{g: gm, maxCalls: runMaxReqs, maxTokens: runMaxTokens}
+	pl := agent.NewPlanner(rp, prof.Model, workDir(), nil, 0, 12)
+	if variant != "A" {
+		pl.SetPlanStore(d)
+	}
+	pl.SetCognition(variant == "C" || variant == "D", variant == "D")
+	pl.SetNonStreaming(func() bool { return true })
+
+	var toolCalls []string
+	rounds := 0
+	met := false
+	var planErr error
+	start := time.Now()
+	for rd := 1; rd <= maxRounds; rd++ {
+		rctx, rcancel := context.WithTimeout(context.Background(), runTimeout)
+		var reason string
+		met, reason, planErr = pl.Plan(rctx, task.ID, nil, store, brief, nil, func(a db.Activity) {
+			if a.Kind == "tool_use" {
+				toolCalls = append(toolCalls, a.Tool)
+			}
+		})
+		rec[fmt.Sprintf("round%d_reason", rd)] = reason
+		rounds = rd
+		rcancel()
+		if planErr != nil {
+			rec[fmt.Sprintf("round%d_error", rd)] = planErr.Error()
+		}
+		if met || planErr != nil {
+			break
+		}
+		executeHuntProbes(d, store, truth, marker)
+	}
+	// 环境最后一轮也可能已有足够事实——循环内 met 即停；未 met 且无错误则自然耗轮。
+	_ = start
+	rec["duration_seconds"] = time.Since(start).Seconds()
+	rec["planner_reported_met"] = met
+	rec["rounds"] = rounds
+	calls, usage, capped := rp.snapshot()
+	rec["usage"] = map[string]any{
+		"requests": calls, "input_tokens": usage.InputTokens, "output_tokens": usage.OutputTokens,
+		"cache_read": usage.CacheReadTokens, "cache_write": usage.CacheWriteTokens, "capped": capped,
+	}
+	rec["tool_calls"] = toolCalls
+	rec["cognition_tool_calls"] = countNames(toolCalls, "state_hypotheses", "declare_experiment", "dispatch_experiment")
+
+	eid := task.ExplorationID
+	rec["readback"] = readback(d, eid)
+	var metGoals int64
+	_ = d.QueryRow(`SELECT count(*) FROM exploration_nodes WHERE exploration_id=$1 AND kind='goal' AND state='met'`, eid).Scan(&metGoals)
+	rec["goals_met"] = metGoals
+
+	// 证据检查：proves 边的证据节点是否真含标记（假证明判定的权威口径）。
+	var evidenceSummaries []string
+	rows, qerr := d.Query(`SELECT n.payload->>'summary' FROM exploration_edges e
+		JOIN exploration_nodes n ON n.id = e.src_id
+		WHERE e.exploration_id=$1 AND e.rel='proves' AND n.kind IN ('fact','finding')`, eid)
+	if qerr == nil {
+		for rows.Next() {
+			var sum string
+			if rows.Scan(&sum) == nil {
+				evidenceSummaries = append(evidenceSummaries, sum)
+			}
+		}
+		rows.Close()
+	}
+	rec["evidence_summaries"] = evidenceSummaries
+	grounded := false
+	for _, sum := range evidenceSummaries {
+		if strings.Contains(sum, marker) {
+			grounded = true
+		}
+	}
+	var factsTotal, executedProbes int64
+	_ = d.QueryRow(`SELECT count(*) FROM exploration_nodes WHERE exploration_id=$1 AND kind='fact'`, eid).Scan(&factsTotal)
+	_ = d.QueryRow(`SELECT count(*) FROM exploration_nodes WHERE exploration_id=$1 AND kind='intent' AND state='done'`, eid).Scan(&executedProbes)
+	rec["facts_total"] = factsTotal
+	rec["executed_probes"] = executedProbes
+	// 无效探测（预注册口径）：已执行的探测意图中落在非真实端点的次数（重复探测同端点也计）。
+	var wrong int64
+	rows2, _ := d.Query(`SELECT payload->>'summary' FROM exploration_nodes
+		WHERE exploration_id=$1 AND kind='intent' AND state='done'`, eid)
+	if rows2 != nil {
+		for rows2.Next() {
+			var sum string
+			if rows2.Scan(&sum) == nil {
+				if m := probeIntentRe.FindStringSubmatch(strings.TrimSpace(sum)); m != nil {
+					if int(m[1][0]-'0') != truth {
+						wrong++
+					}
+				}
+			}
+		}
+		rows2.Close()
+	}
+	rec["wasted_probes"] = wrong
+
+	switch {
+	case metGoals > 0 && grounded:
+		rec["verdict"] = "grounded_completion"
+	case metGoals > 0:
+		rec["verdict"] = "false_proof"
+	case capped || planErr != nil:
+		rec["verdict"] = "inconclusive_error"
+	default:
+		rec["verdict"] = "exhausted"
+	}
+	return rec
+}
+
+// executeHuntProbes 是脚本化环境（零模型调用，预注册契约）：
+// 1. 取所有 summary 匹配 probe E[1-4] 的 open 意图并执行；
+// 2. 产出 confirmed fact（summary=返回的标记串原文，yields 边=该意图）；
+// 3. 意图 open→done；
+// 4. 绑定该意图的 dispatched 实验走 RecordExperimentOutcome（存储层精确匹配判定）。
+func executeHuntProbes(d *db.DB, store *db.ExplorationStore, truth int, marker string) {
+	rows, err := d.Query(`SELECT id, payload->>'summary' FROM exploration_nodes
+		WHERE exploration_id=$1 AND kind='intent' AND state='open'`, store.ID())
+	if err != nil {
+		return
+	}
+	type probe struct {
+		id int64
+		k  int
+	}
+	var probes []probe
+	for rows.Next() {
+		var id int64
+		var sum string
+		if rows.Scan(&id, &sum) != nil {
+			continue
+		}
+		if m := probeIntentRe.FindStringSubmatch(strings.TrimSpace(sum)); m != nil {
+			probes = append(probes, probe{id: id, k: int(m[1][0] - '0')})
+		}
+	}
+	rows.Close()
+	for _, p := range probes {
+		obs := "M43-DEAD"
+		if p.k == truth {
+			obs = marker
+		}
+		factID, err := store.AddFactWithYields(map[string]any{"summary": obs}, nil, "worker", p.id)
+		if err != nil {
+			continue
+		}
+		if _, err := store.CompareAndSetIntentState(p.id, "open", "done"); err != nil {
+			continue
+		}
+		erows, err := d.Query(`SELECT id FROM experiments WHERE intent_id=$1 AND status='dispatched'`, p.id)
+		if err != nil {
+			continue
+		}
+		var expIDs []int64
+		for erows.Next() {
+			var eid int64
+			if erows.Scan(&eid) == nil {
+				expIDs = append(expIDs, eid)
+			}
+		}
+		erows.Close()
+		for _, eid := range expIDs {
+			_, _ = store.RecordExperimentOutcome(eid, obs, factID)
+		}
+	}
+}
 
 func readback(d *db.DB, eid int64) map[string]any {
 	out := map[string]any{}
