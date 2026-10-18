@@ -52,11 +52,13 @@ func compactIntents(ns []*db.Node, parentsOf, yieldsOf map[int64][]int64) []map[
 // One ToolSet is created per planner/worker run; per-run signals live here.
 type ToolSet struct {
 	findingRecorder FindingRecorder
-	as              *db.AssetStore   // asset store (optional; nil = asset tools not available)
-	cs              *db.CompanyStore // company store (optional)
-	ts              *db.ExplorationStore
-	worker          string
-	taskID          int64 // PG tasks.id; 0 when unknown (tests / orchestrator cross-task reads)
+	// cogLite 为 true 时不注册 M3 假设/实验工具（M4.2 消融变体；由 planner 传导）。
+	cogLite bool
+	as      *db.AssetStore   // asset store (optional; nil = asset tools not available)
+	cs      *db.CompanyStore // company store (optional)
+	ts      *db.ExplorationStore
+	worker  string
+	taskID  int64 // PG tasks.id; 0 when unknown (tests / orchestrator cross-task reads)
 	// coverageDisabled mirrors tasks.coverage_enabled=false. Stored inverted so the
 	// zero value (all existing ToolSet constructions) means ENABLED — matching the
 	// DB default (true). When true: graphOverviewData drops the coverage block, the
@@ -2013,10 +2015,15 @@ func (t *ToolSet) listWorkerTraces() actool.CoreTool {
 
 // PlannerTools is the read + intent-generation + goal-judgement tool set.
 func (t *ToolSet) PlannerTools() []actool.CoreTool {
-	return []actool.CoreTool{
+	tools := []actool.CoreTool{
 		t.graphOverview(), t.listFindings(), t.listFacts(), t.nodeDetail(),
-		// M3.1：条件化认知——竞争假设与预注册区分性实验进入真实调用链。
-		t.stateHypotheses(), t.declareExperiment(), t.dispatchExperiment(),
+	}
+	// M3.1：条件化认知——竞争假设与预注册区分性实验进入真实调用链
+	//（cogLite 消融变体不注册——M4.2）。
+	if !t.cogLite {
+		tools = append(tools, t.stateHypotheses(), t.declareExperiment(), t.dispatchExperiment())
+	}
+	tools = append(tools,
 		// cold-digest §6.1: restore folded cold nodes (digest body → members → detail).
 		t.expandDigest(),
 		t.getWorkerOutput(), t.getWorkerTrace(), t.searchAllWorkerTraces(), t.listGoals(), t.addIntent(), t.proveGoal(), t.goalMet(),
@@ -2034,5 +2041,6 @@ func (t *ToolSet) PlannerTools() []actool.CoreTool {
 		t.addTaskScope(),
 		// list_untested_assets：按需查本任务范围内未测资产(类型+分页)，自行决定补测。
 		t.listUntestedAssets(),
-	}
+	)
+	return tools
 }

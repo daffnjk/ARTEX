@@ -52,6 +52,10 @@ type Planner struct {
 	// hydrate（失败即停止本轮，绝不回退空内存），TodoWrite 先 CAS 落盘后确认，
 	// Options.Todos 置 nil、改用 plantodo.go 的持久化工具。nil = 内存模式原行为。
 	plans PlanPersister
+
+	// cogLite 关闭 M3 认知层（M4.2 消融变体专用，生产不设）：不注册假设/实验
+	// 工具、不渲染信念态与实验推荐。
+	cogLite bool
 }
 
 func NewPlanner(prov llm.Provider, model, workDir string, tx *transcript.Store, window, maxTurns int) *Planner {
@@ -121,6 +125,10 @@ func (p *Planner) todoFor(expID int64) *actool.TodoStore {
 	}
 	return s
 }
+
+// SetCognitionLite 关闭 M3 认知层（假设/实验工具与信念渲染）——M4.2 消融
+// 变体专用；生产装配不调用。
+func (p *Planner) SetCognitionLite(lite bool) { p.cogLite = lite }
 
 // SetPlanStore wires the authoritative task-plan persistence backend (M1b.1).
 // Once set, the planner hydrates its cross-round plan from storage at the start
@@ -371,6 +379,7 @@ func (p *Planner) Plan(ctx context.Context, taskID int64, as *db.AssetStore, ts 
 	// runs in a detached goroutine so it never adds latency to this round.
 	p.compactor.OnPlannerRound(ctx, ts)
 	tsx := NewToolSet(ts, "planner")
+	tsx.cogLite = p.cogLite
 	tsx.SetFindingRecorder(p.findingRecorder)
 	if as != nil {
 		tsx.SetAssetStore(as, as.Companies())
@@ -498,12 +507,18 @@ func (p *Planner) Plan(ctx context.Context, taskID int64, as *db.AssetStore, ts 
 	} else {
 		crossRoundTodos = opts.Todos.List()
 	}
-	hyps, hypErr := ts.ListHypotheses()
-	openExps, expErr := ts.OpenExperiments()
-	beliefBlock := renderHypothesesBlock(hyps, openExps)
-	recs, recErr := ts.RecommendExperiments()
-	if recErr == nil {
-		beliefBlock += renderExperimentRecommendations(recs)
+	var hyps []db.Hypothesis
+	var openExps []db.Experiment
+	var hypErr, expErr error
+	beliefBlock := ""
+	if !p.cogLite {
+		hyps, hypErr = ts.ListHypotheses()
+		openExps, expErr = ts.OpenExperiments()
+		beliefBlock = renderHypothesesBlock(hyps, openExps)
+		recs, recErr := ts.RecommendExperiments()
+		if recErr == nil {
+			beliefBlock += renderExperimentRecommendations(recs)
+		}
 	}
 	if hypErr != nil || expErr != nil {
 		// 信念态读取失败不静默（审查 P2）——模型必须知道当前假设态不可用。
