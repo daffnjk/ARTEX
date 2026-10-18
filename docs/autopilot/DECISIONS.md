@@ -63,3 +63,13 @@
   否则得到的是无区分力的零效应（本 pilot 即实例）。
 - M3.2–M4.1 独立审查（agent_068cba5d）APPROVE_WITH_P1：P1=supported 假设不合并
   区分性证据 fact 到 basis_node_ids，失效监测漏网；P2×7 见 evidence/M3-2-M4-1-review.md。
+
+## 2026-10-19 00:15 批审 P1 修复 + 级联删除认知史
+- supported 假设的证据链闭合：区分性 fact 并入 basis（否则失效监测按 basis
+  检索会漏掉真正的支撑证据撤回）。
+- DeleteTaskCascade 与追加式触发器的冲突是结构性 bug（任务删不掉 + 测试清理
+  静默失败累积残留）。选择 owner 级事务内 DISABLE/ENABLE 触发器而非
+  session_replication_role：后者要 superuser，owner 权限即可且 DDL 事务性
+  保证回滚还原。
+- 测试清理路径必须与被测代码同源（m31Store 改走 DeleteTaskCascade 后，
+  研究库残留从 192/123 清零并保持为零——复跑矩阵即验证）。

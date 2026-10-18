@@ -160,10 +160,14 @@
    "acceptance": [
     "all completion paths and authority inventory; no premature release"
    ],
-   "status": "DRAFT",
-   "attempts": {},
+   "status": "DONE",
+   "attempts": {
+    "1": "完成入口清单+固定写面（见 evidence 与 RUNBOOK §3 完成/验收行；后续 M1b.3b 已在其上落地）"
+   },
    "commits": [],
-   "evidence": []
+   "evidence": [
+    "evidence/M1b-3a-local-results.json"
+   ]
   },
   {
    "id": "M1b.3b",
