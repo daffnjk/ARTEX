@@ -6,7 +6,7 @@
   "work_branch": "research/autopilot-v2",
   "observed_main_commit": "cc8acc9da541c902e332d608833c461d40a26966",
   "checkpoint_parent_commit": "cc8acc9da541c902e332d608833c461d40a26966",
-  "last_verified_code_commit": "c2c1833 (M1b.2a atomic graph ops + review fixes; 18/18 PG matrix); M0.1 7762813; M1b.1 d12f2ff/177098c",
+  "last_verified_code_commit": "baseline runs on c5ede8b tree (M0.2 pos/neg PASS as expected, metered); M1b.2a c2c1833; M0.1 7762813; M1b.1 d12f2ff/177098c",
   "verified_scope_note": "M1b.1a storage 24a6337 + M1b.1b planner integration d12f2ff: real isolated PostgreSQL 17.11 matrix 8/8 PASS with race; agent tool unit 6/6; full regression (build/vet/race harness/cmd/TestGoalCompletion/agent pkg) PASS; see evidence/M1b-1-local-results.json",
   "historical_verified_commit": "be0d4e65ba4d382556ac69f65aefc0899f938d80",
   "historical_verification_scope": "M1a.1 via PR #2; baseline re-run locally this session before M1b.1 work",
@@ -25,18 +25,12 @@
       "strategies_attempted": 1,
       "next_strategy": "none; keep using the isolated local test database only",
       "status": "RESOLVED_LOCAL"
-    },
-    {
-      "id": "MODEL-BUDGET",
-      "scope": "live model baseline/ablation",
-      "root_cause": "no approved configured model credentials or measurable quota in current executor",
-      "strategies_attempted": 0,
-      "status": "NEEDS_INPUT"
     }
   ],
   "independent_review": "M1b.2a+M0.1 COMPLETED 2026-10-18 (agent_c26c0094): APPROVE_WITH_P1, fixed in c2c1833, re-verified; M1b.1 earlier (agent_fdb4fd4e); reports in evidence/",
   "remote_save": "research/autopilot-v2 pushed through ecadba4 (15 commits); draft PR #3 open; CI run 39130370327 all green incl. first real research-postgres run",
   "deployment_actions_in_session": false,
   "last_verified_scope": "M1b.1 storage + planner CAS lifecycle on real isolated PostgreSQL; full regression battery",
-  "local_workdir": "/Users/admin/Documents/渗透测试/ARTEX"
+  "local_workdir": "/Users/admin/Documents/渗透测试/ARTEX",
+  "model_budget_state": "APPROVED and first-used 2026-10-18: GLM-5.3-Flash via operator profile, preregistered caps enforced by the metering wrapper; see evidence/M0-2-baseline-runs.json"
 }
