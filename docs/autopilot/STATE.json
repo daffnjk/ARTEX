@@ -6,12 +6,12 @@
   "work_branch": "research/autopilot-v2",
   "observed_main_commit": "cc8acc9da541c902e332d608833c461d40a26966",
   "checkpoint_parent_commit": "cc8acc9da541c902e332d608833c461d40a26966",
-  "last_verified_code_commit": "c9491eb (M1b.2b 20/20 PG matrix); M0.2 8d1581e baseline pos/neg; earlier see history",
+  "last_verified_code_commit": "96bd085 (M1b.3b 25/25 PG matrix); M2.2 d2bbf1c 24/24; M2.1 68d7bdd; M1b.3a 3ee1762; review-fix 35bb667",
   "verified_scope_note": "M1b.1a storage 24a6337 + M1b.1b planner integration d12f2ff: real isolated PostgreSQL 17.11 matrix 8/8 PASS with race; agent tool unit 6/6; full regression (build/vet/race harness/cmd/TestGoalCompletion/agent pkg) PASS; see evidence/M1b-1-local-results.json",
   "historical_verified_commit": "be0d4e65ba4d382556ac69f65aefc0899f938d80",
   "historical_verification_scope": "M1a.1 via PR #2; baseline re-run locally this session before M1b.1 work",
-  "current_task": "M1b.3a completion-path inventory (dependency-ready); M1b.2b reviewer pass queued",
-  "next_task": "M1b.3a then M2.1; batch independent review for M0.2+M1b.2b",
+  "current_task": "M2.3 read-only inspection API + controlled completion-evaluation integration (design)",
+  "next_task": "M2.3 then M3.1 (deps M2.3+M0.2); batch review for M2.1/M2.2/M1b.3b",
   "run_state": "WORKING",
   "writer": "current authorized executor; single writer on research/autopilot-v2",
   "external_scheduler": "not configured",
@@ -32,5 +32,6 @@
   "deployment_actions_in_session": false,
   "last_verified_scope": "M1b.1 storage + planner CAS lifecycle on real isolated PostgreSQL; full regression battery",
   "local_workdir": "/Users/admin/Documents/渗透测试/ARTEX",
-  "model_budget_state": "APPROVED and first-used 2026-10-18: GLM-5.3-Flash via operator profile, preregistered caps enforced by the metering wrapper; see evidence/M0-2-baseline-runs.json"
+  "model_budget_state": "APPROVED and first-used 2026-10-18: GLM-5.3-Flash via operator profile, preregistered caps enforced by the metering wrapper; see evidence/M0-2-baseline-runs.json",
+  "tonight_progress": "2026-10-18 night: M0.2, M1b.2b, M1b.3a, M2.1, M2.2, M1b.3b all DONE + batch review (agent_062a7276 APPROVE_WITH_P1, both P1s fixed incl. evidence misreading retraction)"
 }
