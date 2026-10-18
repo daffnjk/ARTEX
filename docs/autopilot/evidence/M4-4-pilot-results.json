@@ -25,8 +25,9 @@
    "wasted_probes": 3
   },
   "D": {
-   "attempts": "2 次均因网关传输错误（unexpected EOF）失败——基础设施失败按预注册条款重跑一次仍失败，双记录存档；改用 M4.3 同场景成功 D 运行作对照",
-   "comparison_from_M43": "无纪律 D 成功运行：state_hypotheses×1（部分采用）、实验预注册/派发=0"
+   "attempts": "3 次均因网关不稳失败（240s 停滞→unexpected EOF→360s 停滞），双记录+第三记录存档（M4-4-pilot-D-rerun2.jsonl）；同根因第 3 次尝试后按约束停止重试。对照仍取 M4.3 成功 D 运行。",
+   "comparison_from_M43": "无纪律 D 成功运行：state_hypotheses×1（部分采用）、实验预注册/派发=0",
+   "third_attempt_note": "第三次尝试在停滞前自发 state_hypotheses×4（8 条 active）——无纪律下『部分采用声明、实验始终为零』的结论再获佐证。"
   }
  },
  "interpretation": [
@@ -39,5 +40,6 @@
   "n=1；D 对照取自 M4.3 同场景成功运行（跨批次，同装配无纪律）。",
   "D 本批 2 次网关传输失败均存档未隐藏；未做第 3 次重试（网关当时不稳，同根因不超 3 策略约束下选择如实记录）。",
   "inconclusive 判定说明期望书写规范需要在工具描述/纪律指令中继续打磨——留作后续。"
- ]
+ ],
+ "usage_note": "M4.4 批次总用量 15/24 请求（含三次 D 失败尝试），未触顶。"
 }
