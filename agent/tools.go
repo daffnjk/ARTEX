@@ -2015,6 +2015,8 @@ func (t *ToolSet) listWorkerTraces() actool.CoreTool {
 func (t *ToolSet) PlannerTools() []actool.CoreTool {
 	return []actool.CoreTool{
 		t.graphOverview(), t.listFindings(), t.listFacts(), t.nodeDetail(),
+		// M3.1：条件化认知——竞争假设与预注册区分性实验进入真实调用链。
+		t.stateHypotheses(), t.declareExperiment(), t.dispatchExperiment(),
 		// cold-digest §6.1: restore folded cold nodes (digest body → members → detail).
 		t.expandDigest(),
 		t.getWorkerOutput(), t.getWorkerTrace(), t.searchAllWorkerTraces(), t.listGoals(), t.addIntent(), t.proveGoal(), t.goalMet(),

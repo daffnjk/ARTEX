@@ -404,6 +404,78 @@ DROP TRIGGER IF EXISTS trg_harness_acc_rewrite ON harness_acceptance;
 CREATE TRIGGER trg_harness_acc_rewrite BEFORE UPDATE OR DELETE ON harness_acceptance
     FOR EACH ROW EXECUTE FUNCTION forbid_acceptance_rewrite();
 
+-- hypotheses / experiments (research M3.1)：条件化假设与预注册区分性实验。
+-- 认知契约：假设是环境的竞争内部模型（同问题 ≥2 活跃假设是常态，禁止过早
+-- 收敛）；实验期望在派发前声明且派发后不可变（结构性预注册，防事后拟合）；
+-- 假设状态翻转必须由区分性实验结果驱动（带事件流历史），模型叙事不能自证。
+CREATE TABLE IF NOT EXISTS hypotheses (
+    id              BIGSERIAL PRIMARY KEY,
+    exploration_id  BIGINT NOT NULL REFERENCES explorations(id) ON DELETE CASCADE,
+    question        TEXT NOT NULL,
+    statement       TEXT NOT NULL,
+    status          TEXT NOT NULL DEFAULT 'active'
+                    CHECK (status IN ('active','supported','refuted','superseded')),
+    basis_node_ids  BIGINT[] NOT NULL DEFAULT '{}',
+    notes           TEXT NOT NULL DEFAULT '',
+    created_by      TEXT NOT NULL DEFAULT 'planner',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_hypotheses_exp ON hypotheses(exploration_id, status);
+DROP TRIGGER IF EXISTS trg_hypotheses_upd ON hypotheses;
+CREATE TRIGGER trg_hypotheses_upd BEFORE UPDATE ON hypotheses
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- 假设状态变迁事件流（append-only）：M3.2 条件失效唤醒需要完整历史。
+CREATE TABLE IF NOT EXISTS hypothesis_events (
+    id              BIGSERIAL PRIMARY KEY,
+    hypothesis_id   BIGINT NOT NULL REFERENCES hypotheses(id) ON DELETE CASCADE,
+    from_status     TEXT NOT NULL,
+    to_status       TEXT NOT NULL,
+    reason          TEXT NOT NULL,
+    experiment_id   BIGINT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_hyp_events ON hypothesis_events(hypothesis_id, id);
+
+-- 实验规格：期望（per-hypothesis 预期观察）在 declared 时写定；派发后任何
+-- 改写被触发器拒绝（预注册结构性强制）。结果只允许经 RecordOutcome 路径追加。
+CREATE TABLE IF NOT EXISTS experiments (
+    id              BIGSERIAL PRIMARY KEY,
+    exploration_id  BIGINT NOT NULL REFERENCES explorations(id) ON DELETE CASCADE,
+    question        TEXT NOT NULL,
+    action          TEXT NOT NULL,
+    hypothesis_ids  BIGINT[] NOT NULL DEFAULT '{}',
+    expectations    JSONB NOT NULL DEFAULT '{}',
+    intent_id       BIGINT,
+    status          TEXT NOT NULL DEFAULT 'declared'
+                    CHECK (status IN ('declared','dispatched','observed','inconclusive','invalid')),
+    outcome         JSONB NOT NULL DEFAULT '{}',
+    stop_condition  TEXT NOT NULL DEFAULT '',
+    declared_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    dispatched_at   TIMESTAMPTZ,
+    observed_at     TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_experiments_exp ON experiments(exploration_id, status);
+CREATE OR REPLACE FUNCTION forbid_experiment_spec_rewrite() RETURNS trigger AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'experiments are history (no delete)';
+  END IF;
+  IF OLD.status IN ('dispatched','observed','inconclusive') THEN
+    IF NEW.question <> OLD.question OR NEW.action <> OLD.action
+       OR NEW.hypothesis_ids <> OLD.hypothesis_ids
+       OR NEW.expectations::text <> OLD.expectations::text THEN
+      RAISE EXCEPTION 'experiment spec is immutable after dispatch (pre-registration)';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_experiments_spec ON experiments;
+CREATE TRIGGER trg_experiments_spec BEFORE UPDATE OR DELETE ON experiments
+    FOR EACH ROW EXECUTE FUNCTION forbid_experiment_spec_rewrite();
+
 CREATE TABLE IF NOT EXISTS activity (
     id                 BIGSERIAL PRIMARY KEY,
     exploration_id     BIGINT NOT NULL REFERENCES explorations(id) ON DELETE CASCADE,
