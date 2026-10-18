@@ -2,7 +2,9 @@
   "schema_version": 1,
   "task": "M2.1",
   "baseline_commit": "ed23873",
-  "implementation_commits": ["68d7bdd"],
+  "implementation_commits": [
+    "68d7bdd"
+  ],
   "results": {
     "pg_matrix": {
       "command": "ARTEX_TEST_PG_DSN=<local-isolated> sh scripts/test-research-pg.sh (now 22 cases)",
@@ -18,5 +20,5 @@
   },
   "finding_during_verification": "digest-only idempotency check accepted a cross-task id collision as idempotent (caught by the matrix across runs); fixed to full-identity comparison — recorded as a real boundary lesson, tests now use run-unique ids",
   "deferred": "live worker capture channel wiring + CLI/API surface belong to M2.2/M2.3",
-  "independent_review": "PENDING (queued with M0.2/M1b.2b batch)"
+  "independent_review": "COMPLETED in the M2.1-M3.1 batch (agent_143a00b5): no issues in M2.1's own surface; batch hardening (TRUNCATE guards, request_id unique) applied; see evidence/M2-M3-review.md"
 }

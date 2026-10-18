@@ -1169,6 +1169,10 @@ func (m *Manager) ApplyTaskAdmission(id, expectedStatus, status string, queued b
 	        WHEN $2 IN ('done','failed','timeout') THEN COALESCE(completed_at, now())
 	        ELSE NULL
 	    END,
+	    completed_source=CASE
+	        WHEN $2 IN ('done','failed','timeout') THEN completed_source
+	        ELSE ''
+	    END,
 	    paused=false,
 	    queued=$3,
 	    queued_at=CASE

@@ -27,6 +27,8 @@ func m31Store(t *testing.T) (*DB, *ExplorationStore) {
 	return d, d.Exploration(task.ExplorationID)
 }
 
+func keep1(hyps []Hypothesis) string { return hyps[0].Statement }
+
 func TestHypothesisLifecycle(t *testing.T) {
 	d, s := m31Store(t)
 	_ = d
@@ -38,6 +40,10 @@ func TestHypothesisLifecycle(t *testing.T) {
 	hyps, err := s.ListHypotheses()
 	if err != nil || len(hyps) != 2 {
 		t.Fatalf("want 2 hypotheses, got %d %v", len(hyps), err)
+	}
+	// 结构性反过早收敛：单假设重述被拒。
+	if err := s.UpsertHypotheses("why 500s", []Hypothesis{{Statement: keep1(hyps)}}); err == nil || !strings.Contains(err.Error(), "2 competing") {
+		t.Fatalf("single-hypothesis collapse must be rejected, got %v", err)
 	}
 	// 重述集合：替换一条 → 旧 active 变 superseded（事件留痕），已判定的不动。
 	keep := hyps[0].Statement
@@ -66,7 +72,7 @@ func TestHypothesisLifecycle(t *testing.T) {
 		t.Fatalf("supersede must leave an event, got %d", events)
 	}
 	// basis 边界：跨探索节点拒绝。
-	if err := s.UpsertHypotheses("bad basis", []Hypothesis{{Statement: "x", BasisNodeIDs: []int64{999999}}}); err == nil || !strings.Contains(err.Error(), "basis") {
+	if err := s.UpsertHypotheses("bad basis", []Hypothesis{{Statement: "x", BasisNodeIDs: []int64{999999}}, {Statement: "y"}}); err == nil || !strings.Contains(err.Error(), "basis") {
 		t.Fatalf("cross-exploration basis must be rejected, got %v", err)
 	}
 }
@@ -91,8 +97,8 @@ func TestExperimentPreRegistrationAndOutcome(t *testing.T) {
 		Question: "auth bypass?", Action: "send alg=none token",
 		HypothesisIDs: []int64{hyps[0].ID, hyps[1].ID},
 		Expectations: map[int64]string{
-			hyps[0].ID: "200 admin panel",
-			hyps[1].ID: "401 invalid token",
+			hyps[0].ID: "server returned 200 admin panel",
+			hyps[1].ID: "server returned 401 invalid token",
 		},
 	})
 	if err != nil {
@@ -164,6 +170,22 @@ func TestExperimentPreRegistrationAndOutcome(t *testing.T) {
 		if h.Question == "which cache?" && h.Status != "active" {
 			t.Fatalf("inconclusive outcome must not change hypothesis status: %+v", h)
 		}
+	}
+	// 声明一致性（审查 P1）：期望键与参试集不一致 → 拒绝。
+	if _, err := s.DeclareExperiment(Experiment{
+		Question: "mismatch", Action: "x",
+		HypothesisIDs: []int64{c1, c2},
+		Expectations:  map[int64]string{c1: "a", c1 + 1000: "b"},
+	}); err == nil || !strings.Contains(err.Error(), "not among") {
+		t.Fatalf("mismatched expectations must be rejected, got %v", err)
+	}
+	// 跨探索假设 → 拒绝。
+	if _, err := s.DeclareExperiment(Experiment{
+		Question: "foreign", Action: "x",
+		HypothesisIDs: []int64{c1, 999999},
+		Expectations:  map[int64]string{c1: "a", 999999: "b"},
+	}); err == nil {
+		t.Fatal("cross-exploration hypothesis must be rejected")
 	}
 	// 开放实验预算。
 	var declared int

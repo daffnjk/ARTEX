@@ -1,6 +1,8 @@
 package server
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -56,8 +58,11 @@ func buildResearchInspection(pg *db.DB, id string) (researchInspection, int, err
 		COALESCE(completed_source, '')
 		FROM tasks WHERE id=$1 AND deleted_at IS NULL`, taskID).
 		Scan(&status, &completedAt, &completedSource)
-	if err != nil {
+	if errors.Is(err, sql.ErrNoRows) {
 		return out, 404, fmt.Errorf("task not found")
+	}
+	if err != nil {
+		return out, 500, err // 审查 P2：DB 故障不是 404
 	}
 	out.Task.ID = id
 	out.Task.Status = status

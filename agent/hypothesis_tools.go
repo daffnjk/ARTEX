@@ -197,6 +197,10 @@ func renderHypothesesBlock(hyps []db.Hypothesis, experiments []db.Experiment) st
 			b.WriteString(fmt.Sprintf("    #%d [%s] %s（区分 %d 个假设）\n", e.ID, e.Status, e.Action, len(e.HypothesisIDs)))
 		}
 	}
-	b.WriteString("纪律：问题未定时保持 ≥2 条可区分假设（state_hypotheses 整体重述）；为待区分问题用 declare_experiment 预注册实验（期望先于执行声明）；单一匹配才判定，歧义不判定。假设不是证据——prove_goal 仍只认 fact/finding。")
+	b.WriteString("纪律：问题未定时保持 ≥2 条可区分假设（state_hypotheses 整体重述）；为待区分问题用 declare_experiment 预注册实验（期望=与观察同粒度的【精确一行】，系统按精确相等匹配）；单一匹配才判定，歧义不判定。假设不是证据——prove_goal 仍只认 fact/finding。")
+	// 体积上限（审查 P2）：截断不静默。
+	if b.Len() > 16<<10 {
+		return b.String()[:16<<10] + "\n…（假设态渲染超上限已截断——用 state_hypotheses 收敛问题集）"
+	}
 	return b.String()
 }

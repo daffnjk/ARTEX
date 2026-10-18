@@ -356,6 +356,8 @@ CREATE TABLE IF NOT EXISTS harness_evaluations (
     created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_harness_eval_task ON harness_evaluations(task_id, id);
+-- 审查硬化：request_id 唯一（重试重放不得重复追加评估存档）。
+CREATE UNIQUE INDEX IF NOT EXISTS uq_harness_eval_request ON harness_evaluations(request_id);
 -- 不可变强制：两张表拒绝 UPDATE/DELETE（append-only）。
 CREATE OR REPLACE FUNCTION forbid_mutation() RETURNS trigger AS $$
 BEGIN RAISE EXCEPTION '% is append-only (trusted harness storage)', TG_TABLE_NAME; END;
@@ -403,6 +405,17 @@ $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS trg_harness_acc_rewrite ON harness_acceptance;
 CREATE TRIGGER trg_harness_acc_rewrite BEFORE UPDATE OR DELETE ON harness_acceptance
     FOR EACH ROW EXECUTE FUNCTION forbid_acceptance_rewrite();
+-- 审查硬化：单当前版本不变量（部分唯一索引）；TRUNCATE 同样被拒。
+CREATE UNIQUE INDEX IF NOT EXISTS uq_harness_acc_current ON harness_acceptance(task_id, goal_id) WHERE is_current;
+DROP TRIGGER IF EXISTS trg_harness_obs_trunc ON harness_observations;
+CREATE TRIGGER trg_harness_obs_trunc BEFORE TRUNCATE ON harness_observations
+    FOR EACH STATEMENT EXECUTE FUNCTION forbid_mutation();
+DROP TRIGGER IF EXISTS trg_harness_eval_trunc ON harness_evaluations;
+CREATE TRIGGER trg_harness_eval_trunc BEFORE TRUNCATE ON harness_evaluations
+    FOR EACH STATEMENT EXECUTE FUNCTION forbid_mutation();
+DROP TRIGGER IF EXISTS trg_harness_acc_trunc ON harness_acceptance;
+CREATE TRIGGER trg_harness_acc_trunc BEFORE TRUNCATE ON harness_acceptance
+    FOR EACH STATEMENT EXECUTE FUNCTION forbid_acceptance_rewrite();
 
 -- hypotheses / experiments (research M3.1)：条件化假设与预注册区分性实验。
 -- 认知契约：假设是环境的竞争内部模型（同问题 ≥2 活跃假设是常态，禁止过早

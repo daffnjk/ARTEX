@@ -109,14 +109,19 @@ func (s *HarnessStore) RecordEvaluation(r harness.EvaluationReport) error {
 	if err != nil {
 		return fmt.Errorf("encode evaluation report: %w", err)
 	}
-	_, err = s.d.Exec(`
+	// request_id 唯一（审查硬化）：重试重放不重复追加，幂等成功。
+	res, err := s.d.Exec(`
 INSERT INTO harness_evaluations(request_id, task_id, goal_id, experiment_id, context_version,
     criterion_id, criterion_version, validity, conclusion, disposition, report)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+ON CONFLICT (request_id) DO NOTHING`,
 		r.RequestID, r.TaskID, r.GoalID, r.ExperimentID, r.ContextVersion,
 		r.CriterionID, r.CriterionVersion, string(r.Validity), string(r.Conclusion), string(r.Disposition), raw)
 	if err != nil {
 		return fmt.Errorf("record evaluation %s: %w", r.RequestID, err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return nil // 同 request_id 已存档——幂等
 	}
 	return nil
 }

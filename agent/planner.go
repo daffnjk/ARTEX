@@ -498,9 +498,14 @@ func (p *Planner) Plan(ctx context.Context, taskID int64, as *db.AssetStore, ts 
 	} else {
 		crossRoundTodos = opts.Todos.List()
 	}
-	hyps, _ := ts.ListHypotheses()
-	openExps, _ := ts.OpenExperiments()
-	input := lead + situational + renderHypothesesBlock(hyps, openExps) + "\n\n据上面的态势，判定目标。目标已【真正达成】（已拿到目标成果/已确认目标漏洞）时用 prove_goal 逐个标记。**硬底线：只要目标尚未达成、且当前没有任何 open 或 running 意图（frontier_open=0 且 running_intents 为空），本轮就必须产出至少一个向目标推进的意图——此时没有在跑的 work 可等、也没有在排队的方向，产出 0 意图=任务停摆。仅当已有 open/running 意图在推进、或目标已达成时，本轮才可以不产出新意图。**" +
+	hyps, hypErr := ts.ListHypotheses()
+	openExps, expErr := ts.OpenExperiments()
+	beliefBlock := renderHypothesesBlock(hyps, openExps)
+	if hypErr != nil || expErr != nil {
+		// 信念态读取失败不静默（审查 P2）——模型必须知道当前假设态不可用。
+		beliefBlock += "\n【假设态读取失败——当前竞争假设不可见，谨慎行事，勿据未知信念态判定】"
+	}
+	input := lead + situational + beliefBlock + "\n\n据上面的态势，判定目标。目标已【真正达成】（已拿到目标成果/已确认目标漏洞）时用 prove_goal 逐个标记。**硬底线：只要目标尚未达成、且当前没有任何 open 或 running 意图（frontier_open=0 且 running_intents 为空），本轮就必须产出至少一个向目标推进的意图——此时没有在跑的 work 可等、也没有在排队的方向，产出 0 意图=任务停摆。仅当已有 open/running 意图在推进、或目标已达成时，本轮才可以不产出新意图。**" +
 		renderPlannerTodos(crossRoundTodos)
 	// MaxDuration 现在会在墙钟到点打断在跑工具并就地进收尾(在活 ctx 上),单轮卡死不再
 	// 绕过收尾,无需外部硬 ctx 兜底。ctx 只承载 pause / kill / shutdown。

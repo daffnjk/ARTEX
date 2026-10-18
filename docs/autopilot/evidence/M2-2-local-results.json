@@ -2,7 +2,9 @@
   "schema_version": 1,
   "task": "M2.2",
   "baseline_commit": "35bb667",
-  "implementation_commits": ["d2bbf1c"],
+  "implementation_commits": [
+    "d2bbf1c"
+  ],
   "results": {
     "pg_matrix": {
       "command": "ARTEX_TEST_PG_DSN=<local-isolated> sh scripts/test-research-pg.sh (now 24 cases)",
@@ -18,5 +20,5 @@
     "regression": "PASS (harness/cmd race; build)"
   },
   "boundaries": "premise scope only (never whole vulns/goals); marker host-supplied; acceptance versions immutable history, never reused; resolver is task/goal-scoped",
-  "independent_review": "PENDING (next batch)"
+  "independent_review": "COMPLETED in the batch: single-current partial-unique index added (resolver no longer trusts convention); see evidence/M2-M3-review.md"
 }

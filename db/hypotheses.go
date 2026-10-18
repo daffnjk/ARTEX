@@ -68,8 +68,10 @@ func ValidateHypothesis(question, statement string, basis []int64) error {
 // 竞争集）：新语句插入 active；不再出现的旧假设若仍 active → superseded（记
 // 事件）；已 supported/refuted 的不复活也不改写。同语句幂等更新 notes/basis。
 func (s *ExplorationStore) UpsertHypotheses(question string, items []Hypothesis) error {
-	if len(items) < 1 {
-		return fmt.Errorf("at least one hypothesis per question required")
+	// 反过早收敛的结构强制（审查 P2）：未决问题的假设集重述不得少于 2 条
+	//（收敛只能由区分性实验结果驱动，不能由叙事收窄）。
+	if len(items) < 2 {
+		return fmt.Errorf("a question under investigation keeps >=2 competing hypotheses (collapse is driven by experiment outcomes, not by restating fewer)")
 	}
 	if len(items) > 8 {
 		return fmt.Errorf("at most 8 hypotheses per question")
@@ -93,7 +95,7 @@ func (s *ExplorationStore) UpsertHypotheses(question string, items []Hypothesis)
 	for _, h := range items {
 		for _, b := range h.BasisNodeIDs {
 			var ok int64
-			err := tx.QueryRow(`SELECT n.id FROM exploration_nodes n WHERE n.id=$1 AND (
+			err := tx.QueryRow(`SELECT n.id FROM exploration_nodes n WHERE n.id=$1 AND n.kind IN ('fact','finding') AND (
 				n.exploration_id=$2 OR EXISTS (
 					SELECT 1 FROM tasks owner
 					JOIN task_relations r ON r.task_id=owner.id
@@ -199,9 +201,35 @@ func (s *ExplorationStore) DeclareExperiment(e Experiment) (int64, error) {
 	if len(e.Expectations) < 2 {
 		return 0, fmt.Errorf("a discriminating experiment needs expectations for at least 2 hypotheses")
 	}
+	if len(e.HypothesisIDs) != len(e.Expectations) {
+		return 0, fmt.Errorf("expectations keys must exactly cover the participating hypothesis ids (%d ids, %d expectations)", len(e.HypothesisIDs), len(e.Expectations))
+	}
+	// 审查 P1：键集必须与参试集一致，且全部为本探索的 active 假设——否则
+	// 畸形声明可让非参试者被"supported"、参试者被批量 refuted，或跨探索腐蚀。
+	partSet := map[int64]bool{}
+	for _, id := range e.HypothesisIDs {
+		partSet[id] = true
+	}
+	for hypID := range e.Expectations {
+		if !partSet[hypID] {
+			return 0, fmt.Errorf("expectation key %d is not among hypothesis_ids", hypID)
+		}
+	}
 	for hypID, exp := range e.Expectations {
 		if strings.TrimSpace(exp) == "" || len(exp) > MaxExpectationBytes {
 			return 0, fmt.Errorf("expectation for hypothesis %d must be 1..%d bytes", hypID, MaxExpectationBytes)
+		}
+		var status string
+		var expl int64
+		err := s.db.QueryRow(`SELECT status, exploration_id FROM hypotheses WHERE id=$1`, hypID).Scan(&status, &expl)
+		if err != nil {
+			return 0, fmt.Errorf("hypothesis %d not found", hypID)
+		}
+		if expl != s.expID {
+			return 0, fmt.Errorf("hypothesis %d belongs to another exploration", hypID)
+		}
+		if status != "active" {
+			return 0, fmt.Errorf("hypothesis %d is %q, not active", hypID, status)
 		}
 	}
 	var open int64
@@ -223,7 +251,15 @@ func (s *ExplorationStore) DeclareExperiment(e Experiment) (int64, error) {
 }
 
 // DispatchExperiment 把已声明实验绑定到意图并置 dispatched（期望自此不可变）。
+// 意图必须属于本探索（审查 P1：防跨探索绑定）。
 func (s *ExplorationStore) DispatchExperiment(experimentID, intentID int64) error {
+	var intentExpl int64
+	if err := s.db.QueryRow(`SELECT exploration_id FROM exploration_nodes WHERE id=$1 AND kind='intent'`, intentID).Scan(&intentExpl); err != nil {
+		return fmt.Errorf("intent %d not found: %w", intentID, err)
+	}
+	if intentExpl != s.expID {
+		return fmt.Errorf("intent %d belongs to another exploration", intentID)
+	}
 	res, err := s.db.Exec(`UPDATE experiments SET intent_id=$2, status='dispatched', dispatched_at=now()
 		WHERE id=$1 AND exploration_id=$3 AND status='declared'`, experimentID, intentID, s.expID)
 	if err != nil {
@@ -278,10 +314,15 @@ func (s *ExplorationStore) RecordExperimentOutcome(experimentID int64, observed 
 	if err := json.Unmarshal(expRaw, &expectations); err != nil {
 		return ExperimentOutcome{}, err
 	}
+	// 匹配只认精确相等（审查 P1：双向 Contains 过宽——expected="200" 会匹配
+	// "3200"，短串巧合可造成假唯一匹配，而 refuted 不可逆）。要求观察与预注册
+	// 期望同粒度精确对写；匹配文本写入 outcome 供审计。
 	out := ExperimentOutcome{Status: "inconclusive"}
+	matched := map[int64]string{}
 	for hypID, expected := range expectations {
-		if observed == expected || strings.Contains(observed, expected) || strings.Contains(expected, observed) {
+		if strings.TrimSpace(observed) == strings.TrimSpace(expected) {
 			out.Matches = append(out.Matches, hypID)
+			matched[hypID] = expected
 		}
 	}
 	switch {
@@ -294,19 +335,23 @@ func (s *ExplorationStore) RecordExperimentOutcome(experimentID int64, observed 
 			if hypID == out.Discriminated {
 				to = "supported"
 			}
-			if _, err := tx.Exec(`UPDATE hypotheses SET status=$2, updated_at=now() WHERE id=$1 AND status='active'`, hypID, to); err != nil {
+			res, err := tx.Exec(`UPDATE hypotheses SET status=$2, updated_at=now() WHERE id=$1 AND status='active'`, hypID, to)
+			if err != nil {
 				return ExperimentOutcome{}, err
 			}
-			if _, err := tx.Exec(`INSERT INTO hypothesis_events(hypothesis_id, from_status, to_status, reason, experiment_id)
-				VALUES ($1,'active',$2,$3,$4)`, hypID, to, "discriminated by experiment outcome", experimentID); err != nil {
-				return ExperimentOutcome{}, err
+			if n, _ := res.RowsAffected(); n > 0 {
+				if _, err := tx.Exec(`INSERT INTO hypothesis_events(hypothesis_id, from_status, to_status, reason, experiment_id)
+					VALUES ($1,'active',$2,$3,$4)`, hypID, to, "discriminated by experiment outcome", experimentID); err != nil {
+					return ExperimentOutcome{}, err
+				}
 			}
 		}
 	default:
 		out.Reason = fmt.Sprintf("observation matches %d declared expectations — inconclusive, no status change", len(out.Matches))
 	}
 	outcomeRaw, _ := json.Marshal(map[string]any{
-		"observed": observed, "fact_id": factID, "matches": out.Matches, "discriminated": out.Discriminated, "reason": out.Reason,
+		"observed": observed, "fact_id": factID, "matches": out.Matches,
+		"matched_text": matched, "discriminated": out.Discriminated, "reason": out.Reason,
 	})
 	if _, err := tx.Exec(`UPDATE experiments SET status=$2, outcome=$3, observed_at=now() WHERE id=$1`,
 		experimentID, out.Status, outcomeRaw); err != nil {

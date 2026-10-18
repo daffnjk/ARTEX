@@ -63,7 +63,7 @@ func TestBuildResearchInspection(t *testing.T) {
 		t.Fatalf("complete: won=%v err=%v", won, err)
 	}
 	if err := d.Harness(task.ID).RecordEvaluation(harness.EvaluationReport{
-		RequestID: "m23-eval-1", TaskID: task.ID, GoalID: goal,
+		RequestID: fmt.Sprintf("m23-eval-1-%d", task.ID), TaskID: task.ID, GoalID: goal,
 		Validity: harness.ValidityValid, Conclusion: harness.Supported, Disposition: harness.Confirm,
 	}); err != nil {
 		t.Fatal(err)

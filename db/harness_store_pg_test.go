@@ -98,7 +98,7 @@ func TestHarnessResolverTaskScopeAndFullStackEvaluation(t *testing.T) {
 	}
 	registry := map[harness.Criterion]harness.Verifier{acceptance.Criterion: verifier}
 	req := harness.EvaluationRequest{
-		SchemaVersion: harness.SchemaVersion, ID: "m21-eval-1", TaskID: taskA, GoalID: base + 2,
+		SchemaVersion: harness.SchemaVersion, ID: fmt.Sprintf("m21-eval-1-%d", taskA), TaskID: taskA, GoalID: base + 2,
 		ExperimentID: "exp-m21", ContextVersion: "ctx-m21", Claim: acceptance.Claim,
 		CriterionID: "fixture-value", CriterionVersion: "1", AcceptanceVersion: "acc-m21",
 		Evidence: []harness.EvidenceRef{{ObservationID: obsID, SHA256: digest}},
@@ -117,7 +117,7 @@ func TestHarnessResolverTaskScopeAndFullStackEvaluation(t *testing.T) {
 	if err != nil || len(got) == 0 {
 		t.Fatalf("evaluation read-back failed: %v %d", err, len(got))
 	}
-	if got[0].RequestID != "m21-eval-1" || got[0].Disposition != harness.Confirm {
+	if got[0].RequestID != fmt.Sprintf("m21-eval-1-%d", taskA) || got[0].Disposition != harness.Confirm {
 		t.Fatalf("evaluation record mismatch: %+v", got[0])
 	}
 	// 存档同样不可变。
