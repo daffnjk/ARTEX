@@ -42,7 +42,7 @@
       "status": "NEEDS_INPUT"
     }
   ],
-  "independent_review": "M1b.1: PENDING — read-only reviewer scheduled on cc8acc9d..d12f2ff before wrap-up closes; previous receipt 6236232397 covered M1a.1 only",
+  "independent_review": "M1b.1 COMPLETED 2026-10-18 (read-only subagent agent_fdb4fd4e): APPROVE_WITH_P1 — both P1 CAS holes and all P2s fixed and re-verified on real PG (matrix now 11/11); report at evidence/M1b-1-review.md; previous receipt 6236232397 covered M1a.1 only",
   "remote_save": "nothing pushed this session; local commits (24a6337, d12f2ff, wrap-up) exist only in the local clone — loss risk until push auth is provided",
   "deployment_actions_in_session": false,
   "last_verified_scope": "M1b.1 storage + planner CAS lifecycle on real isolated PostgreSQL; full regression battery",

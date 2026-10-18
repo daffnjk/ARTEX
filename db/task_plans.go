@@ -29,22 +29,30 @@ type PlanStep struct {
 
 // TaskPlan 是一个探索（任务，二者 1:1）的当前计划。Revision 是 CAS 期望值：
 // Load 返回当前值（无记录返回 nil,nil —— 显式空计划，不臆造）；Save 用它做
-// 乐观并发控制，成功后返回携带新 Revision 的落盘结果。
+// 乐观并发控制，成功后返回携带新 Revision 的落盘结果。RowID 是存储行的身份
+// （BIGSERIAL 主键）：CAS 谓词同时校验 revision 与 RowID——行被删除后重建会
+// 获得新 RowID，持有旧行身份的迟到写入即使 revision 撞值（如都为 1）也会被
+// 拒绝（封死 delete→recreate 的 ABA 覆盖）。首次写入期望 (Revision 0, RowID 0)。
 type TaskPlan struct {
 	ExplorationID int64
+	RowID         int64
 	Revision      int64
 	Steps         []PlanStep
 	ModelNotes    string
 }
 
-// PlanConflictError 表示 CAS 冲突：HaveRevision 是数据库里的当前 revision。
-// 可恢复：调用方重新 Load 后基于新状态重试；绝不静默覆盖。
+// PlanConflictError 表示 CAS 冲突：HaveRevision 是数据库里的当前 revision；
+// HaveRevision==0 表示当前无行（计划已被删除/归档清除），期望值相对"行已消失"
+// 过期。两者都可恢复：调用方重新 Load 后基于新状态重试；绝不静默覆盖。
 type PlanConflictError struct {
 	ExplorationID int64
 	HaveRevision  int64
 }
 
 func (e *PlanConflictError) Error() string {
+	if e.HaveRevision == 0 {
+		return fmt.Sprintf("task plan conflict: exploration %d has no stored plan row (deleted/archived); expectation is stale", e.ExplorationID)
+	}
 	return fmt.Sprintf("task plan conflict: exploration %d is at revision %d", e.ExplorationID, e.HaveRevision)
 }
 
@@ -129,12 +137,13 @@ func MergePlanSteps(existing, incoming []PlanStep) []PlanStep {
 // 读取错误原样上抛：调用方（planner 恢复路径）必须停止本轮而不是回退空内存。
 func (d *DB) LoadTaskPlan(explorationID int64) (*TaskPlan, error) {
 	var (
+		rowID int64
 		rev   int64
 		steps []byte
 		notes string
 	)
-	err := d.QueryRow(`SELECT revision, steps, model_notes FROM task_plans WHERE exploration_id=$1`,
-		explorationID).Scan(&rev, &steps, &notes)
+	err := d.QueryRow(`SELECT id, revision, steps, model_notes FROM task_plans WHERE exploration_id=$1`,
+		explorationID).Scan(&rowID, &rev, &steps, &notes)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -143,6 +152,7 @@ func (d *DB) LoadTaskPlan(explorationID int64) (*TaskPlan, error) {
 	}
 	var plan TaskPlan
 	plan.ExplorationID = explorationID
+	plan.RowID = rowID
 	plan.Revision = rev
 	plan.ModelNotes = notes
 	if len(steps) > 0 {
@@ -153,42 +163,62 @@ func (d *DB) LoadTaskPlan(explorationID int64) (*TaskPlan, error) {
 	return &plan, nil
 }
 
-// SaveTaskPlan 以 CAS 语义落盘：plan.Revision 是期望的当前值（0=期望尚无记录，
-// 首次写入）。成功返回新 revision 的落盘计划；期望值过期（含两方同时首写）返回
-// *PlanConflictError。落盘成功才返回——先持久化，后确认。
+// SaveTaskPlan 以 CAS 语义落盘：plan.Revision/plan.RowID 是期望的当前值
+// （0/0 = 期望尚无记录，首次写入）。三段式（每段各自原子，谓词保证语义）：
+//  1. CAS 更新：行存在且 (revision, row id) 与期望完全匹配 → revision+1；
+//  2. 首写插入：仅当期望为 (0,0)；并发首写恰一方成功（ON CONFLICT DO NOTHING）；
+//  3. 显式冲突：期望过期（行在但不匹配）、行已消失（计划被删除/归档清除，
+//     HaveRevision 0，绝不复活）、或首写撞车 → *PlanConflictError。
+//
+// 行身份参与谓词封死 delete→recreate 的 revision 撞值 ABA。成功返回新 revision
+// 的落盘计划；落盘成功才返回——先持久化，后确认。
 func (d *DB) SaveTaskPlan(plan TaskPlan) (TaskPlan, error) {
 	stepsJSON, err := json.Marshal(plan.Steps)
 	if err != nil {
 		return plan, fmt.Errorf("encode task plan steps (exploration %d): %w", plan.ExplorationID, err)
 	}
-	var newRev int64
+	var newRev, newRowID int64
 	err = d.QueryRow(`
-INSERT INTO task_plans (exploration_id, revision, steps, model_notes)
-VALUES ($1, 1, $2, $3)
-ON CONFLICT (exploration_id) DO UPDATE
-   SET revision = task_plans.revision + 1,
-       steps = EXCLUDED.steps,
-       model_notes = EXCLUDED.model_notes,
-       updated_at = now()
-WHERE task_plans.revision = $4
-RETURNING revision`,
-		plan.ExplorationID, stepsJSON, plan.ModelNotes, plan.Revision).Scan(&newRev)
-	if errors.Is(err, sql.ErrNoRows) {
-		// 0 行 = 期望 revision 不匹配（或并发首写撞车）。查当前值构造显式冲突。
-		var have int64
-		qErr := d.QueryRow(`SELECT revision FROM task_plans WHERE exploration_id=$1`,
-			plan.ExplorationID).Scan(&have)
-		if qErr == nil {
-			return plan, &PlanConflictError{ExplorationID: plan.ExplorationID, HaveRevision: have}
-		}
-		return plan, fmt.Errorf("save task plan (exploration %d): revision %d rejected and current revision unavailable: %w",
-			plan.ExplorationID, plan.Revision, qErr)
+UPDATE task_plans
+   SET revision = revision + 1, steps = $2, model_notes = $3, updated_at = now()
+ WHERE exploration_id = $1 AND revision = $4 AND id = $5
+RETURNING revision, id`,
+		plan.ExplorationID, stepsJSON, plan.ModelNotes, plan.Revision, plan.RowID).Scan(&newRev, &newRowID)
+	if err == nil {
+		plan.Revision, plan.RowID = newRev, newRowID
+		return plan, nil
 	}
-	if err != nil {
+	if !errors.Is(err, sql.ErrNoRows) {
 		return plan, fmt.Errorf("save task plan (exploration %d): %w", plan.ExplorationID, err)
 	}
-	plan.Revision = newRev
-	return plan, nil
+	if plan.Revision == 0 && plan.RowID == 0 {
+		err = d.QueryRow(`
+INSERT INTO task_plans (exploration_id, revision, steps, model_notes)
+VALUES ($1, 1, $2, $3)
+ON CONFLICT (exploration_id) DO NOTHING
+RETURNING revision, id`,
+			plan.ExplorationID, stepsJSON, plan.ModelNotes).Scan(&newRev, &newRowID)
+		if err == nil {
+			plan.Revision, plan.RowID = newRev, newRowID
+			return plan, nil
+		}
+		if !errors.Is(err, sql.ErrNoRows) {
+			return plan, fmt.Errorf("save task plan (exploration %d): %w", plan.ExplorationID, err)
+		}
+	}
+	// 显式冲突：查当前状态构造可恢复错误；行不存在 ⇒ HaveRevision 0。
+	var have int64
+	qErr := d.QueryRow(`SELECT revision FROM task_plans WHERE exploration_id=$1`,
+		plan.ExplorationID).Scan(&have)
+	switch {
+	case qErr == nil:
+		return plan, &PlanConflictError{ExplorationID: plan.ExplorationID, HaveRevision: have}
+	case errors.Is(qErr, sql.ErrNoRows):
+		return plan, &PlanConflictError{ExplorationID: plan.ExplorationID, HaveRevision: 0}
+	default:
+		return plan, fmt.Errorf("save task plan (exploration %d): revision %d rejected and current state unavailable: %w",
+			plan.ExplorationID, plan.Revision, qErr)
+	}
 }
 
 // PlanBasisNodesOwned 校验 basis 节点确实属于该探索（防止跨任务引用/臆造 id）。

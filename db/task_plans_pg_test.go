@@ -24,6 +24,11 @@ func researchPlanDSN(t *testing.T) string {
 	if dsn == "" {
 		t.Skipf("ARTEX_TEST_PG_DSN not set — task-plan PG matrix runs only via scripts/test-research-pg.sh (never silently)")
 	}
+	// 拒绝带查询参数的 DSN：pgx 会在 URL authority 之后应用 ?host=/?database=
+	// 覆盖项（pgconn/config.go 的查询参数循环），只看 authority 的守卫可被绕过。
+	if strings.Contains(dsn, "?") {
+		t.Fatalf("ARTEX_TEST_PG_DSN must not carry query parameters (pgx ?host=/?database= overrides bypass the isolation guard)")
+	}
 	u, err := url.Parse(dsn)
 	if err != nil {
 		t.Fatalf("ARTEX_TEST_PG_DSN is not a valid URL: %v", err)
@@ -113,11 +118,14 @@ func TestTaskPlanPGRoundTrip(t *testing.T) {
 	if saved.Revision != 1 {
 		t.Fatalf("first save revision = %d, want 1", saved.Revision)
 	}
+	if saved.RowID == 0 {
+		t.Fatal("first save must return a nonzero row id (storage row identity)")
+	}
 	loaded, err := d.LoadTaskPlan(expID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if loaded.Revision != 1 || loaded.ModelNotes != "chain via upload" || len(loaded.Steps) != 2 {
+	if loaded.Revision != 1 || loaded.RowID != saved.RowID || loaded.ModelNotes != "chain via upload" || len(loaded.Steps) != 2 {
 		t.Fatalf("roundtrip mismatch: %+v", loaded)
 	}
 	if loaded.Steps[0].Content != "step one" || loaded.Steps[0].Status != planStatusCompleted || len(loaded.Steps[0].BasisNodeIDs) != 1 || loaded.Steps[0].BasisNodeIDs[0] != 7 {
@@ -126,12 +134,51 @@ func TestTaskPlanPGRoundTrip(t *testing.T) {
 	if loaded.Steps[1].ExpectedOutput != "admin session cookie" {
 		t.Fatalf("expected_output not roundtripped: %+v", loaded.Steps[1])
 	}
-	again, err := d.SaveTaskPlan(TaskPlan{ExplorationID: expID, Revision: 1, Steps: []PlanStep{{Content: "step one", Status: planStatusCompleted}}})
+	again, err := d.SaveTaskPlan(TaskPlan{ExplorationID: expID, Revision: 1, RowID: loaded.RowID, Steps: []PlanStep{{Content: "step one", Status: planStatusCompleted}}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if again.Revision != 2 {
-		t.Fatalf("second save revision = %d, want 2", again.Revision)
+	if again.Revision != 2 || again.RowID != loaded.RowID {
+		t.Fatalf("second save revision = %d rowid = %d, want 2/%d", again.Revision, again.RowID, loaded.RowID)
+	}
+}
+
+// TestTaskPlanPGConcurrentSameRevisionUpdate 同 revision 真并发双写：两个写入方
+// 持相同期望 (N,R)，恰一方成功推进 revision，另一方显式冲突。
+func TestTaskPlanPGConcurrentSameRevisionUpdate(t *testing.T) {
+	d, expID := openResearchPlanDB(t)
+	first, err := d.SaveTaskPlan(TaskPlan{ExplorationID: expID, Steps: []PlanStep{{Content: "seed", Status: planStatusPending}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wg sync.WaitGroup
+	var wins, conflicts int64
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			_, err := d.SaveTaskPlan(TaskPlan{
+				ExplorationID: expID, Revision: first.Revision, RowID: first.RowID,
+				Steps: []PlanStep{{Content: fmt.Sprintf("racer %d", i), Status: planStatusInProgress}},
+			})
+			var pc *PlanConflictError
+			switch {
+			case err == nil:
+				atomic.AddInt64(&wins, 1)
+			case errors.As(err, &pc):
+				atomic.AddInt64(&conflicts, 1)
+			default:
+				t.Errorf("unexpected error: %v", err)
+			}
+		}(i)
+	}
+	wg.Wait()
+	if wins != 1 || conflicts != 1 {
+		t.Fatalf("same-revision race: wins=%d conflicts=%d, want 1/1", wins, conflicts)
+	}
+	got, err := d.LoadTaskPlan(expID)
+	if err != nil || got.Revision != 2 {
+		t.Fatalf("winner must advance to revision 2 exactly once: %+v %v", got, err)
 	}
 }
 
@@ -195,6 +242,67 @@ func TestTaskPlanPGStaleWriteRejected(t *testing.T) {
 	}
 	if loaded.Revision != 2 || len(loaded.Steps) != 1 || loaded.Steps[0].Content != "B newer state" {
 		t.Fatalf("late write must NOT overwrite (no last-write-wins): %+v", loaded)
+	}
+}
+
+// TestTaskPlanPGStaleWriteAfterRowDeleted 行消失后的迟到写入（审查 P1#1）：
+// hydrate rev N → 行被删除（如归档清除）→ 持旧期望（N>0, 旧行 id）的写入必须
+// 得到显式冲突（HaveRevision 0），绝不被 INSERT 分支复活。
+func TestTaskPlanPGStaleWriteAfterRowDeleted(t *testing.T) {
+	d, expID := openResearchPlanDB(t)
+	first, err := d.SaveTaskPlan(TaskPlan{ExplorationID: expID, Steps: []PlanStep{{Content: "v1", Status: planStatusPending}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.Exec(`DELETE FROM task_plans WHERE exploration_id=$1`, expID); err != nil {
+		t.Fatal(err)
+	}
+	// 迟到写入方仍持有 (rev1, rowID)。
+	stale := TaskPlan{ExplorationID: expID, Revision: first.Revision, RowID: first.RowID,
+		Steps: []PlanStep{{Content: "resurrected stale plan", Status: planStatusPending}}}
+	_, err = d.SaveTaskPlan(stale)
+	var pc *PlanConflictError
+	if !errors.As(err, &pc) || pc.HaveRevision != 0 {
+		t.Fatalf("write against a deleted plan row must conflict with HaveRevision 0, got %v", err)
+	}
+	var n int
+	if err := d.QueryRow(`SELECT count(*) FROM task_plans WHERE exploration_id=$1`, expID).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Fatalf("stale write must not resurrect a deleted plan, found %d rows", n)
+	}
+}
+
+// TestTaskPlanPGDeleteRecreateRejectsABA 删除重建后的 ABA（审查 P1#2）：
+// 旧行 (rev1, R1) 删除 → 新计划重建 (rev1, R2) → 持 (1, R1) 的旧写入即使
+// revision 撞值也必须因行身份不匹配被拒绝；新计划不被旧控制器覆盖。
+func TestTaskPlanPGDeleteRecreateRejectsABA(t *testing.T) {
+	d, expID := openResearchPlanDB(t)
+	old, err := d.SaveTaskPlan(TaskPlan{ExplorationID: expID, Steps: []PlanStep{{Content: "old generation", Status: planStatusPending}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.Exec(`DELETE FROM task_plans WHERE exploration_id=$1`, expID); err != nil {
+		t.Fatal(err)
+	}
+	fresh, err := d.SaveTaskPlan(TaskPlan{ExplorationID: expID, Steps: []PlanStep{{Content: "new generation", Status: planStatusInProgress}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fresh.Revision != 1 || fresh.RowID == old.RowID {
+		t.Fatalf("recreated plan must be a new row (rev from 1, distinct id): old=%+v new=%+v", old, fresh)
+	}
+	stale := TaskPlan{ExplorationID: expID, Revision: old.Revision, RowID: old.RowID,
+		Steps: []PlanStep{{Content: "stale ABA overwrite", Status: planStatusPending}}}
+	_, err = d.SaveTaskPlan(stale)
+	var pc *PlanConflictError
+	if !errors.As(err, &pc) || pc.HaveRevision != 1 {
+		t.Fatalf("stale write with old row identity must conflict even when revision collides, got %v", err)
+	}
+	got, err := d.LoadTaskPlan(expID)
+	if err != nil || got == nil || got.RowID != fresh.RowID || got.Steps[0].Content != "new generation" {
+		t.Fatalf("new generation plan must survive untouched: %+v %v", got, err)
 	}
 }
 

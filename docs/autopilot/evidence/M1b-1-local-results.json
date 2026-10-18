@@ -7,14 +7,14 @@
     "M1b.1b_planner_integration": "d12f2ff"
   },
   "tested_code_blobs": {
-    "db/task_plans.go": "79a6d8108c56e89a250c881fb1eb8176f4814681",
+    "db/task_plans.go": "5c54a5a5b31c6feeaae731f8349ee3e13554be01",
     "db/task_plans_test.go": "cba538acd594f3808c16a0c2e3931ba26a49853a",
-    "db/task_plans_pg_test.go": "b7fbc4d53f90706388c99bd7c618b853aa1665e1",
-    "agent/plantodo.go": "2929c7e57fb79f98d5aa5650e3959033e9b28c44",
+    "db/task_plans_pg_test.go": "f3de2e31b7cc4aaac13890f1bae7ff69f97e2d77",
+    "agent/plantodo.go": "bb22ca9262967a73a05587484cd2686e015eeb8d",
     "agent/plantodo_test.go": "f05e3d3341ab4d3f86a18522c3e220c4ba32f39b",
     "agent/planner.go": "a053f8a71aac9a2dc4e37cfe625987c7bc00b0c8",
     "server/task_llm.go": "8977975dc60c1767a854297f9a247a0da6e993ec",
-    "scripts/test-research-pg.sh": "b9bbeb034ef7fee8161fb5116c11a63d7c92501a"
+    "scripts/test-research-pg.sh": "101d6f58eed02e2ed27f4b1a511030391206ea92"
   },
   "environment": {
     "postgres": "PostgreSQL 17.11 (Homebrew) on aarch64 darwin, isolated database artex_research_test (localhost:5432)",
@@ -25,31 +25,35 @@
     "pg_matrix": {
       "command": "ARTEX_TEST_PG_DSN=postgres://<local-user>@localhost:5432/artex_research_test sh scripts/test-research-pg.sh",
       "exit": 0,
-      "top_level_pass": 8,
+      "top_level_pass": 11,
       "cases": [
         "TestTaskPlanPGMigrationIdempotent",
         "TestTaskPlanPGRoundTrip",
+        "TestTaskPlanPGConcurrentSameRevisionUpdate",
         "TestTaskPlanPGConcurrentFirstWrite",
         "TestTaskPlanPGStaleWriteRejected",
+        "TestTaskPlanPGStaleWriteAfterRowDeleted",
+        "TestTaskPlanPGDeleteRecreateRejectsABA",
         "TestTaskPlanPGIsolationAndBasisOwnership",
         "TestTaskPlanPGDeleteCascases",
         "TestTaskPlanPGErrorSurfaces",
         "TestTaskPlanPGArchivePurgeRemovesPlan"
       ],
-      "plus_regression": "TestTaskArchiveDatabaseRoundTrip PASS",
+      "plus_regression": "TestTaskArchiveDatabaseRoundTrip PASS (skip-in-runner now fails the runner)",
+      "guard_negative_tests": "query-param DSN / non-local host / wrong db name all rejected",
       "race": "PASS (-race on the matrix run)",
-      "log_sha256": "ac40f3371d67337eaa7aa763dbe8c50375d6de9556b002a3bff523e3b0644ab6"
+      "log_sha256": "dd2f451ab47ed57027d53676c587a04f6245c1c5c06012559abce8f55ffaefcc"
     },
     "db_unit": {
       "command": "go test -race -count=1 -run 'TestMergePlanSteps|TestValidatePlanSteps' ./db",
       "exit": 0,
-      "log_sha256": "b584b643a8bcaca714dbec7426ef526b32b6412d4b81e0a8cfc431e0cdb811e8"
+      "log_sha256": "dced55d75be8973c1d0ecbf351f1ee10beb737de2f59ff8992a43442f3d246e2"
     },
     "agent_unit": {
       "command": "go test -race -count=1 -run 'TestPlannerTodo|TestLoadPlannerPlanState|TestPlannerTodosProjection' ./agent",
       "exit": 0,
       "top_level_pass": 6,
-      "log_sha256": "1bc25a9e26c42b5bbaba1fc6b60a00342eb8b6199c60d19d48e2443a3050a37f"
+      "log_sha256": "3474bc53af52602eabe8d9042e7af03ada692049ede8affc4c3b738fd0645764"
     },
     "harness_regression": {
       "command": "go test -race -count=1 ./harness ./cmd/harness-eval",
@@ -64,11 +68,13 @@
     "full_build_and_vet": "PASS (go build ./... ; go vet ./agent/ ./db/ ./server/)"
   },
   "acceptance_matrix_mapping": {
-    "same-instance-multi-round": "PASS — store roundtrip + tool second-save expects persisted revision (agent unit)",
+    "same-instance-multi-round": "PASS — store roundtrip + tool second-save expects persisted revision/rowid (agent unit + PG roundtrip)",
     "new-planner-instance-hydration": "PASS — loadPlannerPlanState hydrates verbatim; absent = explicit empty; error stops the round (unit + PG reopen)",
     "process-restart-reopen": "PASS — TestTaskPlanPGMigrationIdempotent (Open twice, plan survives, not overwritten)",
-    "same-revision-double-write": "PASS — TestTaskPlanPGConcurrentFirstWrite exactly one winner, other explicit *PlanConflictError",
+    "same-revision-double-write": "PASS — TestTaskPlanPGConcurrentFirstWrite AND TestTaskPlanPGConcurrentSameRevisionUpdate (true goroutine race, exactly one winner each)",
     "late-write-rejected": "PASS — TestTaskPlanPGStaleWriteRejected keeps B's data (no last-write-wins)",
+    "late-write-after-row-deleted": "PASS — TestTaskPlanPGStaleWriteAfterRowDeleted: conflict with HaveRevision 0, no resurrection (review P1#1 fix)",
+    "delete-recreate-ABA": "PASS — TestTaskPlanPGDeleteRecreateRejectsABA: row identity in CAS predicate blocks colliding revisions (review P1#2 fix)",
     "task-isolation": "PASS — TestTaskPlanPGIsolationAndBasisOwnership",
     "task-delete-archive": "PASS — TestTaskPlanPGDeleteCascases + TestTaskPlanPGArchivePurgeRemovesPlan (purge enumerates task_plans; restored task = explicit empty plan)",
     "db-error-surfaces": "PASS — TestTaskPlanPGErrorSurfaces + TestPlannerTodoToolStoreErrorStopsNotAcks",
@@ -82,5 +88,5 @@
     "full ARTEX test suite beyond the listed packages",
     "UI"
   ],
-  "independent_review": "PENDING (read-only reviewer scheduled before M1b.1 wrap-up commit)"
+  "independent_review": "COMPLETED (read-only subagent agent_fdb4fd4e, 2026-10-18): APPROVE_WITH_P1; both P1 CAS holes (stale-writer resurrection via INSERT branch; delete-recreate revision ABA) and all P2s (DSN query-param bypass, silent-skip in runner, missing matrix cases) fixed and re-verified — matrix extended to 11 cases, all PASS. Full report: evidence/M1b-1-review.md"
 }

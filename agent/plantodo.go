@@ -149,12 +149,16 @@ func (st *plannerPlanState) todoTool(exp *db.ExplorationStore) actool.CoreTool {
 			saved, err := st.persister.SaveTaskPlan(db.TaskPlan{
 				ExplorationID: st.plan.ExplorationID,
 				Revision:      st.plan.Revision, // CAS 期望值：本轮已知的权威 revision
+				RowID:         st.plan.RowID,    // 行身份：封死删除重建后的 ABA 覆盖
 				Steps:         merged,
 				ModelNotes:    in.Note,
 			})
 			if err != nil {
 				var conflict *db.PlanConflictError
 				if errors.As(err, &conflict) {
+					if conflict.HaveRevision == 0 {
+						return actool.Errorf("TodoWrite conflict: the stored plan for this task no longer exists (deleted or archived) while you expected an existing revision. Your list is stale — stop editing the plan this round; the next planning round re-reads authoritative state."), nil
+					}
 					return actool.Errorf(fmt.Sprintf(
 						"TodoWrite conflict: this plan was updated by another writer (storage is at revision %d; yours was %d). Your list is stale — stop editing the plan this round; the next planning round re-reads it.",
 						conflict.HaveRevision, st.plan.Revision)), nil
