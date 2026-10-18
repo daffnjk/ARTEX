@@ -215,7 +215,7 @@ func (e *Engine) settleTask(ctx context.Context, t *Task) {
 	if met {
 		status = "done"
 	}
-	won, err := e.m.SetTaskStatusGuarded(t.ID, status)
+	won, err := e.m.CompleteTaskGuarded(t.ID, status, "system:timeout")
 	switch {
 	case err != nil:
 		log.Printf("[deadline] task %s 落终态失败: %v", t.ID, err)

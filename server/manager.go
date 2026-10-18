@@ -1403,6 +1403,33 @@ func (m *Manager) SetTaskStatusGuarded(id, status string) (won bool, err error) 
 	return true, nil
 }
 
+// CompleteTaskGuarded 是 M1b.3b 的共享事务性完成入口：done 附带图一致性
+// （无 open goal）与当前冻结验收重校验，终态 CAS 先到者胜，completed_source
+// 分记来源。语义详见 db.CompleteTaskGuarded。
+func (m *Manager) CompleteTaskGuarded(id, status, source string) (won bool, err error) {
+	m.taskStateMu.Lock()
+	defer m.taskStateMu.Unlock()
+	n, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		return false, err
+	}
+	won, err = m.pg.CompleteTaskGuarded(n, status, source)
+	if err != nil || !won {
+		return won, err
+	}
+	m.mu.Lock()
+	if t := m.tasks[id]; t != nil {
+		t.updateLifecycle(func(state *taskLifecycleState) {
+			state.Status = status
+			if state.CompletedAt == 0 {
+				state.CompletedAt = time.Now().Unix()
+			}
+		})
+	}
+	m.mu.Unlock()
+	return true, nil
+}
+
 // SetTaskStatus persists a task's lifecycle status (e.g. "done") and reflects it
 // on the in-memory handle so the derived DTO status shows it without a reload.
 func (m *Manager) SetTaskStatus(id, status string) error {

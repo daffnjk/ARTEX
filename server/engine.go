@@ -847,7 +847,7 @@ func (e *Engine) plannerLoop(ctx context.Context, t *Task) {
 			if active, err := t.Store.HasActiveIntent(); err == nil && !active {
 				// frontier 抽干且无在跑意图 → 收尾。用 Guarded 版做 CAS，避免踩到并发的
 				// pause/delete/超时收尾的状态转换。
-				if won, err := e.m.SetTaskStatusGuarded(t.ID, "done"); err != nil {
+				if won, err := e.m.CompleteTaskGuarded(t.ID, "done", "system:goalless-drain"); err != nil {
 					log.Printf("[goalless] task %s 收尾落 done 失败: %v", t.ID, err)
 				} else if won {
 					e.emitActivity(t, db.Activity{Worker: "system", Kind: "text",
@@ -885,8 +885,12 @@ func (e *Engine) plannerLoop(ctx context.Context, t *Task) {
 		case met:
 			log.Printf("[planner] task %s 判定目标达成: %s", t.ID, reason)
 			// 所有目标达成 → 持久化任务状态为 done（前端 DTO 会优先展示该终态）。
-			if err := e.m.SetTaskStatus(t.ID, "done"); err != nil {
+			// M1b.3b：共享事务性完成（无 open goal 复查 + 验收重校验 + 终态 CAS
+			//——迟到 met 不再覆盖先到的 timeout，修复盘点 R6），来源分记。
+			if won, err := e.m.CompleteTaskGuarded(t.ID, "done", "model:prove_goal"); err != nil {
 				log.Printf("[planner] task %s 标记完成落库失败: %v", t.ID, err)
+			} else if !won {
+				log.Printf("[planner] task %s 完成落库时已是终态，保留原状态（来源冲突放弃）", t.ID)
 			}
 			// 任务已判完成 → 立刻取消在跑的 worker：它们手头的意图跑出来也没意义了。
 			// 下一轮 worker 循环撞终态门就不再领新意图;被取消的这批走下方"任务已完成"分支
