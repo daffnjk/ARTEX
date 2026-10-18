@@ -50,6 +50,16 @@ cd "$root"
 # 专用非跳过套件（-race）。
 ARTEX_TEST_PG_DSN="$DSN" go test -race -count=1 -v -run 'TestTaskPlanPG|TestGraphOps|TestGraphIntegrity|TestSoftDeleteRepeat|TestHarnessObservation|TestHarnessResolver|TestHarnessAcceptance|TestCompleteTaskGuarded' ./db
 
+# M2.3 只读检查面装配（server 包，同 DSN 激活）。
+ARTEX_TEST_PG_DSN="$DSN" ARTEX_PG_DSN="$DSN" go test -count=1 -run 'TestBuildResearchInspection' ./server > /tmp/artex-research-inspect.log 2>&1 || {
+  cat /tmp/artex-research-inspect.log
+  fail "inspection assembly FAILED"
+}
+cat /tmp/artex-research-inspect.log
+if grep -Eq "SKIP" /tmp/artex-research-inspect.log; then
+  fail "inspection assembly SKIPPED — not acceptable in the dedicated runner"
+fi
+
 # 既有归档回归（testDSN 读 ARTEX_PG_DSN）：专用 runner 里 SKIP = 失败。
 ARTEX_PG_DSN="$DSN" go test -count=1 -v -run 'TestTaskArchiveDatabaseRoundTrip' ./db > /tmp/artex-research-pg-archive.log 2>&1 || {
   cat /tmp/artex-research-pg-archive.log

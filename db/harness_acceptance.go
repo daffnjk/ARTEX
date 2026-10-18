@@ -108,3 +108,65 @@ func (d *DB) HarnessAcceptanceHistory(taskID, goalID int64) ([]harness.Acceptanc
 	}
 	return specs, current, rows.Err()
 }
+
+// AcceptanceRecord 是验收历史行（含 goal 与时间戳，供只读检查面）。
+type AcceptanceRecord struct {
+	GoalID    int64
+	Version   string
+	Claim     string
+	Current   bool
+	CreatedAt string
+}
+
+// HarnessAcceptanceTaskHistory 返回任务全部 goal 的验收版本行（新→旧）。
+func (d *DB) HarnessAcceptanceTaskHistory(taskID int64) ([]AcceptanceRecord, error) {
+	rows, err := d.Query(`SELECT goal_id, version, claim, is_current,
+		to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+		FROM harness_acceptance WHERE task_id=$1 ORDER BY id DESC LIMIT 200`, taskID)
+	if err != nil {
+		return nil, fmt.Errorf("acceptance task history: %w", err)
+	}
+	defer rows.Close()
+	out := make([]AcceptanceRecord, 0, 4)
+	for rows.Next() {
+		var a AcceptanceRecord
+		if err := rows.Scan(&a.GoalID, &a.Version, &a.Claim, &a.Current, &a.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, a)
+	}
+	return out, rows.Err()
+}
+
+// EvaluationRecord 是评估存档行（含时间戳，供只读检查面）。
+type EvaluationRecord struct {
+	RequestID   string
+	GoalID      int64
+	Validity    string
+	Conclusion  string
+	Disposition string
+	CreatedAt   string
+}
+
+// EvaluationRecords 返回任务最近的评估存档行（新→旧，只读）。
+func (d *DB) EvaluationRecords(taskID int64, limit int) ([]EvaluationRecord, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	rows, err := d.Query(`SELECT request_id, goal_id, validity, conclusion, disposition,
+		to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+		FROM harness_evaluations WHERE task_id=$1 ORDER BY id DESC LIMIT $2`, taskID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("evaluation records: %w", err)
+	}
+	defer rows.Close()
+	out := make([]EvaluationRecord, 0, 8)
+	for rows.Next() {
+		var e EvaluationRecord
+		if err := rows.Scan(&e.RequestID, &e.GoalID, &e.Validity, &e.Conclusion, &e.Disposition, &e.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, e)
+	}
+	return out, rows.Err()
+}

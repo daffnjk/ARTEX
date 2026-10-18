@@ -138,3 +138,96 @@ func (d *DB) GraphIntegrityReport() (findings []IntegrityFinding, counts map[Int
 	}
 	return findings, counts, nil
 }
+
+// IntegrityReportScoped 是任务范围的诊断结果（该任务探索内的病灶 + 计数；
+// M2.3 只读检查面用）。挂起 tool_use 检查在任务范围内同样适用。
+type IntegrityReportScoped struct {
+	Findings []IntegrityFinding       `json:"findings"`
+	Counts   map[IntegrityCheck]int64 `json:"counts"`
+}
+
+var scopedIntegrityQueries = map[IntegrityCheck]string{
+	CheckFactNoYields: `
+SELECT n.exploration_id, n.id, '' FROM exploration_nodes n
+WHERE n.exploration_id=$1 AND n.kind='fact' AND n.state <> 'origin'
+  AND NOT EXISTS (SELECT 1 FROM exploration_edges e WHERE e.dst_id=n.id AND e.rel='yields')`,
+	CheckIntentNoDerived: `
+SELECT n.exploration_id, n.id, n.origin FROM exploration_nodes n
+WHERE n.exploration_id=$1 AND n.kind='intent'
+  AND NOT EXISTS (SELECT 1 FROM exploration_edges e WHERE e.dst_id=n.id AND e.rel='derived_from')`,
+	CheckGoalNoSpawns: `
+SELECT n.exploration_id, n.id, '' FROM exploration_nodes n
+WHERE n.exploration_id=$1 AND n.kind='goal'
+  AND NOT EXISTS (SELECT 1 FROM exploration_edges e WHERE e.dst_id=n.id AND e.rel='spawns')`,
+	CheckFindingNoYields: `
+SELECT n.exploration_id, n.id, '' FROM exploration_nodes n
+WHERE n.exploration_id=$1 AND n.kind='finding'
+  AND NOT EXISTS (SELECT 1 FROM exploration_edges e WHERE e.dst_id=n.id AND e.rel='yields')`,
+	CheckMetGoalNoProves: `
+SELECT n.exploration_id, n.id, '' FROM exploration_nodes n
+WHERE n.exploration_id=$1 AND n.kind='goal' AND n.state='met'
+  AND NOT EXISTS (SELECT 1 FROM exploration_edges e WHERE e.dst_id=n.id AND e.rel='proves')`,
+	CheckDanglingToolUse: `
+SELECT u.exploration_id, 0, u.id
+FROM activity u
+LEFT JOIN activity r ON r.exploration_id=u.exploration_id
+  AND r.tool_use_id=u.tool_use_id AND r.kind='tool_result'
+WHERE u.exploration_id=$1 AND u.kind='tool_use' AND r.id IS NULL AND u.tool_use_id IS NOT NULL`,
+}
+
+// TaskIntegrityReportScoped 按任务（经其探索）执行只读一致性诊断，上限每类
+// 200 条。finding_node_broken（跨表审计）仅在全局报告提供。
+func (d *DB) TaskIntegrityReportScoped(taskID int64, out **IntegrityReportScoped) error {
+	var expID int64
+	err := d.QueryRow(`SELECT exploration_id FROM tasks WHERE id=$1 AND deleted_at IS NULL`, taskID).Scan(&expID)
+	if err != nil {
+		return fmt.Errorf("task %d not found: %w", taskID, err)
+	}
+	report := &IntegrityReportScoped{Counts: map[IntegrityCheck]int64{}, Findings: make([]IntegrityFinding, 0, 8)}
+	for _, check := range integrityOrder {
+		query, ok := scopedIntegrityQueries[check]
+		if !ok {
+			continue
+		}
+		var cnt int64
+		if err := d.QueryRow(`SELECT count(*) FROM (`+query+`) c`, expID).Scan(&cnt); err != nil {
+			return fmt.Errorf("integrity count %s: %w", check, err)
+		}
+		report.Counts[check] = cnt
+		if cnt == 0 {
+			continue
+		}
+		rows, err := d.Query(query+" LIMIT 200", expID)
+		if err != nil {
+			return fmt.Errorf("integrity list %s: %w", check, err)
+		}
+		for rows.Next() {
+			var f IntegrityFinding
+			f.Check = check
+			var nodeID, other int64
+			var origin string
+			if check == CheckDanglingToolUse {
+				if err := rows.Scan(&f.ExplorationID, &nodeID, &other); err != nil {
+					rows.Close()
+					return err
+				}
+				f.ActivityID = other
+			} else {
+				if err := rows.Scan(&f.ExplorationID, &nodeID, &origin); err != nil {
+					rows.Close()
+					return err
+				}
+				f.NodeID = nodeID
+				f.Origin = origin
+			}
+			report.Findings = append(report.Findings, f)
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return err
+		}
+		rows.Close()
+	}
+	*out = report
+	return nil
+}
