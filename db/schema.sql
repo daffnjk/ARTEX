@@ -295,6 +295,234 @@ CREATE TABLE IF NOT EXISTS task_constraints (
 );
 CREATE INDEX IF NOT EXISTS idx_task_constraints_exp ON task_constraints(exploration_id);
 
+-- task_plans (research M1b.1): the planner's per-task plan scratchpad, promoted from
+-- a process-local map to authoritative PostgreSQL storage. One plan per exploration
+-- (tasks.exploration_id is UNIQUE → 1:1). revision is a CAS counter: a writer must
+-- present the revision it loaded; a stale or concurrent writer gets an explicit
+-- conflict from SaveTaskPlan — never last-write-wins. steps carry host-assigned
+-- stable step ids, optional basis_node_ids (exploration nodes the step derives from)
+-- and an expected_output placeholder; model_notes is plan-level free text. Plan
+-- status is a model note only — no acceptance or completion path reads this table.
+-- Archive purge deletes the row alongside activity/exploration_nodes; it is not part
+-- of the archive payload (regenerable working artifact; restored tasks hydrate an
+-- explicit empty plan).
+CREATE TABLE IF NOT EXISTS task_plans (
+    id              BIGSERIAL PRIMARY KEY,
+    exploration_id  BIGINT NOT NULL UNIQUE REFERENCES explorations(id) ON DELETE CASCADE,
+    revision        BIGINT NOT NULL DEFAULT 1 CHECK (revision >= 1),
+    steps           JSONB NOT NULL DEFAULT '[]',
+    model_notes     TEXT NOT NULL DEFAULT '',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+DROP TRIGGER IF EXISTS trg_task_plans_upd ON task_plans;
+CREATE TRIGGER trg_task_plans_upd BEFORE UPDATE ON task_plans
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- harness_observations / harness_evaluations (research M2.1): the trusted
+-- local capture store for the evaluation harness. 观察是控制器的反馈信号：
+-- 只追加、不可变（触发器拒绝 UPDATE/DELETE，非约定），仅宿主可写（模型永远
+-- 不写观察）；payload 写入时即钉 digest，评估内核读取时再校验。读取按任务
+-- 范围（Resolver 实现调用方/任务访问边界，M1a 契约）。
+CREATE TABLE IF NOT EXISTS harness_observations (
+    id              TEXT PRIMARY KEY,
+    task_id         BIGINT NOT NULL,
+    experiment_id   TEXT NOT NULL,
+    execution_id    TEXT NOT NULL,
+    context_version TEXT NOT NULL,
+    subject_ref     TEXT NOT NULL,
+    object_ref      TEXT NOT NULL,
+    observed_at     TIMESTAMPTZ NOT NULL,
+    complete        BOOLEAN NOT NULL,
+    payload         BYTEA NOT NULL,
+    payload_sha256  TEXT NOT NULL,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_harness_obs_task ON harness_observations(task_id, experiment_id);
+-- 评估报告存档：append-only（与观察同等不可变），report 存完整 JSONB。
+CREATE TABLE IF NOT EXISTS harness_evaluations (
+    id                BIGSERIAL PRIMARY KEY,
+    request_id        TEXT NOT NULL,
+    task_id           BIGINT NOT NULL,
+    goal_id           BIGINT NOT NULL,
+    experiment_id     TEXT NOT NULL,
+    context_version   TEXT NOT NULL,
+    criterion_id      TEXT NOT NULL,
+    criterion_version TEXT NOT NULL,
+    validity          TEXT NOT NULL,
+    conclusion        TEXT NOT NULL,
+    disposition       TEXT NOT NULL,
+    report            JSONB NOT NULL,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_harness_eval_task ON harness_evaluations(task_id, id);
+-- 审查硬化：request_id 唯一（重试重放不得重复追加评估存档）。
+CREATE UNIQUE INDEX IF NOT EXISTS uq_harness_eval_request ON harness_evaluations(request_id);
+-- 不可变强制：两张表拒绝 UPDATE/DELETE（append-only）。
+CREATE OR REPLACE FUNCTION forbid_mutation() RETURNS trigger AS $$
+BEGIN RAISE EXCEPTION '% is append-only (trusted harness storage)', TG_TABLE_NAME; END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_harness_obs_immutable ON harness_observations;
+CREATE TRIGGER trg_harness_obs_immutable BEFORE UPDATE OR DELETE ON harness_observations
+    FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
+DROP TRIGGER IF EXISTS trg_harness_eval_immutable ON harness_evaluations;
+CREATE TRIGGER trg_harness_eval_immutable BEFORE UPDATE OR DELETE ON harness_evaluations
+    FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
+
+-- harness_acceptance (research M2.2)：权威冻结验收规格（按 task/goal 解析，
+-- M1a.1 契约的 PG 实现）。版本化：新版本 = 新行，旧版本保留为历史（UNIQUE
+-- (task_id, goal_id, version) 保证版本号不复用）；仅 is_current 指针可变
+--（触发器禁止改写任何规格字段与 DELETE）。宿主独占写入——模型与请求都不可写。
+CREATE TABLE IF NOT EXISTS harness_acceptance (
+    id                BIGSERIAL PRIMARY KEY,
+    task_id           BIGINT NOT NULL,
+    goal_id           BIGINT NOT NULL,
+    version           TEXT NOT NULL,
+    criterion_id      TEXT NOT NULL,
+    criterion_version TEXT NOT NULL,
+    claim             TEXT NOT NULL,
+    experiment_id     TEXT NOT NULL,
+    context_version   TEXT NOT NULL,
+    is_current        BOOLEAN NOT NULL DEFAULT false,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (task_id, goal_id, version)
+);
+CREATE INDEX IF NOT EXISTS idx_harness_acc_current ON harness_acceptance(task_id, goal_id) WHERE is_current;
+CREATE OR REPLACE FUNCTION forbid_acceptance_rewrite() RETURNS trigger AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'harness_acceptance versions are history (no delete)';
+  END IF;
+  IF NEW.id = OLD.id AND NEW.task_id = OLD.task_id AND NEW.goal_id = OLD.goal_id
+     AND NEW.version = OLD.version AND NEW.criterion_id = OLD.criterion_id
+     AND NEW.criterion_version = OLD.criterion_version AND NEW.claim = OLD.claim
+     AND NEW.experiment_id = OLD.experiment_id AND NEW.context_version = OLD.context_version THEN
+    RETURN NEW;
+  END IF;
+  RAISE EXCEPTION 'harness_acceptance versions are immutable (only is_current may change)';
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_harness_acc_rewrite ON harness_acceptance;
+CREATE TRIGGER trg_harness_acc_rewrite BEFORE UPDATE OR DELETE ON harness_acceptance
+    FOR EACH ROW EXECUTE FUNCTION forbid_acceptance_rewrite();
+-- 审查硬化：单当前版本不变量（部分唯一索引）；TRUNCATE 同样被拒。
+CREATE UNIQUE INDEX IF NOT EXISTS uq_harness_acc_current ON harness_acceptance(task_id, goal_id) WHERE is_current;
+DROP TRIGGER IF EXISTS trg_harness_obs_trunc ON harness_observations;
+CREATE TRIGGER trg_harness_obs_trunc BEFORE TRUNCATE ON harness_observations
+    FOR EACH STATEMENT EXECUTE FUNCTION forbid_mutation();
+DROP TRIGGER IF EXISTS trg_harness_eval_trunc ON harness_evaluations;
+CREATE TRIGGER trg_harness_eval_trunc BEFORE TRUNCATE ON harness_evaluations
+    FOR EACH STATEMENT EXECUTE FUNCTION forbid_mutation();
+DROP TRIGGER IF EXISTS trg_harness_acc_trunc ON harness_acceptance;
+CREATE TRIGGER trg_harness_acc_trunc BEFORE TRUNCATE ON harness_acceptance
+    FOR EACH STATEMENT EXECUTE FUNCTION forbid_acceptance_rewrite();
+
+-- hypotheses / experiments (research M3.1)：条件化假设与预注册区分性实验。
+-- 认知契约：假设是环境的竞争内部模型（同问题 ≥2 活跃假设是常态，禁止过早
+-- 收敛）；实验期望在派发前声明且派发后不可变（结构性预注册，防事后拟合）；
+-- 假设状态翻转必须由区分性实验结果驱动（带事件流历史），模型叙事不能自证。
+CREATE TABLE IF NOT EXISTS hypotheses (
+    id              BIGSERIAL PRIMARY KEY,
+    exploration_id  BIGINT NOT NULL REFERENCES explorations(id) ON DELETE CASCADE,
+    question        TEXT NOT NULL,
+    statement       TEXT NOT NULL,
+    status          TEXT NOT NULL DEFAULT 'active'
+                    CHECK (status IN ('active','supported','refuted','superseded')),
+    basis_node_ids  BIGINT[] NOT NULL DEFAULT '{}',
+    notes           TEXT NOT NULL DEFAULT '',
+    created_by      TEXT NOT NULL DEFAULT 'planner',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_hypotheses_exp ON hypotheses(exploration_id, status);
+-- M3.2：条件失效态（basis 事实被反证 → supported 假设降级 invalidated，等待
+-- 重估；重述同名假设可复活为 active）。幂等地把旧 CHECK 换成含新值的版本。
+DO $$
+DECLARE cname text;
+BEGIN
+    SELECT conname INTO cname FROM pg_constraint
+     WHERE conrelid='hypotheses'::regclass AND contype='c'
+       AND pg_get_constraintdef(oid) LIKE '%active%'
+       AND pg_get_constraintdef(oid) NOT LIKE '%invalidated%';
+    IF cname IS NOT NULL THEN
+        EXECUTE 'ALTER TABLE hypotheses DROP CONSTRAINT '||quote_ident(cname);
+        ALTER TABLE hypotheses ADD CONSTRAINT ck_hyp_status CHECK (
+            status IN ('active','supported','refuted','superseded','invalidated'));
+    END IF;
+END $$;
+DROP TRIGGER IF EXISTS trg_hypotheses_upd ON hypotheses;
+CREATE TRIGGER trg_hypotheses_upd BEFORE UPDATE ON hypotheses
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- 假设状态变迁事件流（append-only）：M3.2 条件失效唤醒需要完整历史。
+CREATE TABLE IF NOT EXISTS hypothesis_events (
+    id              BIGSERIAL PRIMARY KEY,
+    hypothesis_id   BIGINT NOT NULL REFERENCES hypotheses(id) ON DELETE CASCADE,
+    from_status     TEXT NOT NULL,
+    to_status       TEXT NOT NULL,
+    reason          TEXT NOT NULL,
+    experiment_id   BIGINT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_hyp_events ON hypothesis_events(hypothesis_id, id);
+
+-- 实验规格：期望（per-hypothesis 预期观察）在 declared 时写定；派发后任何
+-- 改写被触发器拒绝（预注册结构性强制）。结果只允许经 RecordOutcome 路径追加。
+CREATE TABLE IF NOT EXISTS experiments (
+    id              BIGSERIAL PRIMARY KEY,
+    exploration_id  BIGINT NOT NULL REFERENCES explorations(id) ON DELETE CASCADE,
+    question        TEXT NOT NULL,
+    action          TEXT NOT NULL,
+    hypothesis_ids  BIGINT[] NOT NULL DEFAULT '{}',
+    expectations    JSONB NOT NULL DEFAULT '{}',
+    intent_id       BIGINT,
+    status          TEXT NOT NULL DEFAULT 'declared'
+                    CHECK (status IN ('declared','dispatched','observed','inconclusive','invalid')),
+    outcome         JSONB NOT NULL DEFAULT '{}',
+    stop_condition  TEXT NOT NULL DEFAULT '',
+    declared_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    dispatched_at   TIMESTAMPTZ,
+    observed_at     TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_experiments_exp ON experiments(exploration_id, status);
+CREATE OR REPLACE FUNCTION forbid_experiment_spec_rewrite() RETURNS trigger AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'experiments are history (no delete)';
+  END IF;
+  IF OLD.status IN ('dispatched','observed','inconclusive') THEN
+    IF NEW.question <> OLD.question OR NEW.action <> OLD.action
+       OR NEW.hypothesis_ids <> OLD.hypothesis_ids
+       OR NEW.expectations::text <> OLD.expectations::text THEN
+      RAISE EXCEPTION 'experiment spec is immutable after dispatch (pre-registration)';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_experiments_spec ON experiments;
+CREATE TRIGGER trg_experiments_spec BEFORE UPDATE OR DELETE ON experiments
+    FOR EACH ROW EXECUTE FUNCTION forbid_experiment_spec_rewrite();
+
+-- hypothesis_reviews (research M3.4)：干净上下文 Reviewer 的评议存档。
+-- 只追加：评议是建议性输出（advisory），永不反写假设/目标/实验状态——
+-- Reviewer 无工具、无权限，输出仅记录与展示。
+CREATE TABLE IF NOT EXISTS hypothesis_reviews (
+    id              BIGSERIAL PRIMARY KEY,
+    exploration_id  BIGINT NOT NULL REFERENCES explorations(id) ON DELETE CASCADE,
+    model           TEXT NOT NULL,
+    advisory        JSONB NOT NULL,
+    usage           JSONB NOT NULL DEFAULT '{}',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_hyp_reviews ON hypothesis_reviews(exploration_id, id);
+DROP TRIGGER IF EXISTS trg_hyp_reviews_immutable ON hypothesis_reviews;
+CREATE TRIGGER trg_hyp_reviews_immutable BEFORE UPDATE OR DELETE ON hypothesis_reviews
+    FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
+DROP TRIGGER IF EXISTS trg_hyp_reviews_trunc ON hypothesis_reviews;
+CREATE TRIGGER trg_hyp_reviews_trunc BEFORE TRUNCATE ON hypothesis_reviews
+    FOR EACH STATEMENT EXECUTE FUNCTION forbid_mutation();
+
 CREATE TABLE IF NOT EXISTS activity (
     id                 BIGSERIAL PRIMARY KEY,
     exploration_id     BIGINT NOT NULL REFERENCES explorations(id) ON DELETE CASCADE,
@@ -558,6 +786,9 @@ ALTER TABLE tasks ADD COLUMN IF NOT EXISTS pinned_at TIMESTAMPTZ;
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS active_llm_profile_id BIGINT REFERENCES llm_profiles(id) ON DELETE SET NULL;
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS llm_chain_revision BIGINT NOT NULL DEFAULT 0;
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+-- M1b.3b：完成来源分记（model:prove_goal / system:goalless-drain / system:timeout /
+-- 人工/程序来源各自留痕），与 completed_at 同事务写入（CompleteTaskGuarded）。
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS completed_source TEXT NOT NULL DEFAULT '';
 CREATE INDEX IF NOT EXISTS idx_tasks_category ON tasks(category_id, created_at DESC)
     WHERE deleted_at IS NULL AND category_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_tasks_pinned ON tasks(pinned_at DESC)

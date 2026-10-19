@@ -1,28 +1,534 @@
 {
-  "schema_version": 1,
-  "contract_id": "ARTEX-RESEARCH-V1",
-  "contract_sha256": "bb0bf9e10f7d3838b70e7a7e63f8646eba372b743c33f7998d85e3888d9ec349",
-  "tasks": [
-    {"id":"GOV.0","dependencies":[],"acceptance":["finite contract, persistent dependencies/state, bounded source-linked CI evidence"],"status":"DONE","attempts":{},"commits":["aeb693f6d0b90575eab5e97bb68c6d0f28220da6"],"evidence":["evidence/GOV-0-environment.md","evidence/M1a-1-validation.md#source-acquisition"]},
-    {"id":"M1a.1","dependencies":["GOV.0"],"acceptance":["trusted acceptance binding regression matrix and compatibility"],"status":"DONE","attempts":{"request_selected_criterion":{"strategies":1,"method":"host-owned frozen acceptance lookup and full binding"}},"commits":["be0d4e65ba4d382556ac69f65aefc0899f938d80"],"evidence":["evidence/M1a-1-validation.md","evidence/M1a-1-local-results.json","evidence/M1a-1-ci.json"]},
-    {"id":"M1b.1a","dependencies":["M1a.1"],"acceptance":["real schema/API inspection, stable task plan storage and idempotent migration"],"status":"IN_PROGRESS","attempts":{},"commits":[],"evidence":["task-specs/M1b.1.md"]},
-    {"id":"M1b.1b","dependencies":["M1b.1a"],"acceptance":["real SDK and Planner persistence/CAS lifecycle integration"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
-    {"id":"M1b.1c","dependencies":["M1b.1b"],"acceptance":["isolated real PG concurrency/restart/delete/archive/error tests and CI"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
-    {"id":"M1b.2a","dependencies":["M1b.1c"],"acceptance":["graph write-path inventory and atomic domain operations"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
-    {"id":"M1b.2b","dependencies":["M1b.2a"],"acceptance":["reconciliation, rollback/cancellation/idempotency and unknown effects"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
-    {"id":"M1b.3a","dependencies":["M1a.1"],"acceptance":["all completion paths and authority inventory; no premature release"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
-    {"id":"M1b.3b","dependencies":["M1b.2b","M2.2","M1b.3a"],"acceptance":["shared transactional authorized completion, no bypass and current conditions"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
-    {"id":"M2.1","dependencies":["M1b.1c","M1b.2b"],"acceptance":["real local capture and immutable observation/evaluation storage"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
-    {"id":"M2.2","dependencies":["M2.1","M1a.1"],"acceptance":["authenticated bounded resolver and scoped premise/control verifier"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
-    {"id":"M2.3","dependencies":["M2.2","M1b.3b"],"acceptance":["end-to-end completion integration and read-only inspection API/UI"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
-    {"id":"M0.1","dependencies":["GOV.0"],"acceptance":["versioned local scenario/truth registry and executable replay fixtures"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
-    {"id":"M0.2","dependencies":["M0.1"],"acceptance":["actual fixed-baseline runs, cost/model/tool controls and preregistration"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
-    {"id":"M3.1","dependencies":["M2.3","M0.2"],"acceptance":["conditioned claims/hypotheses/experiments in actual call chain"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
-    {"id":"M3.2","dependencies":["M3.1"],"acceptance":["counterevidence/condition invalidation and Planner wakeup"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
-    {"id":"M3.3","dependencies":["M3.2"],"acceptance":["hard-boundary filter, candidate selection, budgets and auditable decisions"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
-    {"id":"M3.4","dependencies":["M3.3"],"acceptance":["clean-context advisory reviewer with evidence access; no authority"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
-    {"id":"M4.1","dependencies":["M3.4"],"acceptance":["traceable improvement proposals, offline regression and separate approval"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
-    {"id":"M4.2","dependencies":["M4.1","M0.2"],"acceptance":["fixed-budget A/B/C/D held-out repeated evaluation and honest report"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]},
-    {"id":"FINAL","dependencies":["M1b.1c","M1b.2b","M1b.3b","M2.3","M0.2","M3.4","M4.2"],"acceptance":["all contract invariants, current checks, independent review, runbook/rollback/handoff"],"status":"DRAFT","attempts":{},"commits":[],"evidence":[]}
-  ]
+ "schema_version": 1,
+ "contract_id": "ARTEX-RESEARCH-V1",
+ "contract_sha256": "bb0bf9e10f7d3838b70e7a7e63f8646eba372b743c33f7998d85e3888d9ec349",
+ "tasks": [
+  {
+   "id": "GOV.0",
+   "dependencies": [],
+   "acceptance": [
+    "finite contract, persistent dependencies/state, bounded source-linked CI evidence"
+   ],
+   "status": "DONE",
+   "attempts": {},
+   "commits": [
+    "aeb693f6d0b90575eab5e97bb68c6d0f28220da6"
+   ],
+   "evidence": [
+    "evidence/GOV-0-environment.md",
+    "evidence/M1a-1-validation.md#source-acquisition"
+   ]
+  },
+  {
+   "id": "M1a.1",
+   "dependencies": [
+    "GOV.0"
+   ],
+   "acceptance": [
+    "trusted acceptance binding regression matrix and compatibility"
+   ],
+   "status": "DONE",
+   "attempts": {
+    "request_selected_criterion": {
+     "strategies": 1,
+     "method": "host-owned frozen acceptance lookup and full binding"
+    }
+   },
+   "commits": [
+    "be0d4e65ba4d382556ac69f65aefc0899f938d80"
+   ],
+   "evidence": [
+    "evidence/M1a-1-validation.md",
+    "evidence/M1a-1-local-results.json",
+    "evidence/M1a-1-ci.json"
+   ]
+  },
+  {
+   "id": "M1b.1a",
+   "dependencies": [
+    "M1a.1"
+   ],
+   "acceptance": [
+    "real schema/API inspection, stable task plan storage and idempotent migration"
+   ],
+   "status": "DONE",
+   "attempts": {},
+   "commits": [
+    "24a6337291a8775b0200b194544415047cdfaa77"
+   ],
+   "evidence": [
+    "evidence/M1b-1-local-results.json",
+    "evidence/M1b-1-validation.md",
+    "task-specs/M1b.1.md"
+   ]
+  },
+  {
+   "id": "M1b.1b",
+   "dependencies": [
+    "M1b.1a"
+   ],
+   "acceptance": [
+    "real SDK and Planner persistence/CAS lifecycle integration"
+   ],
+   "status": "DONE",
+   "attempts": {
+    "sdk_binding": {
+     "strategies": 1,
+     "method": "Options.Todos=nil + project TodoWrite CoreTool via AugmentTools/ToolResolve (SDK appends its own tool otherwise; registry later-name-wins); hydrate fail-closed; persist-before-ack"
+    }
+   },
+   "commits": [
+    "d12f2ff47e915420f8240ce95db3ffebe29c15d3"
+   ],
+   "evidence": [
+    "evidence/M1b-1-local-results.json",
+    "docs/research-harness/plan-persistence.md"
+   ]
+  },
+  {
+   "id": "M1b.1c",
+   "dependencies": [
+    "M1b.1b"
+   ],
+   "acceptance": [
+    "isolated real PG concurrency/restart/delete/archive/error tests and CI"
+   ],
+   "status": "DONE",
+   "attempts": {},
+   "commits": [
+    "24a6337291a8775b0200b194544415047cdfaa77"
+   ],
+   "evidence": [
+    "evidence/M1b-1-local-results.json",
+    "evidence/M1b-1-validation.md"
+   ],
+   "notes": "PG matrix 8/8 + archive regression PASS locally (PG 17.11 artex_research_test); CI research-postgres job added to workflow but NOT_RUN until branch push (see STATE PUSH-AUTH) — not claimed green"
+  },
+  {
+   "id": "M1b.2a",
+   "dependencies": [
+    "M1b.1c"
+   ],
+   "acceptance": [
+    "graph write-path inventory and atomic domain operations"
+   ],
+   "status": "DONE",
+   "attempts": {
+    "inventory": {
+     "strategies": 1,
+     "method": "read-only Explore agent inventory; 4 HIGH node/edge split gaps + C5 mirror + C6 race + C7 retry"
+    }
+   },
+   "commits": [
+    "f316a16",
+    "c2c1833"
+   ],
+   "evidence": [
+    "evidence/M1b-2a-local-results.json",
+    "evidence/M1b-2a-review.md",
+    "task-specs/M1b.2a.md"
+   ]
+  },
+  {
+   "id": "M1b.2b",
+   "dependencies": [
+    "M1b.2a"
+   ],
+   "acceptance": [
+    "reconciliation, rollback/cancellation/idempotency and unknown effects"
+   ],
+   "status": "DONE",
+   "attempts": {
+    "inventory": {
+     "strategies": 1,
+     "method": "read-only Explore agent report folded into task-spec"
+    }
+   },
+   "commits": [
+    "c9491eb"
+   ],
+   "evidence": [
+    "task-specs/M1b.2b.md"
+   ],
+   "notes": "GraphIntegrityReport (7 read-only checks incl. dangling tool_use unknown-effect ledger), repeat-cancel idempotent at control layer (db stays strict), fallbackChat atomic; commit-failure injection NOT_TESTED (no natural injection point), engine-level cancel e2e + finding dedup deferred with reasons; 20/20 PG matrix PASS"
+  },
+  {
+   "id": "M1b.3a",
+   "dependencies": [
+    "M1a.1"
+   ],
+   "acceptance": [
+    "all completion paths and authority inventory; no premature release"
+   ],
+   "status": "DONE",
+   "attempts": {
+    "1": "完成入口清单+固定写面（见 evidence 与 RUNBOOK §3 完成/验收行；后续 M1b.3b 已在其上落地）"
+   },
+   "commits": [
+    "3ee1762"
+   ],
+   "evidence": [
+    "task-specs/M1b.3a.md（13 条完成入口 file:line 清单 + 写面钉死测试，commit 3ee1762）"
+   ]
+  },
+  {
+   "id": "M1b.3b",
+   "dependencies": [
+    "M1b.2b",
+    "M2.2",
+    "M1b.3a"
+   ],
+   "acceptance": [
+    "shared transactional authorized completion, no bypass and current conditions"
+   ],
+   "status": "DONE",
+   "attempts": {},
+   "commits": [
+    "a0a8eb2"
+   ],
+   "evidence": [
+    "task-specs/M1b.3b.md"
+   ],
+   "notes": "single completion entry with terminal CAS (R6 fixed), source provenance, open-goal + current-acceptance revalidation in-tx; EvaluationReport stays unwired until M2.3 (no new auto-release)"
+  },
+  {
+   "id": "M2.1",
+   "dependencies": [
+    "M1b.1c",
+    "M1b.2b"
+   ],
+   "acceptance": [
+    "real local capture and immutable observation/evaluation storage"
+   ],
+   "status": "DONE",
+   "attempts": {},
+   "commits": [
+    "68d7bdd"
+   ],
+   "evidence": [
+    "evidence/M2-1-local-results.json",
+    "task-specs/M2.1.md"
+   ]
+  },
+  {
+   "id": "M2.2",
+   "dependencies": [
+    "M2.1",
+    "M1a.1"
+   ],
+   "acceptance": [
+    "authenticated bounded resolver and scoped premise/control verifier"
+   ],
+   "status": "DONE",
+   "attempts": {},
+   "commits": [
+    "d2bbf1c"
+   ],
+   "evidence": [
+    "evidence/M2-2-local-results.json",
+    "task-specs/M2.2.md"
+   ]
+  },
+  {
+   "id": "M2.3",
+   "dependencies": [
+    "M2.2",
+    "M1b.3b"
+   ],
+   "acceptance": [
+    "end-to-end completion integration and read-only inspection API/UI"
+   ],
+   "status": "DONE",
+   "attempts": {},
+   "commits": [
+    "50600ea"
+   ],
+   "evidence": [
+    "task-specs/M2.3.md"
+   ],
+   "notes": "read-only inspection API delivered + acceptance-revalidated completion (M1b.3b) constitutes the controlled integration; evaluation-as-completion-requirement deferred to M3.2 by design; web UI deferred (browser-render acceptance rule)"
+  },
+  {
+   "id": "M0.1",
+   "dependencies": [
+    "GOV.0"
+   ],
+   "acceptance": [
+    "versioned local scenario/truth registry and executable replay fixtures"
+   ],
+   "status": "DONE",
+   "attempts": {},
+   "commits": [
+    "7762813"
+   ],
+   "evidence": [
+    "evidence/M0-1-local-results.json",
+    "docs/research-harness/scenario-registry.md"
+   ],
+   "notes": "16 immutable id@version scenarios covering all 14 registered classes; replay via production kernel 19/19 subtests PASS incl. offline Go1.23 module; M0.2 requires model credentials (NEEDS_INPUT)"
+  },
+  {
+   "id": "M0.2",
+   "dependencies": [
+    "M0.1"
+   ],
+   "acceptance": [
+    "actual fixed-baseline runs, cost/model/tool controls and preregistration"
+   ],
+   "status": "DONE",
+   "attempts": {},
+   "commits": [
+    "8d1581e"
+   ],
+   "evidence": [
+    "evidence/M0-2-baseline-runs.json",
+    "task-specs/M0.2.md"
+   ],
+   "notes": "BASE-POS proved via atomic ProveGoal (single call; early 'idempotent repeat' note was a collector double-count misreading, corrected after review); BASE-NEG refused false confirmation and dispatched an intent; usage metered, caps enforced; single round per scenario — significance claims deferred to M4"
+  },
+  {
+   "id": "M3.1",
+   "dependencies": [
+    "M2.3",
+    "M0.2"
+   ],
+   "acceptance": [
+    "conditioned claims/hypotheses/experiments in actual call chain"
+   ],
+   "status": "DONE",
+   "attempts": {},
+   "commits": [
+    "759516f"
+   ],
+   "evidence": [
+    "evidence/M3-1-local-results.json",
+    "task-specs/M3.1.md"
+   ]
+  },
+  {
+   "id": "M3.2",
+   "dependencies": [
+    "M3.1"
+   ],
+   "acceptance": [
+    "counterevidence/condition invalidation and Planner wakeup"
+   ],
+   "status": "DONE",
+   "attempts": {},
+   "commits": [
+    "9e93a6c"
+   ],
+   "evidence": [
+    "task-specs/M3.2.md"
+   ]
+  },
+  {
+   "id": "M3.3",
+   "dependencies": [
+    "M3.2"
+   ],
+   "acceptance": [
+    "hard-boundary filter, candidate selection, budgets and auditable decisions"
+   ],
+   "status": "DONE",
+   "attempts": {},
+   "commits": [
+    "b385358"
+   ],
+   "evidence": [
+    "db/experiment_selection_pg_test.go"
+   ],
+   "notes": "budgets = open-experiment cap (16, M3.1) + preregistered model budget; selection advisory to planner with rendered reasons"
+  },
+  {
+   "id": "M3.4",
+   "dependencies": [
+    "M3.3"
+   ],
+   "acceptance": [
+    "clean-context advisory reviewer with evidence access; no authority"
+   ],
+   "status": "DONE",
+   "attempts": {},
+   "commits": [
+    "c7c75c4"
+   ],
+   "evidence": [
+    "evidence/M3-3-4-local-results.json"
+   ]
+  },
+  {
+   "id": "M4.1",
+   "dependencies": [
+    "M3.4"
+   ],
+   "acceptance": [
+    "traceable improvement proposals, offline regression and separate approval"
+   ],
+   "status": "DONE",
+   "attempts": {},
+   "commits": [
+    "a7bc19b"
+   ],
+   "evidence": [
+    "db/proposal_mining_pg_test.go"
+   ]
+  },
+  {
+   "id": "M4.2",
+   "dependencies": [
+    "M4.1",
+    "M0.2"
+   ],
+   "acceptance": [
+    "fixed-budget A/B/C/D held-out repeated evaluation and honest report"
+   ],
+   "status": "DONE",
+   "attempts": {
+    "1": "pilot r=1 诚实零效应（认知工具零调用，A≈B≈C≈D）；按预注册不追加 r=3（防凑方向）。后续：M4.3 以有区分力场景重答可证伪命题"
+   },
+   "commits": [
+    "5b22eaa",
+    "6aa8d2f"
+   ],
+   "evidence": [
+    "evidence/M4-2-pilot-raw.jsonl",
+    "evidence/M4-2-pilot-results.json"
+   ]
+  },
+  {
+   "id": "FINAL",
+   "dependencies": [
+    "M1b.1c",
+    "M1b.2b",
+    "M1b.3b",
+    "M2.3",
+    "M0.2",
+    "M3.4",
+    "M4.2"
+   ],
+   "acceptance": [
+    "all contract invariants, current checks, independent review, runbook/rollback/handoff"
+   ],
+   "status": "DONE",
+   "attempts": {
+    "1": "不变量↔检查对照表入 RUNBOOK §3（34 矩阵 case 钉死）；证据指针全量审计通过（修正 1 处误指）；CI da78595 绿。09:00 定时器自删与会话总结为计划内收尾动作。"
+   },
+   "commits": [],
+   "evidence": [
+    "RUNBOOK.md（环境/验证命令/构件地图 17 行/回滚/交接）",
+    "evidence/ 五轮独立审查记录（M1b-1-review / M1b-2a-review / M0-2-M1b2b-review / M2-M3-review / M3-2-M4-1-review）",
+    "SESSION_HANDOFF.md"
+   ]
+  },
+  {
+   "id": "M4.3",
+   "dependencies": [
+    "M4.2"
+   ],
+   "acceptance": [
+    "判别性场景下的固定预算 A/B/C/D 对照：认知层成为完成必要路径，多轮信念修订闭环（脚本化环境执行+实验观察上报），诚实报告"
+   ],
+   "status": "DONE",
+   "attempts": {
+    "1": "pilot r=1 完成：零假证明、四变体全部有据完成；核心发现=认知工具采用缺口（仅 D 声明过假设，实验全零）→ 立项 M4.4 纪律指令采用实验"
+   },
+   "commits": [
+    "a174400"
+   ],
+   "evidence": [
+    "evidence/M4-3-pilot-raw.jsonl",
+    "evidence/M4-3-pilot-D-rerun.jsonl",
+    "evidence/M4-3-pilot-results.json"
+   ]
+  },
+  {
+   "id": "M4.4",
+   "dependencies": [
+    "M4.3"
+   ],
+   "acceptance": [
+    "纪律指令变体（E）认知工具采用与完整闭环 live 演示，诚实报告"
+   ],
+   "status": "DONE",
+   "attempts": {
+    "1": "E 全链路采用+机制闭环（实验判定 inconclusive=精确匹配拒绝强拟合，诚实性保持）；D 两次网关传输失败存档，对照取 M4.3 成功 D"
+   },
+   "commits": [
+    "dd36b78"
+   ],
+   "evidence": [
+    "evidence/M4-4-pilot-raw.jsonl",
+    "evidence/M4-4-pilot-D-rerun.jsonl",
+    "evidence/M4-4-pilot-results.json"
+   ]
+  },
+  {
+   "id": "M5.1",
+   "dependencies": [
+    "M4.5"
+   ],
+   "acceptance": [
+    "hunt-noise 噪声消融：预注册先行，r=4×变体（A/B/D/E），false_proof/无效重探/采用计数如实报告（含零效应）"
+   ],
+   "status": "DRAFT",
+   "attempts": {},
+   "commits": [],
+   "evidence": []
+  },
+  {
+   "id": "M5.2",
+   "dependencies": [
+    "M4.5",
+    "M3.2"
+   ],
+   "acceptance": [
+    "hunt-retract 中途撤回：失效链 live 反证传播，恢复成功率/invalidated 事件流/假证明率"
+   ],
+   "status": "DRAFT",
+   "attempts": {},
+   "commits": [],
+   "evidence": []
+  },
+  {
+   "id": "M5.3",
+   "dependencies": [
+    "M4.5"
+   ],
+   "acceptance": [
+    "M4.5 闭环稳定性重复 E/D 各 r=5，计数报告+置信边界（不做显著性声明）"
+   ],
+   "status": "DRAFT",
+   "attempts": {},
+   "commits": [],
+   "evidence": []
+  },
+  {
+   "id": "M5.4",
+   "dependencies": [
+    "M5.1",
+    "M5.2"
+   ],
+   "acceptance": [
+    "真实引擎闭环：worker 真实上报实验观察，事件流来自真实调用链（activity 佐证）"
+   ],
+   "status": "DRAFT",
+   "attempts": {},
+   "commits": [],
+   "evidence": []
+  },
+  {
+   "id": "M5.5",
+   "dependencies": [
+    "M4.1"
+   ],
+   "acceptance": [
+    "ChangeProposal 挖掘→用户审批→应用一条提案→前后对照回归（审批必须显式提交用户）"
+   ],
+   "status": "DRAFT",
+   "attempts": {},
+   "commits": [],
+   "evidence": []
+  }
+ ]
 }

@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "task": "M3.1",
+  "baseline_commit": "6ddfd04",
+  "results": {
+    "pg_matrix": {
+      "command": "ARTEX_TEST_PG_DSN=<local-isolated> sh scripts/test-research-pg.sh (now 27 db cases + inspection + archive)",
+      "exit": 0,
+      "new_cases": [
+        "TestHypothesisLifecycle (set restatement supersedes with event history; cross-exploration basis rejected)",
+        "TestExperimentPreRegistrationAndOutcome (>=2 expectations required; post-dispatch spec rewrite rejected by trigger; unique match -> supported/refuted transitions with events; double outcome rejected; no-match -> inconclusive with NO status change; open experiment budget enforced)"
+      ],
+      "log_sha256": "3659b6fbad23ba0e9b2e06fe9a06ea8e47f51de04f2f9cd2d722847eae377e3f"
+    },
+    "call_chain": "planner tools state_hypotheses/declare_experiment/dispatch_experiment registered in PlannerTools; worker tool report_experiment_outcome in WorkerTools; planner wake-up prompt renders the live belief state (active hypotheses grouped by question + open experiments) via renderHypothesesBlock",
+    "regression": "PASS (build; vet; agent pkg; race harness/cmd; TestGoalCompletion)"
+  },
+  "structural_guarantees": "expectations immutable after dispatch (trigger); hypothesis status transitions only via discriminating experiment outcomes (event history); ambiguous/no-match never changes status; hypotheses are not prove_goal evidence",
+  "deferred_to_M3.2": "condition-invalidation wakeup (basis fact retracted/superseded -> flag dependent hypotheses), M3.3 candidate selection, M3.4 reviewer",
+  "independent_review": "COMPLETED (agent_143a00b5, night 2026-10-18/19): APPROVE_WITH_P1 — both P1s fixed (exact-match semantics; declaration consistency) + structural >=2 anti-collapse and hardening in the same commit; report evidence/M2-M3-review.md; matrix re-verified 27/27"
+}

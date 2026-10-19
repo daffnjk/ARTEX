@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "task": "M2.2",
+  "baseline_commit": "35bb667",
+  "implementation_commits": [
+    "d2bbf1c"
+  ],
+  "results": {
+    "pg_matrix": {
+      "command": "ARTEX_TEST_PG_DSN=<local-isolated> sh scripts/test-research-pg.sh (now 24 cases)",
+      "exit": 0,
+      "pass_cases": 24,
+      "new_cases": [
+        "TestHarnessAcceptanceVersions (idempotent identical set, version bump keeps history, version reuse rejected, missing fail-closed, spec rewrite + delete rejected by trigger)",
+        "TestHarnessAcceptanceFullStackPremise (PG observations + PG acceptance + host-marker premise verifier -> confirm; request pinned to superseded version fails closed after v2)"
+      ],
+      "log_sha256": "a193250307d9a2d1f7b02ef4991a6d1213c023c16190f0477c9ffcd615ed1fb8"
+    },
+    "unit": "TestPremiseMarkerVerifier PASS (supported/refuted-bounded/inconclusive/empty-marker/empty-obs)",
+    "regression": "PASS (harness/cmd race; build)"
+  },
+  "boundaries": "premise scope only (never whole vulns/goals); marker host-supplied; acceptance versions immutable history, never reused; resolver is task/goal-scoped",
+  "independent_review": "COMPLETED in the batch: single-current partial-unique index added (resolver no longer trusts convention); see evidence/M2-M3-review.md"
+}

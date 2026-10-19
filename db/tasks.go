@@ -644,6 +644,9 @@ DELETE FROM assets a USING deletable d WHERE a.id=d.id`, id, expID)
 	}
 	// llm_usage (the token metering ledger) is intentionally NOT deleted with the
 	// task — it is kept as historical accounting even after the task is gone.
+	if err := dropCognitionHistory(tx, expID); err != nil {
+		return result, err
+	}
 	if _, err := tx.Exec(`DELETE FROM tasks WHERE id=$1`, id); err != nil {
 		return result, err
 	}
@@ -651,4 +654,83 @@ DELETE FROM assets a USING deletable d WHERE a.id=d.id`, id, expID)
 		return result, err
 	}
 	return result, tx.Commit()
+}
+
+// dropCognitionHistory 处置被删探索的认知史（M3.2–M4.1 批审 P2#8）：
+//
+//  1. 他探索里 basis 指向本探索节点的 supported 假设——证据随图消失，先失效
+//     （事件留痕），否则依赖假设在来源任务删除后永久 supported。
+//  2. experiments / hypothesis_reviews 是触发器保护的追加式表，FK 级联删除会
+//     被它们整体拦下（任务从此删不掉）。删除任务=显式处置认知史：owner 级
+//     在同一事务内临时 DISABLE 这两个触发器——DDL 事务性保证任何失败整体
+//     回滚，触发器不会留在禁用态。
+func dropCognitionHistory(tx *sql.Tx, expID int64) error {
+	// 批审 P2：先取 experiments/hypothesis_reviews 的 ACCESS EXCLUSIVE（与后续
+	// DISABLE TRIGGER 同级）再碰 hypotheses 行——固定锁序，避免与并发
+	// RecordExperimentOutcome（先持 experiments 行锁、后改 hypotheses）成环死锁。
+	if _, err := tx.Exec(`LOCK TABLE experiments, hypothesis_reviews IN ACCESS EXCLUSIVE MODE`); err != nil {
+		return err
+	}
+	rows, err := tx.Query(`SELECT DISTINCT h.id FROM hypotheses h
+		JOIN exploration_nodes n ON n.exploration_id=$1
+		WHERE h.status='supported' AND h.exploration_id<>$1 AND n.id=ANY(h.basis_node_ids)`, expID)
+	if err != nil {
+		return err
+	}
+	var dependents []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return err
+		}
+		dependents = append(dependents, id)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for _, id := range dependents {
+		res, err := tx.Exec(`UPDATE hypotheses SET status='invalidated', updated_at=now()
+			WHERE id=$1 AND status='supported'`, id)
+		if err != nil {
+			return err
+		}
+		if n, _ := res.RowsAffected(); n > 0 {
+			if _, err := tx.Exec(`INSERT INTO hypothesis_events(hypothesis_id, from_status, to_status, reason)
+				VALUES ($1,'supported','invalidated',$2)`, id, "basis evidence removed with source task deletion"); err != nil {
+				return err
+			}
+		}
+	}
+	if _, err := tx.Exec(`ALTER TABLE experiments DISABLE TRIGGER trg_experiments_spec`); err != nil {
+		return fmt.Errorf("disable experiments immutability trigger (requires table owner): %w", err)
+	}
+	if _, err := tx.Exec(`ALTER TABLE hypothesis_reviews DISABLE TRIGGER trg_hyp_reviews_immutable`); err != nil {
+		return fmt.Errorf("disable hypothesis_reviews immutability trigger (requires table owner): %w", err)
+	}
+	_, err = tx.Exec(`DELETE FROM experiments WHERE exploration_id=$1`, expID)
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(`DELETE FROM hypothesis_reviews WHERE exploration_id=$1`, expID)
+	if err != nil {
+		return err
+	}
+	// hypothesis_events / hypotheses 无 DELETE 触发器，正常级联即可；补刀显式
+	// 删除以防未来触发器收紧后再次炸级联。
+	if _, err := tx.Exec(`DELETE FROM hypothesis_events WHERE hypothesis_id IN
+		(SELECT id FROM hypotheses WHERE exploration_id=$1)`, expID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`DELETE FROM hypotheses WHERE exploration_id=$1`, expID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`ALTER TABLE experiments ENABLE TRIGGER trg_experiments_spec`); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`ALTER TABLE hypothesis_reviews ENABLE TRIGGER trg_hyp_reviews_immutable`); err != nil {
+		return err
+	}
+	return nil
 }

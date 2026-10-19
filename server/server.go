@@ -717,14 +717,15 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/tasks/{id}/scope", s.taskScopeList)
 	mux.HandleFunc("POST /api/tasks/{id}/scope", s.taskScopeAdd)
 	mux.HandleFunc("DELETE /api/tasks/{id}/scope/{sid}", s.taskScopeDelete)
-	mux.HandleFunc("GET /api/tasks/{id}/goals", s.listGoals)                       // 目标管理:列出本任务全部目标
-	mux.HandleFunc("POST /api/tasks/{id}/goals", s.addGoal)                        // 目标管理:人工新增目标(复活任务)
-	mux.HandleFunc("PATCH /api/tasks/{id}/goals/{gid}", s.editGoal)                // 目标管理:修改目标(复活任务)
-	mux.HandleFunc("DELETE /api/tasks/{id}/goals/{gid}", s.deleteGoal)             // 目标管理:硬删除目标(不复活)
-	mux.HandleFunc("GET /api/tasks/{id}/constraints", s.listConstraints)           // 约束管理:列出本任务操作约束
-	mux.HandleFunc("POST /api/tasks/{id}/constraints", s.addConstraint)            // 约束管理:新增约束(不通知 planner)
-	mux.HandleFunc("PATCH /api/tasks/{id}/constraints/{cid}", s.editConstraint)    // 约束管理:修改约束
-	mux.HandleFunc("DELETE /api/tasks/{id}/constraints/{cid}", s.deleteConstraint) // 约束管理:删除约束
+	mux.HandleFunc("GET /api/tasks/{id}/goals", s.listGoals)                            // 目标管理:列出本任务全部目标
+	mux.HandleFunc("GET /api/tasks/{id}/research/inspection", s.taskResearchInspection) // M2.3 只读研究检查面:完成事实/图一致性/评估存档/验收历史
+	mux.HandleFunc("POST /api/tasks/{id}/goals", s.addGoal)                             // 目标管理:人工新增目标(复活任务)
+	mux.HandleFunc("PATCH /api/tasks/{id}/goals/{gid}", s.editGoal)                     // 目标管理:修改目标(复活任务)
+	mux.HandleFunc("DELETE /api/tasks/{id}/goals/{gid}", s.deleteGoal)                  // 目标管理:硬删除目标(不复活)
+	mux.HandleFunc("GET /api/tasks/{id}/constraints", s.listConstraints)                // 约束管理:列出本任务操作约束
+	mux.HandleFunc("POST /api/tasks/{id}/constraints", s.addConstraint)                 // 约束管理:新增约束(不通知 planner)
+	mux.HandleFunc("PATCH /api/tasks/{id}/constraints/{cid}", s.editConstraint)         // 约束管理:修改约束
+	mux.HandleFunc("DELETE /api/tasks/{id}/constraints/{cid}", s.deleteConstraint)      // 约束管理:删除约束
 	mux.HandleFunc("POST /api/tasks/{id}/control", s.control)
 	mux.HandleFunc("PUT /api/tasks/{id}/llm", s.updateTaskLLMProfiles)
 	mux.HandleFunc("GET /api/tasks/{id}/llm/resolution", s.taskLLMResolutionHandler)
@@ -1714,13 +1715,11 @@ func (s *Server) seed(t *Task, text string) {
 // a failure just falls back to the normal planner-driven flow.
 func (s *Server) seedFirstIntent(t *Task) {
 	summary := fmt.Sprintf("完成任务目标：%s（任务：%s）", t.Goal, t.Description)
-	id, err := t.Store.AddIntent(map[string]any{"summary": summary}, 8, nil, "seed")
+	// 意图节点与 derived_from 边同一事务落库（M1b.2a C8）。
+	id, err := t.Store.AddIntentWithParents(map[string]any{"summary": summary}, 8, nil, "seed", nil)
 	if err != nil {
 		log.Printf("[seed] task %s: 下发种子意图失败: %v", t.ID, err)
 		return
-	}
-	if origin, _ := t.Store.OriginFactID(); origin > 0 {
-		_ = t.Store.Link(origin, db.RelDerivedFrom, id)
 	}
 	log.Printf("[seed] task %s: 已下发种子意图 #%d", t.ID, id)
 }
@@ -2284,6 +2283,10 @@ func (s *Server) patchFinding(w http.ResponseWriter, r *http.Request) {
 		// 避免出现状态已改而推送事件丢失的窗口。事件登记失败不影响状态更新，
 		// 所以只记日志、不向调用方报错。
 		from, found, notified, err := s.m.pg.SetFindingStatusWithNotify(r.Context(), id, *body.Status)
+		// M3.2 条件失效唤醒：误报撤回会（同事务）失效依赖假设——唤醒 planner 重估。
+		if err == nil && found && *body.Status == db.FindingFalsePositive {
+			s.wakeTaskOfFinding(id)
+		}
 		if err != nil {
 			writeErr(w, 500, err.Error())
 			return
@@ -2353,7 +2356,15 @@ func (s *Server) deleteFinding(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, "bad finding id")
 		return
 	}
+	// M3.2：删除 finding = 证据撤回，可能失效了依赖假设——先记归属再删，删后唤醒 planner 重估。
+	var ownerTaskID int64
+	_ = s.m.pg.QueryRow(`SELECT COALESCE(task_id,0) FROM findings WHERE id=$1`, id).Scan(&ownerTaskID)
 	n, err := s.m.pg.DeleteFinding(id)
+	if err == nil && n > 0 && ownerTaskID > 0 {
+		if t, ok := s.m.Task(fmt.Sprint(ownerTaskID)); ok {
+			t.Notify()
+		}
+	}
 	if err != nil {
 		writeErr(w, 500, err.Error())
 		return
@@ -3820,7 +3831,8 @@ func (s *Server) fallbackChat(t *Task, msg string) string {
 	switch {
 	case strings.HasPrefix(m, "意图") || strings.HasPrefix(lower, "intent"):
 		text := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(m, "意图"), "intent"))
-		_, _ = t.Store.AddIntent(map[string]any{"summary": text}, 9, nil, "human")
+		// M1b.2b：走原子原语（节点+任务根血缘边同事务），不再产生无边意图。
+		_, _ = t.Store.AddIntentWithParents(map[string]any{"summary": text}, 9, nil, "human", nil)
 		return "已注入一条高优先级意图：" + text
 	case strings.HasPrefix(m, "提示") || strings.HasPrefix(lower, "hint"):
 		text := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(m, "提示"), "hint"))

@@ -1,0 +1,80 @@
+{
+ "schema_version": "1",
+ "id": "cross-task-reference",
+ "version": "1",
+ "sample_class": "cross-task-reference",
+ "description": "Evidence belongs to a different task; integrity check rejects the binding",
+ "allowed_actions": [
+  "evaluate_only"
+ ],
+ "stop_conditions": [
+  "all_steps_evaluated"
+ ],
+ "controls": {
+  "model": "none-required",
+  "tool_budget": "none",
+  "target": "none"
+ },
+ "truth": {
+  "source": "constructed fixture: payload bytes are author-controlled",
+  "condition": "offline evaluation against the M1a.1 acceptance kernel only; no target, no model"
+ },
+ "acceptance": {
+  "TaskID": 101,
+  "GoalID": 201,
+  "Version": "acc-v1",
+  "Criterion": {
+   "ID": "fixture-value",
+   "Version": "1"
+  },
+  "Claim": "Local fixture value equals 42.",
+  "ExperimentID": "experiment-local-1",
+  "ContextVersion": "context-1"
+ },
+ "verifier": {
+  "kind": "payload-equals",
+  "expect": "eyJmaXh0dXJlX3ZhbHVlIjo0Mn0="
+ },
+ "steps": [
+  {
+   "name": "evaluate",
+   "request": {
+    "schema_version": "1",
+    "id": "cross-task-req",
+    "task_id": 101,
+    "goal_id": 201,
+    "experiment_id": "experiment-local-1",
+    "context_version": "context-1",
+    "claim": "Local fixture value equals 42.",
+    "criterion_id": "fixture-value",
+    "criterion_version": "1",
+    "acceptance_version": "acc-v1",
+    "evidence": [
+     {
+      "observation_id": "o-x",
+      "sha256": "20487b17d02df41fdbcf98c96e046392974d9565991260aafd60d476d91bcc6a"
+     }
+    ]
+   },
+   "observations": [
+    {
+     "id": "o-x",
+     "task_id": 999,
+     "experiment_id": "experiment-local-1",
+     "execution_id": "exec-1",
+     "context_version": "context-1",
+     "subject_ref": "fixture-user",
+     "object_ref": "fixture-object",
+     "observed_at": "2026-10-18T00:00:00Z",
+     "complete": true,
+     "payload": "eyJmaXh0dXJlX3ZhbHVlIjo0Mn0="
+    }
+   ],
+   "expect": {
+    "conclusion": "inconclusive",
+    "disposition": "review",
+    "issue_code": "evidence_binding_mismatch"
+   }
+  }
+ ]
+}

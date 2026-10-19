@@ -1,57 +1,38 @@
 {
-  "schema_version": 1,
-  "contract_id": "ARTEX-RESEARCH-V1",
-  "contract_sha256": "bb0bf9e10f7d3838b70e7a7e63f8646eba372b743c33f7998d85e3888d9ec349",
-  "repository": "daffnjk/ARTEX",
-  "work_branch": "research/autopilot-v1",
-  "observed_main_commit": "674dd067eb4eba7dc95b786a63b7576abb064a48",
-  "checkpoint_parent_commit": "46c5798b136ebf6b3137b4880268e073689f5e63",
-  "last_verified_code_commit": "be0d4e65ba4d382556ac69f65aefc0899f938d80",
-  "historical_verified_commit": "daa01668c7785e1e7ee9824ef3d9fc19668f65e7",
-  "historical_verification_scope": "PR #1 scoped core and TestGoalCompletion CI; not rerun here",
-  "current_task": "M1b.1a",
-  "next_task": "M1b.1b",
-  "run_state": "WORKING",
-  "writer": "current authorized executor; remote expected-SHA checks required",
-  "external_scheduler": "not configured",
-  "cost": "unknown",
-  "remaining_quota": "unknown",
-  "blockers": [
-    {
-      "id": "ENV-NETWORK",
-      "scope": "direct local git clone/dependency acquisition",
-      "root_cause": "github.com DNS lookup failed in container; archive download not available through viewed URL path",
-      "strategies_attempted": 3,
-      "next_strategy": "No further direct-network retries; use connected API and verified committed-source bundle",
-      "status": "WORKAROUND_VERIFIED"
-    },
-    {
-      "id": "ENV-PG",
-      "scope": "local PG validation",
-      "root_cause": "no psql/postgres/docker or installed PostgreSQL directory found",
-      "strategies_attempted": 1,
-      "next_strategy": "Bounded never-started public PostgreSQL image from existing CI; use existing executor permissions only, otherwise dedicated CI service",
-      "status": "ACQUIRING"
-    },
-    {
-      "id": "MODEL-BUDGET",
-      "scope": "live model baseline/ablation",
-      "root_cause": "no approved configured model credentials or measurable quota in current executor",
-      "strategies_attempted": 0,
-      "status": "NEEDS_INPUT"
-    },
-    {
-      "id": "ENV-GO-SDK",
-      "scope": "full local project-toolchain tests",
-      "root_cause": "installed Go 1.23.2 cannot build root Go 1.26.3 module; direct dependencies unavailable",
-      "strategies_attempted": 1,
-      "next_strategy": "Verified SDK acquired; real local Go 1.26.3 scoped tests pass; marker removed",
-      "status": "WORKAROUND_VERIFIED"
-    }
-  ],
-  "independent_review": "be0d4e65: completed, no major issues reported; receipt 6236232397; not a security proof",
-  "remote_save": "46c5798b136ebf6b3137b4880268e073689f5e63 saved/imported; local M1b.1a implementation is uncommitted and not yet PG-verified",
-  "deployment_actions_in_session": false,
-  "last_verified_scope": "M1a.1 local red/green, CI 39047329301 under Go 1.26.3 and separate Codex read-only review",
-  "local_workdir": "/mnt/data/artex-work/ARTEX"
+ "schema_version": 1,
+ "contract_id": "ARTEX-RESEARCH-V1",
+ "contract_sha256": "bb0bf9e10f7d3838b70e7a7e63f8646eba372b743c33f7998d85e3888d9ec349",
+ "repository": "daffnjk/ARTEX",
+ "work_branch": "research/autopilot-v2",
+ "observed_main_commit": "cc8acc9da541c902e332d608833c461d40a26966",
+ "checkpoint_parent_commit": "cc8acc9da541c902e332d608833c461d40a26966",
+ "last_verified_code_commit": "1179bff: matrix 35/35 PASS (race) incl. basis-lineage regression; go vet ./... clean; offline race green",
+ "verified_scope_note": "M1b.1a storage 24a6337 + M1b.1b planner integration d12f2ff: real isolated PostgreSQL 17.11 matrix 8/8 PASS with race; agent tool unit 6/6; full regression (build/vet/race harness/cmd/TestGoalCompletion/agent pkg) PASS; see evidence/M1b-1-local-results.json",
+ "historical_verified_commit": "be0d4e65ba4d382556ac69f65aefc0899f938d80",
+ "historical_verification_scope": "M1a.1 via PR #2; baseline re-run locally this session before M1b.1 work",
+ "current_task": "M4 阶段收口完成；交接文档/阶段计划/驱动提示词已交付",
+ "next_task": "M5.1 hunt-noise 噪声消融（NEXT-PHASE-PLAN.md；入口 HANDOFF.md §7；驱动提示词 NEXT-PHASE-PROMPT.md）",
+ "run_state": "READY_FOR_NEXT_PHASE",
+ "writer": "current authorized executor; single writer on research/autopilot-v2",
+ "external_scheduler": "STOPPED 2026-10-19 09:12: 本会话工具集无 CronDelete 工具且无 CLI，按用户停止指令改经宿主 automations 存储（tasks-index.sqlite）最小停用——enabled=0 + lifecycle_status=completed（保留历史行，用户可在 Automations 页恢复/删除）。CronList 复核通过。",
+ "cost": "unknown",
+ "remaining_quota": "unknown",
+ "blockers": [
+  {
+   "id": "ENV-PG",
+   "scope": "local PG validation",
+   "root_cause": "resolved: local PostgreSQL 17.11 with dedicated artex_research_test validated the full M1b.1 matrix",
+   "strategies_attempted": 1,
+   "next_strategy": "none; keep using the isolated local test database only",
+   "status": "RESOLVED_LOCAL"
+  }
+ ],
+ "independent_review": "M1b.2a+M0.1 COMPLETED 2026-10-18 (agent_c26c0094): APPROVE_WITH_P1, fixed in c2c1833, re-verified; M1b.1 earlier (agent_fdb4fd4e); reports in evidence/; M3.2–M4.1 batch (agent_068cba5d) APPROVE_WITH_P1 2026-10-18: all P1+P2 fixed at da78595, see evidence/M3-2-M4-1-review.md; M4.2b–M4.5 batch (agent_efbcfd31) APPROVE_WITH_P1 2026-10-19: all P1+P2 fixed at 1179bff, see evidence/M4-2-M4-5-review.md",
+ "remote_save": "research/autopilot-v2 pushed through 1179bff; draft PR #3; CI auto-triggers each push (green through a174400 run 39143131735)",
+ "deployment_actions_in_session": false,
+ "last_verified_scope": "M1b.1 storage + planner CAS lifecycle on real isolated PostgreSQL; full regression battery",
+ "local_workdir": "/Users/admin/Documents/渗透测试/ARTEX",
+ "model_budget_state": "APPROVED and first-used 2026-10-18: GLM-5.3-Flash via operator profile, preregistered caps enforced by the metering wrapper; see evidence/M0-2-baseline-runs.json",
+ "tonight_progress": "2026-10-18 night: M0.2, M1b.2b, M1b.3a, M2.1, M2.2, M1b.3b all DONE + batch review (agent_062a7276 APPROVE_WITH_P1, both P1s fixed incl. evidence misreading retraction)",
+ "final_verification": "2026-10-19 09:10: matrix 35/35 PASS (race); go vet ./... clean; offline race green; CI green (run 39147470161); HEAD 71ea16a == origin; research DB clean except intentional -keep diagnostic rows"
 }

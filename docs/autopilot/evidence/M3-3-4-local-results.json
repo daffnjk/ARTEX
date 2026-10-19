@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "task": "M3.3+M3.4",
+  "results": {
+    "m33_selection": {
+      "test": "TestExperimentSelection PASS (ranking, dispatched-first, explicit deny-constraint exclusion, reason content, exclusion ordering)",
+      "render": "planner prompt renders ranked recommendations with reasons and exclusion notes (advisory)"
+    },
+    "m34_reviewer": {
+      "packet_test": "TestReviewPacket PASS (self-contained clean-context packet: hypotheses/events/closed+open experiments/facts/recommendations; append-only archive)",
+      "live_run": {
+        "model": "GLM-5.3-Flash", "requests": 1, "input_tokens": 522, "output_tokens": 3448, "duration_seconds": 70.9,
+        "outcome": "advisory stored; model fenced JSON (fence-stripping fixed after the run)",
+        "findings": [
+          "HIGH unsupported_supported_claim: hypothesis supported but WAF block page != 500 — causal chain broken",
+          "HIGH invalid_refutation: sibling refuted invalidly — WAF intercepted before the app layer, unicode hypothesis never tested",
+          "MEDIUM insufficient_discrimination: experiment mixed WAF-layer and app-layer hypotheses",
+          "LOW ungrounded_hypotheses: empty basis_node_ids"
+        ],
+        "significance": "first live evidence of the outer review loop catching over-claiming and invalid refutation produced by the inner loop itself — exactly the target cognitive behavior; advisory only, no state was changed"
+      }
+    },
+    "matrix": "30 db cases PASS with race (log /tmp session archive); agent/harness regressions green"
+  },
+  "independent_review": "PENDING (next batch)"
+}

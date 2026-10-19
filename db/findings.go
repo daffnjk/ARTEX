@@ -668,6 +668,11 @@ func (d *DB) DeleteFinding(id int64) (n int64, err error) {
 			return err
 		}
 		if nodeID.Valid {
+			// M3.2：finding 被删除 = 其证据撤回——同事务失效依赖它的 supported
+			// 假设，再删节点（事件留痕）。
+			if _, err := InvalidateHypothesesOnNodeTx(tx, nodeID.Int64, "basis finding deleted"); err != nil {
+				return err
+			}
 			if _, err := tx.Exec(`DELETE FROM exploration_nodes WHERE id=$1 AND kind='finding'`, nodeID.Int64); err != nil {
 				return err
 			}
@@ -691,8 +696,10 @@ func (d *DB) DeleteFindingsByTask(taskID int64) (int64, error) {
 
 // SetFindingStatus updates one finding's triage state. Returns rows affected.
 //
-// 底层 setter：只改状态、不登记推送事件。生产代码改状态请走
-// SetFindingStatusWithNotify —— 直接调本函数会让「状态变更推送」静默失效。
+// 底层 setter：只改状态、不登记推送事件，也【不】触发 M3.2 条件失效级联
+// （InvalidateHypothesesOnNodeTx 只挂在 SetFindingStatusTx 语义路径上）。生产
+// 代码改状态请走 SetFindingStatusWithNotify —— 直接调本函数会让「状态变更
+// 推送」与「依赖假设失效」同时静默失效。
 // 保留它是为了让不关心通知的用例（参数校验、复测流程）能单独驱动状态。
 func (d *DB) SetFindingStatus(id int64, status string) (int64, error) {
 	res, err := d.Exec(`UPDATE findings SET status=$1 WHERE id=$2`, status, id)
@@ -709,6 +716,19 @@ func (d *DB) SetFindingReportByNodeID(nodeID int64, report string) (int64, error
 	return d.SetFindingReportVersionByNodeID(context.Background(), nodeID, report, nil)
 }
 
+// withTx 在单个普通事务内执行 fn（不需要证据全局锁时的轻量事务包装）。
+func (d *DB) withTx(ctx context.Context, fn func(*sql.Tx) error) error {
+	tx, err := d.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := fn(tx); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
 // setFindingCol updates one text column on the standalone finding row AND mirrors
 // the new value into the originating exploration node's payload under jsonKey, so the
 // per-task 发现 Tab (which reads the node payload, not this table) stays in sync.
@@ -716,20 +736,28 @@ func (d *DB) SetFindingReportByNodeID(nodeID int64, report string) (int64, error
 // col and jsonKey MUST be trusted constants (they are interpolated into SQL) — never
 // pass user input.
 func (d *DB) setFindingCol(id int64, col, jsonKey, val string) (int64, error) {
-	var nodeID *int64
-	err := d.QueryRow(`UPDATE findings SET `+col+`=$1 WHERE id=$2 RETURNING node_id`, val, id).Scan(&nodeID)
-	if err == sql.ErrNoRows {
-		return 0, nil
-	}
-	if err != nil {
-		return 0, err
-	}
-	if nodeID != nil {
-		_, _ = d.Exec(`UPDATE exploration_nodes
-			SET payload = jsonb_set(payload, '{`+jsonKey+`}', to_jsonb($1::text))
-			WHERE id = $2`, val, *nodeID)
-	}
-	return 1, nil
+	// M1b.2a C5：findings 行与节点 payload 镜像同一事务（普通事务即可，不占用
+	// 全局证据 advisory 锁——审查 P2）；镜像失败整体回滚，不再留两侧漂移。
+	var affected int64
+	err := d.withTx(context.Background(), func(tx *sql.Tx) error {
+		var nodeID *int64
+		if err := tx.QueryRow(`UPDATE findings SET `+col+`=$1 WHERE id=$2 RETURNING node_id`, val, id).Scan(&nodeID); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil
+			}
+			return err
+		}
+		affected = 1
+		if nodeID != nil {
+			if _, err := tx.Exec(`UPDATE exploration_nodes
+				SET payload = jsonb_set(payload, '{`+jsonKey+`}', to_jsonb($1::text))
+				WHERE id = $2`, val, *nodeID); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return affected, err
 }
 
 // SetFindingSeverity updates one finding's severity (+ node payload sync). Returns

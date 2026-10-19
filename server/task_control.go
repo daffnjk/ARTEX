@@ -207,6 +207,11 @@ func (s *Server) applyIntentControl(ctx context.Context, t *Task, iid int64, act
 		//   hard(真删除):物理删除该意图及"仅由它支撑"的独占子孙节点(级联到叶子),避免留下
 		//     孤立数据;共享节点、goal、任务根事实保留。
 		// 两种模式都用 cancelled 触发告知 planner(意图内容 + 删除原因),让它据此重规划。
+		if node.State == db.StateIntentDeleted {
+			// M1b.2b 幂等：重复取消已删除意图 = 成功无操作（不再通知、不改状态）。
+			out.State = db.StateIntentDeleted
+			return out, nil
+		}
 		if node.State != "running" && node.State != "paused" && node.State != "open" {
 			return out, fmt.Errorf("仅待领/运行中/已暂停的意图可以删除")
 		}

@@ -518,6 +518,24 @@ FROM findings WHERE id=$1 FOR UPDATE`, id).
 		FromStatus: from,
 		ToStatus:   status,
 	})
+	// M3.2 条件失效：误报（false_positive）= 对该 finding 证据的反证——与状态
+	// 翻转同事务地把它支撑的 supported 假设降级 invalidated（事件留痕）。
+	if status == FindingFalsePositive {
+		var nodeID sql.NullInt64
+		// 审查 P2：node 查找失败必须中止事务（fail-closed）——静默跳过会让
+		// 误报翻转提交而依赖假设不被降级。仅"无 node 关联"（NULL）是合法跳过。
+		switch err := tx.QueryRowContext(ctx, `SELECT node_id FROM findings WHERE id=$1`, id).Scan(&nodeID); {
+		case errors.Is(err, sql.ErrNoRows):
+			return from, true, true, notified, fmt.Errorf("finding %d vanished mid-transaction", id)
+		case err != nil:
+			return from, true, true, notified, err
+		}
+		if nodeID.Valid {
+			if _, err := InvalidateHypothesesOnNodeTx(tx, nodeID.Int64, "basis finding retracted as false_positive"); err != nil {
+				return from, true, true, notified, err
+			}
+		}
+	}
 	return from, true, true, notified, nil
 }
 

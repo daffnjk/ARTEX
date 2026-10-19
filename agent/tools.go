@@ -52,11 +52,13 @@ func compactIntents(ns []*db.Node, parentsOf, yieldsOf map[int64][]int64) []map[
 // One ToolSet is created per planner/worker run; per-run signals live here.
 type ToolSet struct {
 	findingRecorder FindingRecorder
-	as              *db.AssetStore   // asset store (optional; nil = asset tools not available)
-	cs              *db.CompanyStore // company store (optional)
-	ts              *db.ExplorationStore
-	worker          string
-	taskID          int64 // PG tasks.id; 0 when unknown (tests / orchestrator cross-task reads)
+	// cogAblated 为 true 时不注册 M3 假设/实验工具（M4.2 消融变体；planner 传导）。
+	cogAblated bool
+	as         *db.AssetStore   // asset store (optional; nil = asset tools not available)
+	cs         *db.CompanyStore // company store (optional)
+	ts         *db.ExplorationStore
+	worker     string
+	taskID     int64 // PG tasks.id; 0 when unknown (tests / orchestrator cross-task reads)
 	// coverageDisabled mirrors tasks.coverage_enabled=false. Stored inverted so the
 	// zero value (all existing ToolSet constructions) means ENABLED — matching the
 	// DB default (true). When true: graphOverviewData drops the coverage block, the
@@ -1068,22 +1070,11 @@ func (t *ToolSet) addOneIntent(it intentItem) (int64, error) {
 	if len(anchors) > 0 {
 		payload["asset_ids"] = anchors
 	}
-	id, err := t.ts.AddIntent(payload, priority, anchors, "planner")
+	// 节点与全部 derived_from 血缘边在同一事务内落库（M1b.2a：连边失败整体
+	// 回滚，不再留下脱链意图）；无显式 parent 时回连任务根（origin fact）。
+	id, err := t.ts.AddIntentWithParents(payload, priority, anchors, "planner", parents)
 	if err != nil {
 		return 0, err
-	}
-	// upstream lineage: link each (validated) fact/finding parent → this intent, so
-	// "multiple facts combine into one new intent" is expressible.
-	for _, parent := range parents {
-		_ = t.ts.Link(parent, db.RelDerivedFrom, id)
-	}
-	// a top-level intent (no explicit parent) connects to the origin fact, so every
-	// intent still traces back to a fact node — at task start the only fact is the
-	// origin, and the first intents derive from it.
-	if len(parents) == 0 {
-		if origin, _ := t.ts.OriginFactID(); origin > 0 {
-			_ = t.ts.Link(origin, db.RelDerivedFrom, id)
-		}
 	}
 	return id, nil
 }
@@ -1180,23 +1171,18 @@ func (t *ToolSet) proveGoal() actool.CoreTool {
 			if err != nil || evidenceNode == nil || (evidenceNode.Kind != db.KindFact && evidenceNode.Kind != db.KindFinding) {
 				return actool.Errorf("evidence_id 必须是本任务或直接关联任务的事实/漏洞节点"), nil
 			}
-			_ = t.ts.Link(ev, db.RelProves, goal)
-			_ = t.ts.SetNodeState(goal, "met")
-			// 每标记一个目标 met，就检查本任务是否【所有目标】都已 met；若是，自动判定
-			// 任务完成（置 GoalMet），无需再依赖模型显式调 goal_met。
-			if goals, err := t.ts.ListByKind(db.KindGoal, 1000); err == nil && len(goals) > 0 {
-				allMet := true
-				for _, g := range goals {
-					if g.State != "met" {
-						allMet = false
-						break
-					}
-				}
-				if allMet {
-					t.GoalMet = true
-					t.Reason = fmt.Sprintf("所有 %d 个目标均已 met（最后由 goal %d 触发）", len(goals), goal)
-					return actool.Text(fmt.Sprintf("goal %d marked met；本任务所有目标均已达成，任务自动判定完成", goal)), nil
-				}
+			// proves 边与 open→met 翻转同一事务（M1b.2a C1）：任一失败整体回滚且显式
+			// 报错，不再吞错假报成功；目标已 met 为幂等成功。
+			if err := t.ts.ProveGoal(goal, ev); err != nil {
+				return actool.Errorf(fmt.Sprintf("prove_goal 落库失败（目标状态未变）：%v", err)), nil
+			}
+			// 完成判定用权威 SQL（存在 open goal 即未完成），消除读取后新增 goal 的竞态（C6）。
+			open, err := t.ts.HasOpenGoal()
+			if err == nil && !open {
+				t.GoalMet = true
+				// 完成判定语义是"无 open 目标"（abandoned 也算了结），文案如实陈述。
+				t.Reason = fmt.Sprintf("本任务已无未了结（open）的目标（最后由 goal %d 触发；abandoned 目标视为已了结）", goal)
+				return actool.Text(fmt.Sprintf("goal %d marked met；本任务已无未了结（open）的目标，任务自动判定完成（abandoned 目标视为已了结）", goal)), nil
 			}
 			return actool.Text(fmt.Sprintf("goal %d marked met", goal)), nil
 		})
@@ -1338,13 +1324,17 @@ func (t *ToolSet) recordOneFact(it factItem, defaultIntent int64) (int64, error)
 			return 0, fmt.Errorf("intent_id 必须是本任务的意图（关联任务意图只读）")
 		}
 	}
-	// a fact is its OWN node kind (distinct from a vuln finding).
-	id, err := t.ts.AddNode(db.KindFact, payload, 5, "confirmed", t.worker, pidList(it.AssetIDs))
+	// a fact is its OWN node kind (distinct from a vuln finding). 节点与 yields 边
+	// 同一事务落库（M1b.2a C3）：连边失败整体回滚，fact 不再可能与产出意图脱链。
+	var id int64
+	var err error
+	if intent > 0 {
+		id, err = t.ts.AddFactWithYields(payload, pidList(it.AssetIDs), t.worker, intent)
+	} else {
+		id, err = t.ts.AddNode(db.KindFact, payload, 5, "confirmed", t.worker, pidList(it.AssetIDs))
+	}
 	if err != nil {
 		return 0, err
-	}
-	if intent > 0 {
-		_ = t.ts.Link(intent, db.RelYields, id) // chain: intent -> fact
 	}
 	t.writes.Facts++
 	return id, nil
@@ -1459,14 +1449,8 @@ func (t *ToolSet) addOneGoal(it goalItem) (int64, error) {
 	if origin == "" {
 		origin = "system"
 	}
-	id, err := t.ts.AddNode(db.KindGoal, payload, 0, "open", origin, nil)
-	if err != nil {
-		return 0, err
-	}
-	if of, _ := t.ts.OriginFactID(); of > 0 && id > 0 {
-		_ = t.ts.Link(of, db.RelSpawns, id) // goals descend from the task root (origin fact)
-	}
-	return id, nil
+	// goal 节点与 spawns 边同一事务落库（M1b.2a C4），origin 默认与旧行为一致。
+	return t.ts.AddGoalWithRoot(payload, origin)
 }
 
 // setGoals 给【本任务】新增探索目标(goal 节点)。既是目标拆解器的提交工具,也是主
@@ -2031,8 +2015,15 @@ func (t *ToolSet) listWorkerTraces() actool.CoreTool {
 
 // PlannerTools is the read + intent-generation + goal-judgement tool set.
 func (t *ToolSet) PlannerTools() []actool.CoreTool {
-	return []actool.CoreTool{
+	tools := []actool.CoreTool{
 		t.graphOverview(), t.listFindings(), t.listFacts(), t.nodeDetail(),
+	}
+	// M3.1：条件化认知——竞争假设与预注册区分性实验进入真实调用链
+	//（cogAblated 消融变体不注册——M4.2）。
+	if !t.cogAblated {
+		tools = append(tools, t.stateHypotheses(), t.declareExperiment(), t.dispatchExperiment())
+	}
+	tools = append(tools,
 		// cold-digest §6.1: restore folded cold nodes (digest body → members → detail).
 		t.expandDigest(),
 		t.getWorkerOutput(), t.getWorkerTrace(), t.searchAllWorkerTraces(), t.listGoals(), t.addIntent(), t.proveGoal(), t.goalMet(),
@@ -2050,5 +2041,6 @@ func (t *ToolSet) PlannerTools() []actool.CoreTool {
 		t.addTaskScope(),
 		// list_untested_assets：按需查本任务范围内未测资产(类型+分页)，自行决定补测。
 		t.listUntestedAssets(),
-	}
+	)
+	return tools
 }

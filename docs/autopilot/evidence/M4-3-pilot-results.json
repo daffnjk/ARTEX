@@ -1,0 +1,47 @@
+{
+ "schema_version": 1,
+ "milestone": "M4.3",
+ "timestamp": "2026-10-19T00:05..00:30 +08:00",
+ "claim": "判别性 decoy hunt 多轮消融（pilot r=1，A/B/C/D）",
+ "preregistration": "docs/autopilot/task-specs/M4.3.md（先于代码与任何模型调用提交，a174400）",
+ "raw": [
+  "evidence/M4-3-pilot-raw.jsonl",
+  "evidence/M4-3-pilot-D-rerun.jsonl"
+ ],
+ "matrix": {
+  "grounded_completion": "A 1/1, B 1/1, C 1/1, D 1/1（rerun；首轮 D 因模型 API 停滞 240s 超时记 inconclusive_error，按预注册基础设施失败条款透明重跑，双记录均存档）",
+  "false_proof": "0/5（诱饵 M43-DEAD 被全部 run 抵制——prove_goal 引用的证据全部含真实标记）",
+  "wasted_probes": "每 run 3（全部采取一轮全探 4 端点的并行策略——在确定性契约下这是最优解）"
+ },
+ "cognition_adoption": {
+  "A": 0,
+  "B": 0,
+  "C": 0,
+  "D_rerun": "state_hypotheses×1（4 条 active 假设）",
+  "experiments_declared_or_dispatched": "全部 0"
+ },
+ "usage_total": {
+  "pilot_4runs": {
+   "requests": 15,
+   "tokens_in": 159771,
+   "tokens_out": 11675
+  },
+  "D_rerun": {
+   "requests": 4,
+   "tokens_in": 48669,
+   "tokens_out": 5575
+  },
+  "global_capped": false
+ },
+ "interpretation": [
+  "正确性维度无差异：四变体全部有据完成、零假证明——诱饵强度不足以区分。",
+  "采用缺口（核心发现）：认知工具几乎不被自发使用（仅 D rerun 声明了假设；实验预注册/派发全零）——工具注册+信念渲染不足以驱动采用。",
+  "确定性契约下并行全探是最优策略，假设机制对效率无可测增益（信息论上也不可能有）——认知层的价值定位应落在诚实性与可审计性，而非效率。",
+  "D 首轮停滞为模型 API 瞬时问题（重跑 166s 正常完成），非渲染路径死锁（C 同注册正常）。"
+ ],
+ "honest_limits": [
+  "r=1 小样本；adoptance 信号是 1/2（D）vs 0/3（A/B/C），只报方向。",
+  "完整认知闭环（假设→预注册实验→观察→信念修订）尚未被任何 live run 走通——M4.4 以纪律指令检验可否驱动采用并闭环。"
+ ],
+ "next": "M4.4：belief block 显式纪律指令变体（E），检验采用与闭环"
+}

@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "task": "M2.1",
+  "baseline_commit": "ed23873",
+  "implementation_commits": [
+    "68d7bdd"
+  ],
+  "results": {
+    "pg_matrix": {
+      "command": "ARTEX_TEST_PG_DSN=<local-isolated> sh scripts/test-research-pg.sh (now 22 cases)",
+      "exit": 0,
+      "pass_cases": 22,
+      "new_cases": [
+        "TestHarnessObservationStoreImmutable (append-only trigger rejects UPDATE/DELETE; idempotent same-identity store; same-id different-identity conflict; oversize rejected)",
+        "TestHarnessResolverTaskScopeAndFullStackEvaluation (cross-task resolve misses; M1a kernel confirms a claim from PG-backed observations through frozen acceptance; evaluation archive append/read-back; archive immutable)"
+      ],
+      "log_sha256": "77587664ac7356386e16a5b55fbfe288592509b1e9e5a520690103d690d4696d"
+    },
+    "regression": "PASS (agent pkg; harness/cmd race; build)"
+  },
+  "finding_during_verification": "digest-only idempotency check accepted a cross-task id collision as idempotent (caught by the matrix across runs); fixed to full-identity comparison — recorded as a real boundary lesson, tests now use run-unique ids",
+  "deferred": "live worker capture channel wiring + CLI/API surface belong to M2.2/M2.3",
+  "independent_review": "COMPLETED in the M2.1-M3.1 batch (agent_143a00b5): no issues in M2.1's own surface; batch hardening (TRUNCATE guards, request_id unique) applied; see evidence/M2-M3-review.md"
+}

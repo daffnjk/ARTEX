@@ -44,8 +44,23 @@ type Planner struct {
 	// planner's multi-step plan survives across wake-ups — each Plan() is a fresh
 	// session, but the shared store lets it record a serial exploit chain once and
 	// dispatch it step-by-step over rounds instead of front-loading it in parallel.
+	// 仅内存模式（plans==nil，离线/测试）使用；持久化模式的权威计划在 PostgreSQL。
 	todoMu sync.Mutex
 	todos  map[int64]*actool.TodoStore
+
+	// plans 非 nil 时启用持久化计划模式（research M1b.1）：Plan() 开头从权威存储
+	// hydrate（失败即停止本轮，绝不回退空内存），TodoWrite 先 CAS 落盘后确认，
+	// Options.Todos 置 nil、改用 plantodo.go 的持久化工具。nil = 内存模式原行为。
+	plans PlanPersister
+
+	// M4.2 消融开关（倒置存储：零值=全开，生产装配不调用 SetCognition）。
+	// cogToolsOff：不注册 M3 假设/实验工具；cogRenderOff：不渲染信念态与实验推荐。
+	cogToolsOff  bool
+	cogRenderOff bool
+
+	// cogDiscipline（M4.4 研究变体 E）：在 belief block 追加显式认知纪律
+	// 指令（证明前先假设→预注册实验→派发）。生产装配不设置。
+	cogDiscipline bool
 }
 
 func NewPlanner(prov llm.Provider, model, workDir string, tx *transcript.Store, window, maxTurns int) *Planner {
@@ -115,6 +130,23 @@ func (p *Planner) todoFor(expID int64) *actool.TodoStore {
 	}
 	return s
 }
+
+// SetCognition 配置 M3 认知层（M4.2 消融变体专用；生产装配不调用，保持全开）。
+// tools=注册假设/实验工具；render=在态势 prompt 中渲染信念态与实验推荐。
+// 两参独立：C 变体=tools 且 !render，D 变体（全量）=tools 且 render。
+func (p *Planner) SetCognition(tools, render bool) {
+	p.cogToolsOff, p.cogRenderOff = !tools, !render
+}
+
+// SetCognitionDiscipline 开启 belief block 的显式认知纪律指令（M4.4 变体 E
+// 专用；仅当认知渲染开启时生效）。
+func (p *Planner) SetCognitionDiscipline(on bool) { p.cogDiscipline = on }
+
+// SetPlanStore wires the authoritative task-plan persistence backend (M1b.1).
+// Once set, the planner hydrates its cross-round plan from storage at the start
+// of every round and persists each TodoWrite via CAS before acknowledging.
+// nil (or never called) keeps the legacy in-memory scratchpad behavior.
+func (p *Planner) SetPlanStore(ps PlanPersister) { p.plans = ps }
 
 // SetKillWork wires the engine's per-work terminate callback so the planner's
 // kill_work tool can stop a single running worker.
@@ -359,6 +391,7 @@ func (p *Planner) Plan(ctx context.Context, taskID int64, as *db.AssetStore, ts 
 	// runs in a detached goroutine so it never adds latency to this round.
 	p.compactor.OnPlannerRound(ctx, ts)
 	tsx := NewToolSet(ts, "planner")
+	tsx.cogAblated = p.cogToolsOff
 	tsx.SetFindingRecorder(p.findingRecorder)
 	if as != nil {
 		tsx.SetAssetStore(as, as.Companies())
@@ -370,9 +403,23 @@ func (p *Planner) Plan(ctx context.Context, taskID int64, as *db.AssetStore, ts 
 	if origin, _ := ts.OriginFactID(); origin > 0 {
 		tsx.SetOwnerNode(origin) // planner-side anchors default to the task root (origin fact)
 	}
+	// M1b.1：权威计划恢复。失败必须停止本轮规划（fail-closed）——绝不回退空
+	// 内存假装无事，否则旧实例/重启后的规划轮会在错误状态上继续推进。
+	var planState *plannerPlanState
+	if p.plans != nil {
+		var herr error
+		if planState, herr = loadPlannerPlanState(p.plans, ts.ID()); herr != nil {
+			return false, "", herr
+		}
+	}
 	// 领域工具 + 基础默认工具集（Read/Write/Edit/MultiEdit/LS/Glob/Grep/Bash）
 	// 资产覆盖度功能关闭时剔除 add_task_scope/list_untested_assets（不入 prompt）。
 	base := append(tsx.DropCoverageTools(tsx.PlannerTools()), actool.DefaultTools()...)
+	// 持久化计划模式（M1b.1）：注册持久化 TodoWrite（真实 CoreTool 注册路径；
+	// Options.Todos 保持 nil，SDK 自带工具与 reminder 自动让位）。
+	if planState != nil {
+		base = append(base, planState.todoTool(ts))
+	}
 	ctx = WithRunInfo(ctx, RunInfo{TaskID: taskID, ExplorationID: explorationID(ts)})
 	tools, def, cleanup := AugmentTools(ctx, "planner", base)
 	defer cleanup()
@@ -429,8 +476,15 @@ func (p *Planner) Plan(ctx context.Context, taskID int64, as *db.AssetStore, ts 
 		MaxTurns:              p.maxTurns, // 0 = unlimited (configurable in agent management)
 		MaxDuration:           maxDur,     // 0=不限;有 deadline 时=距 deadline 剩余
 		Compaction:            compactionConfig(p.compactionWindow()),
-		// 跨唤醒共享的规划待办：让串行链在多轮之间保留（session 是新的，store 不是）。
-		Todos: p.todoFor(ts.ID()),
+		// 跨唤醒共享的规划待办。内存模式：SDK store（原行为）。持久化模式
+		//（M1b.1）：Todos 置 nil——SDK 工具不注册（避免同名双注册，注册表后到
+		// 者胜出），改用上面注册的持久化 TodoWrite；跨轮保留由 PostgreSQL 承担。
+		Todos: func() *actool.TodoStore {
+			if planState != nil {
+				return nil
+			}
+			return p.todoFor(ts.ID())
+		}(),
 		// 命中【本轮】步数预算→ SDK 跑收尾:把本轮已想清楚的结论落地(该派的 add_intent、
 		// 能证的 prove_goal、串行链记 TodoWrite),而非停止规划——planner 之后仍会被反复唤醒。
 		// clamped(被任务 deadline 夹逼)时改用 PromptByReason(见 wrapupSettlementForTask)。
@@ -458,8 +512,37 @@ func (p *Planner) Plan(ctx context.Context, taskID int64, as *db.AssetStore, ts 
 			lead = "本轮是**定时巡检（心跳到点）**的唤醒,且当前**已没有任何 open 或 running 的意图**——没有 worker 在跑、也没有排队中的方向,探索已停摆。你**必须**在本轮产出一个或多个向目标推进、且与图中既有意图**互不重复**的新意图(不得产出 0 意图);先据下面的态势判定目标是否已达成,未达成则立即补方向："
 		}
 	}
-	input := lead + situational + "\n\n据上面的态势，判定目标。目标已【真正达成】（已拿到目标成果/已确认目标漏洞）时用 prove_goal 逐个标记。**硬底线：只要目标尚未达成、且当前没有任何 open 或 running 意图（frontier_open=0 且 running_intents 为空），本轮就必须产出至少一个向目标推进的意图——此时没有在跑的 work 可等、也没有在排队的方向，产出 0 意图=任务停摆。仅当已有 open/running 意图在推进、或目标已达成时，本轮才可以不产出新意图。**" +
-		renderPlannerTodos(opts.Todos.List())
+	// 跨唤醒待办渲染：持久化模式取权威计划投影；内存模式取 SDK store 快照。
+	var crossRoundTodos []actool.Todo
+	if planState != nil {
+		crossRoundTodos = planState.todos()
+	} else {
+		crossRoundTodos = opts.Todos.List()
+	}
+	var hyps []db.Hypothesis
+	var openExps []db.Experiment
+	var hypErr, expErr, recErr error
+	beliefBlock := ""
+	if !p.cogRenderOff {
+		hyps, hypErr = ts.ListHypotheses()
+		openExps, expErr = ts.OpenExperiments()
+		beliefBlock = renderHypothesesBlock(hyps, openExps)
+		var recs []db.ExperimentCandidate
+		recs, recErr = ts.RecommendExperiments()
+		if recErr == nil {
+			beliefBlock += renderExperimentRecommendations(recs)
+		}
+		if p.cogDiscipline {
+			beliefBlock += "\n\n【认知纪律（本任务流程要求）】：在用 prove_goal 证明目标前，先对未决问题用 state_hypotheses 声明 ≥2 条竞争假设（如：真实标记在各端点上的分布），用 declare_experiment 预注册区分性实验（期望=环境契约中该探测返回的标记串原文），再 dispatch_experiment 把实验绑定到对应探测意图——环境执行探测后实验结果会自动判定假设（唯一精确匹配才判定）。之后据信念态决定证明或继续实验。"
+		}
+	}
+	if hypErr != nil || expErr != nil || recErr != nil {
+		// 信念态读取失败不静默（审查 P2，含 recErr：推荐与边界排除不可见时
+		// 模型必须知道，否则可能在盲态下派发被排除的实验）。
+		beliefBlock += "\n【假设态/实验推荐读取失败——当前竞争假设与边界排除不可见：谨慎行事，勿据未知信念态判定，勿派发任何预注册实验】"
+	}
+	input := lead + situational + beliefBlock + "\n\n据上面的态势，判定目标。目标已【真正达成】（已拿到目标成果/已确认目标漏洞）时用 prove_goal 逐个标记。**硬底线：只要目标尚未达成、且当前没有任何 open 或 running 意图（frontier_open=0 且 running_intents 为空），本轮就必须产出至少一个向目标推进的意图——此时没有在跑的 work 可等、也没有在排队的方向，产出 0 意图=任务停摆。仅当已有 open/running 意图在推进、或目标已达成时，本轮才可以不产出新意图。**" +
+		renderPlannerTodos(crossRoundTodos)
 	// MaxDuration 现在会在墙钟到点打断在跑工具并就地进收尾(在活 ctx 上),单轮卡死不再
 	// 绕过收尾,无需外部硬 ctx 兜底。ctx 只承载 pause / kill / shutdown。
 	_, _, err = captureRun(ctx, opts, input,

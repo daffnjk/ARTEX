@@ -1,0 +1,45 @@
+{
+ "schema_version": 1,
+ "milestone": "M4.4",
+ "timestamp": "2026-10-19T00:40..01:00 +08:00",
+ "claim": "认知纪律指令（变体 E）的采用与闭环实验（pilot r=1）",
+ "preregistration": "docs/autopilot/task-specs/M4.4.md（先于实现提交，dd36b78）",
+ "raw": [
+  "evidence/M4-4-pilot-raw.jsonl",
+  "evidence/M4-4-pilot-D-rerun.jsonl"
+ ],
+ "results": {
+  "E": {
+   "verdict": "grounded_completion",
+   "false_proof": false,
+   "adoption": {
+    "state_hypotheses": 2,
+    "declare_experiment": 1,
+    "dispatch_experiment": 4
+   },
+   "loop": "声明→预注册→派发×4→环境执行4探测→实验判定=inconclusive（期望措辞与观察串非逐字相等，系统拒绝强拟合）→假设集重述（3 superseded+2 active，信念修订可见）→以真实标记有据证明",
+   "rounds": 2,
+   "requests": 10,
+   "tokens_in": 130609,
+   "tokens_out": 8467,
+   "wasted_probes": 3
+  },
+  "D": {
+   "attempts": "3 次均因网关不稳失败（240s 停滞→unexpected EOF→360s 停滞），双记录+第三记录存档（M4-4-pilot-D-rerun2.jsonl）；同根因第 3 次尝试后按约束停止重试。对照仍取 M4.3 成功 D 运行。",
+   "comparison_from_M43": "无纪律 D 成功运行：state_hypotheses×1（部分采用）、实验预注册/派发=0",
+   "third_attempt_note": "第三次尝试在停滞前自发 state_hypotheses×4（8 条 active）——无纪律下『部分采用声明、实验始终为零』的结论再获佐证。"
+  }
+ },
+ "interpretation": [
+  "命题【采用】成立：显式纪律指令驱动了全链路采用（对照：无纪律 D 实验始终为 0）。",
+  "命题【闭环判定】部分成立：机制端到端跑通（声明/预注册/派发/环境执行/存储层判定），但该 run 的实验判定为 inconclusive——模型期望措辞未与观察串逐字相等，精确匹配标准拒绝强拟合（系统按设计工作；暴露『期望书写粒度』是采用后的真实摩擦）。",
+  "诚实性未退化：E 仍以真实标记证明（零假证明）；代价=请求 10 vs 无纪律约 4-5、轮数不变——纪律流程有计量成本，无正确性损失（n=1，方向性）。",
+  "假设集重述（supersede 事件）是信念修订的 live 证据。"
+ ],
+ "honest_limits": [
+  "n=1；D 对照取自 M4.3 同场景成功运行（跨批次，同装配无纪律）。",
+  "D 本批 2 次网关传输失败均存档未隐藏；未做第 3 次重试（网关当时不稳，同根因不超 3 策略约束下选择如实记录）。",
+  "inconclusive 判定说明期望书写规范需要在工具描述/纪律指令中继续打磨——留作后续。"
+ ],
+ "usage_note": "M4.4 批次总用量 15/24 请求（含三次 D 失败尝试），未触顶。"
+}
