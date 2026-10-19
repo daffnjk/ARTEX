@@ -462,6 +462,73 @@
     "evidence/M4-4-pilot-D-rerun.jsonl",
     "evidence/M4-4-pilot-results.json"
    ]
+  },
+  {
+   "id": "M5.1",
+   "dependencies": [
+    "M4.5"
+   ],
+   "acceptance": [
+    "hunt-noise 噪声消融：预注册先行，r=4×变体（A/B/D/E），false_proof/无效重探/采用计数如实报告（含零效应）"
+   ],
+   "status": "DRAFT",
+   "attempts": {},
+   "commits": [],
+   "evidence": []
+  },
+  {
+   "id": "M5.2",
+   "dependencies": [
+    "M4.5",
+    "M3.2"
+   ],
+   "acceptance": [
+    "hunt-retract 中途撤回：失效链 live 反证传播，恢复成功率/invalidated 事件流/假证明率"
+   ],
+   "status": "DRAFT",
+   "attempts": {},
+   "commits": [],
+   "evidence": []
+  },
+  {
+   "id": "M5.3",
+   "dependencies": [
+    "M4.5"
+   ],
+   "acceptance": [
+    "M4.5 闭环稳定性重复 E/D 各 r=5，计数报告+置信边界（不做显著性声明）"
+   ],
+   "status": "DRAFT",
+   "attempts": {},
+   "commits": [],
+   "evidence": []
+  },
+  {
+   "id": "M5.4",
+   "dependencies": [
+    "M5.1",
+    "M5.2"
+   ],
+   "acceptance": [
+    "真实引擎闭环：worker 真实上报实验观察，事件流来自真实调用链（activity 佐证）"
+   ],
+   "status": "DRAFT",
+   "attempts": {},
+   "commits": [],
+   "evidence": []
+  },
+  {
+   "id": "M5.5",
+   "dependencies": [
+    "M4.1"
+   ],
+   "acceptance": [
+    "ChangeProposal 挖掘→用户审批→应用一条提案→前后对照回归（审批必须显式提交用户）"
+   ],
+   "status": "DRAFT",
+   "attempts": {},
+   "commits": [],
+   "evidence": []
   }
  ]
 }
