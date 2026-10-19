@@ -14,7 +14,7 @@
  "next_task": "无——等待用户审阅（PR #3 草稿 + REPORT.md + RUNBOOK.md）；后续研究会话从 SESSION_HANDOFF.md 接续",
  "run_state": "STOPPED",
  "writer": "current authorized executor; single writer on research/autopilot-v2",
- "external_scheduler": "not configured",
+ "external_scheduler": "STOPPED 2026-10-19 09:12: 本会话工具集无 CronDelete 工具且无 CLI，按用户停止指令改经宿主 automations 存储（tasks-index.sqlite）最小停用——enabled=0 + lifecycle_status=completed（保留历史行，用户可在 Automations 页恢复/删除）。CronList 复核通过。",
  "cost": "unknown",
  "remaining_quota": "unknown",
  "blockers": [
