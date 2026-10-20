@@ -169,6 +169,62 @@
     {
       "package": "github.com/Autumn-27/artex/db",
       "name": "TestExperimentSelection"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestMergePlanStepsKeepsIDAcrossReorder"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestMergePlanStepsAssignsNewIDsAndDropsRemoved"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestMergePlanStepsDuplicateContentGetsDistinctIDs"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestValidatePlanStepsBounds"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskPlanPGRoundTrip"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskPlanPGConcurrentSameRevisionUpdate"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskPlanPGConcurrentFirstWrite"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskPlanPGStaleWriteRejected"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskPlanPGStaleWriteAfterRowDeleted"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskPlanPGDeleteRecreateRejectsABA"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskPlanPGIsolationAndBasisOwnership"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskPlanPGDeleteCascases"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskPlanPGErrorSurfaces"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskPlanPGArchivePurgeRemovesPlan"
     }
   ]
 }

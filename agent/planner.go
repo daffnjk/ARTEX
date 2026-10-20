@@ -429,6 +429,9 @@ func (p *Planner) Plan(ctx context.Context, taskID int64, as *db.AssetStore, ts 
 	// Options.Todos 保持 nil，SDK 自带工具与 reminder 自动让位）。
 	if planState != nil {
 		base = append(base, planState.todoTool(ts))
+		if _, ok := p.plans.(planStepPatcher); ok {
+			base = append(base, planState.patchTool(taskID))
+		}
 	}
 	ctx = WithRunInfo(ctx, RunInfo{TaskID: taskID, ExplorationID: explorationID(ts)})
 	tools, def, cleanup := base, DeferredInfo{}, func() {}

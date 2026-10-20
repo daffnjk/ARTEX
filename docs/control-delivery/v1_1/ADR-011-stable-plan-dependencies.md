@@ -1,0 +1,7 @@
+# ENG-11: stable step patches and dispatch prerequisites
+
+Extend the existing plan JSON and RowID/revision CAS; do not replace plan storage. The explicit PatchPlanStep host API and planner tool edit one ID in place, emit a plan_changed event and retain ABA protection. Legacy TodoWrite preserves dependency/context fields for retained IDs and explicitly refuses removing a protected step. All dependency plans have bounded stable IDs and a validated acyclic graph.
+
+Dispatch checks current context, same-task supported valid claims and recursively required steps. A predecessor needs a succeeded controlled execution plus valid, unwithdrawn host capture; a planner's completed note grants nothing. Current plan/claim premises are checked again on each execution grant check, so a changed plan, context or withdrawn observation blocks an already admitted action. Root locks serialize plan writes with admission and evidence mutation; local supervisor polling remains bounded, not an assertion of instantaneous remote cancellation.
+
+The single host context version denotes the identity/target/environment snapshot for this release. Hosts must advance it for such changes; a model cannot declare a new current context. Missing or foreign claim/step references fail closed. No implicit cross-task claim inheritance is added. Existing whole-plan CAS, deletion, archive and recovery tests remain in the regression inventory. Migration only extends plan JSON; rollback retains dependency fields and enforcement. Independent review pending.

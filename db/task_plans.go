@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -16,15 +17,18 @@ import (
 // 计划状态只是模型便签——任何验收/完成路径都不读这张表。
 
 // PlanStep 是计划中的一个步骤。ID 由宿主分配且跨保存稳定（按内容精确匹配保持，
-// 与展示顺序无关；改写文本=新步骤，SDK 整表替换接口无法表达"同一步骤改文案"，
-// 已知限制）。BasisNodeIDs 是该步骤派生自的探索节点（fact/意图），ExpectedOutput
+// 与展示顺序无关；旧整体写入按内容匹配，显式 PatchPlanStep 原位改文案）。
+// BasisNodeIDs 是该步骤派生自的探索节点（fact/意图），ExpectedOutput
 // 是预期产出的占位描述（M1b.1 只记录不绑定，绑定在 M2/M3）。
 type PlanStep struct {
-	ID             int64   `json:"id"`
-	Content        string  `json:"content"`
-	Status         string  `json:"status"`
-	BasisNodeIDs   []int64 `json:"basis_node_ids,omitempty"`
-	ExpectedOutput string  `json:"expected_output,omitempty"`
+	ID               int64   `json:"id"`
+	Content          string  `json:"content"`
+	Status           string  `json:"status"`
+	BasisNodeIDs     []int64 `json:"basis_node_ids,omitempty"`
+	ExpectedOutput   string  `json:"expected_output,omitempty"`
+	ContextVersion   string  `json:"context_version,omitempty"`
+	RequiresStepIDs  []int64 `json:"requires_step_ids,omitempty"`
+	RequiresClaimIDs []int64 `json:"requires_claim_ids,omitempty"`
 }
 
 // TaskPlan 是一个探索（任务，二者 1:1）的当前计划。Revision 是 CAS 期望值：
@@ -172,13 +176,13 @@ func (d *DB) LoadTaskPlan(explorationID int64) (*TaskPlan, error) {
 //
 // 行身份参与谓词封死 delete→recreate 的 revision 撞值 ABA。成功返回新 revision
 // 的落盘计划；落盘成功才返回——先持久化，后确认。
-func (d *DB) SaveTaskPlan(plan TaskPlan) (TaskPlan, error) {
+func saveTaskPlan(ctx context.Context, w observationWriter, plan TaskPlan) (TaskPlan, error) {
 	stepsJSON, err := json.Marshal(plan.Steps)
 	if err != nil {
 		return plan, fmt.Errorf("encode task plan steps (exploration %d): %w", plan.ExplorationID, err)
 	}
 	var newRev, newRowID int64
-	err = d.QueryRow(`
+	err = w.QueryRowContext(ctx, `
 UPDATE task_plans
    SET revision = revision + 1, steps = $2, model_notes = $3, updated_at = now()
  WHERE exploration_id = $1 AND revision = $4 AND id = $5
@@ -192,7 +196,7 @@ RETURNING revision, id`,
 		return plan, fmt.Errorf("save task plan (exploration %d): %w", plan.ExplorationID, err)
 	}
 	if plan.Revision == 0 && plan.RowID == 0 {
-		err = d.QueryRow(`
+		err = w.QueryRowContext(ctx, `
 INSERT INTO task_plans (exploration_id, revision, steps, model_notes)
 VALUES ($1, 1, $2, $3)
 ON CONFLICT (exploration_id) DO NOTHING
@@ -208,7 +212,7 @@ RETURNING revision, id`,
 	}
 	// 显式冲突：查当前状态构造可恢复错误；行不存在 ⇒ HaveRevision 0。
 	var have int64
-	qErr := d.QueryRow(`SELECT revision FROM task_plans WHERE exploration_id=$1`,
+	qErr := w.QueryRowContext(ctx, `SELECT revision FROM task_plans WHERE exploration_id=$1`,
 		plan.ExplorationID).Scan(&have)
 	switch {
 	case qErr == nil:

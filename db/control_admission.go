@@ -132,9 +132,9 @@ func (d *DB) AdmitAndReserve(ctx context.Context, taskID control.TaskID, p contr
 	if !allowed {
 		return none, control.ScopeDenied
 	}
-	if len(p.RequiredClaimIDs) > 0 {
-		return none, control.PreconditionInvalid
-	} // Formal claim adapter is added in ENG-10/11; legacy facts never authorize.
+	if err = checkControlPlanAction(ctx, tx, int64(taskID), expID, p); err != nil {
+		return none, err
+	}
 	if p.ExperimentID != nil {
 		var ok bool
 		if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM experiments WHERE id=$1 AND exploration_id=$2)`, *p.ExperimentID, expID).Scan(&ok); err != nil {
@@ -144,9 +144,7 @@ func (d *DB) AdmitAndReserve(ctx context.Context, taskID control.TaskID, p contr
 			return none, control.LineageMismatch
 		}
 	}
-	if p.StepID != nil {
-		return none, control.PreconditionInvalid
-	} // Stable plan-dependency adapter is ENG-11.
+
 	var inFlight bool
 	if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM action_executions WHERE task_id=$1 AND semantic_key=$2 AND state IN ('queued','running'))`, int64(taskID), semantic).Scan(&inFlight); err != nil {
 		return none, err
@@ -228,7 +226,16 @@ func (d *DB) CheckExecutionGrant(ctx context.Context, taskID control.TaskID, id 
 	if state != "queued" && state != "running" {
 		return control.ResultAvailable
 	}
-	return nil
+	var raw []byte
+	var exp int64
+	if err = d.QueryRowContext(ctx, `SELECT action_json,exploration_id FROM action_executions WHERE id=$1 AND task_id=$2`, string(id), int64(taskID)).Scan(&raw, &exp); err != nil {
+		return err
+	}
+	var proposal control.ActionProposal
+	if err = json.Unmarshal(raw, &proposal); err != nil {
+		return err
+	}
+	return checkControlPlanAction(ctx, d, int64(taskID), exp, proposal)
 }
 func (d *DB) PendingControlEvents(ctx context.Context, limit int) ([]execution.OutboxEvent, error) {
 	if limit < 1 || limit > 128 {

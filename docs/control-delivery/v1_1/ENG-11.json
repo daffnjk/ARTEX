@@ -1,0 +1,36 @@
+{
+  "task_id": "ENG-11",
+  "status": "verified_local",
+  "review": "needs_independent_review",
+  "code_tree_sha256": "ccaa42e3a28f6ec23e4942b2f3e9d6c7403cf73ff3d731aa068fb3217eec7bf0",
+  "required": {
+    "status": "PASS",
+    "required_count": 4,
+    "event_count": 168,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "regression": {
+    "status": "PASS",
+    "required_count": 56,
+    "event_count": 314,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "raw_receipts": "reports/ENG-11/runs/03",
+  "log_hashes": {
+    "required.jsonl": "1d26d655b3a9ce0fdaaf29cbcbc4569ec7f09a48715c12696176d7e584a51a8d",
+    "regression.jsonl": "494f71769c27f6a91cec1f343e98b6c41982975e2bf1cb009183454b1c5167ad",
+    "required.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "regression.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "limits": [
+    "Not final aggregate acceptance; independent review deferred",
+    "No production or real target execution"
+  ],
+  "notes": [
+    "Four required roots and 56 existing regression roots pass; explicit stable-ID tool and recursive grant-time prerequisite checks"
+  ]
+}

@@ -146,6 +146,11 @@ func (st *plannerPlanState) todoTool(exp *db.ExplorationStore) actool.CoreTool {
 				}
 			}
 			merged := db.MergePlanSteps(st.plan.Steps, incoming)
+			var preserveErr error
+			merged, preserveErr = db.PreservePlanDependencies(st.plan.Steps, merged)
+			if preserveErr != nil {
+				return actool.Errorf(fmt.Sprintf("TodoWrite rejected: %v", preserveErr)), nil
+			}
 			saved, err := st.persister.SaveTaskPlan(db.TaskPlan{
 				ExplorationID: st.plan.ExplorationID,
 				Revision:      st.plan.Revision, // CAS 期望值：本轮已知的权威 revision
@@ -168,7 +173,8 @@ func (st *plannerPlanState) todoTool(exp *db.ExplorationStore) actool.CoreTool {
 			}
 			// 先持久化（上面已成功）后确认；内存镜像更新为落盘结果。
 			st.plan = saved
-			return actool.Text(fmt.Sprintf(todoWriteAckText, saved.Revision)), nil
+			raw, _ := json.Marshal(saved)
+			return actool.Text(fmt.Sprintf(todoWriteAckText, saved.Revision) + "\n" + string(raw)), nil
 		},
 	})
 }
