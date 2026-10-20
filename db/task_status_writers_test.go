@@ -16,8 +16,10 @@ import (
 func TestTaskStatusWriteSurfaceIsPinned(t *testing.T) {
 	pattern := regexp.MustCompile(`(?s)UPDATE\s+tasks\s+SET\s+status`)
 	allowed := map[string]int{
-		"db/tasks.go":       2, // SetStatus + SetTerminalStatusGuarded
-		"server/manager.go": 1, // ApplyTaskAdmission (admission CAS, never writes done)
+		"db/tasks.go":           1, // legacy/nonterminal SetStatus; controlled terminals delegate
+		"db/task_completion.go": 1, // legacy shared completion
+		"db/control_close.go":   1, // sole controlled terminal transaction
+		"server/manager.go":     1, // ApplyTaskAdmission (admission CAS, never writes done)
 	}
 	roots := []struct{ dir, prefix string }{{".", "db"}, {"../server", "server"}}
 	found := map[string]int{}

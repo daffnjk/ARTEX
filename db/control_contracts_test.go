@@ -8,7 +8,7 @@ import (
 	"github.com/Autumn-27/artex/control"
 )
 
-func controlContractFixture(t *testing.T) (*DB, *Task, control.Contract) {
+func controlContractFixture(t *testing.T, options ...func(*control.Contract)) (*DB, *Task, control.Contract) {
 	t.Helper()
 	d, err := Open(researchPlanDSN(t))
 	if err != nil {
@@ -25,6 +25,9 @@ func controlContractFixture(t *testing.T) (*DB, *Task, control.Contract) {
 		}
 	})
 	c := control.Contract{Mode: control.ModeDirect, Methods: []control.MethodRef{{ID: "http.get", Version: "1"}}, Targets: []control.ScopeRule{{Kind: "exact_host", Value: "localhost", Ports: []int{8080}}}, IdentityRefs: []string{"synthetic-anonymous"}, DataScope: []string{"synthetic"}, Budgets: []control.BudgetLimit{{Dimension: "requests", Limit: 10, CloseReserve: 1, Measurement: "exact"}}, ExpiresAt: time.Now().UTC().Add(time.Hour), AcceptanceVersion: "fixture-v1"}
+	for _, option := range options {
+		option(&c)
+	}
 	return d, task, c
 }
 func TestControlContractVersionImmutable(t *testing.T) {

@@ -10,12 +10,12 @@ import (
 	"github.com/google/uuid"
 )
 
-func outcomeControlFixture(t *testing.T) (*DB, *Task, int64, int64, harness.EvaluationRequest, map[harness.Criterion]harness.Verifier) {
-	return outcomeControlStatusFixture(t, 200)
+func outcomeControlFixture(t *testing.T, options ...func(*control.Contract)) (*DB, *Task, int64, int64, harness.EvaluationRequest, map[harness.Criterion]harness.Verifier) {
+	return outcomeControlStatusFixture(t, 200, options...)
 }
-func outcomeControlStatusFixture(t *testing.T, status int) (*DB, *Task, int64, int64, harness.EvaluationRequest, map[harness.Criterion]harness.Verifier) {
+func outcomeControlStatusFixture(t *testing.T, status int, options ...func(*control.Contract)) (*DB, *Task, int64, int64, harness.EvaluationRequest, map[harness.Criterion]harness.Verifier) {
 	t.Helper()
-	d, task, _, obs := capturedControlStatusFixture(t, status)
+	d, task, _, obs := capturedControlStatusFixture(t, status, options...)
 	store := d.Exploration(task.ExplorationID)
 	goal, err := store.AddGoal(map[string]any{"summary": "captured bytes match"}, "host")
 	if err != nil {

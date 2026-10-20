@@ -10,9 +10,9 @@ import (
 	"github.com/Autumn-27/artex/execution"
 )
 
-func admissionFixture(t *testing.T) (*DB, *Task, control.ActionProposal) {
+func admissionFixture(t *testing.T, options ...func(*control.Contract)) (*DB, *Task, control.ActionProposal) {
 	t.Helper()
-	d, task, c := controlContractFixture(t)
+	d, task, c := controlContractFixture(t, options...)
 	c.IdentityRefs = []string{"anonymous"}
 	c.Budgets = append(c.Budgets, control.BudgetLimit{Dimension: "response_bytes", Limit: 1048576, Measurement: "exact"}, control.BudgetLimit{Dimension: "concurrency", Limit: 1, Measurement: "exact"})
 	if _, err := d.ApproveControlContract(t.Context(), task.ID, 0, c, "admin:fixture"); err != nil {

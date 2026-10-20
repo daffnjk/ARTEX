@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/Autumn-27/artex/agent"
+	"github.com/Autumn-27/artex/control"
 	"github.com/Autumn-27/artex/db"
 	"github.com/Autumn-27/artex/execution"
 	"github.com/Autumn-27/artex/intercept"
@@ -3881,6 +3882,26 @@ func (s *Server) getReport(w http.ResponseWriter, r *http.Request) {
 	t := s.m.ResolveTask(r.URL.Query().Get("task"))
 	if t == nil {
 		writeErr(w, 404, "no active task")
+		return
+	}
+	taskID, parseErr := strconv.ParseInt(t.ID, 10, 64)
+	if parseErr != nil {
+		writeErr(w, 400, "invalid task")
+		return
+	}
+	mode, modeErr := s.m.pg.ControlMode(r.Context(), taskID)
+	if modeErr != nil {
+		writeErr(w, 500, "control report unavailable")
+		return
+	}
+	if mode != "legacy" {
+		md, err := s.renderControlReport(r.Context(), control.TaskID(taskID))
+		if err != nil {
+			writeErr(w, 500, "control report unavailable")
+			return
+		}
+		w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+		_, _ = w.Write([]byte(md))
 		return
 	}
 	findings, _ := t.Store.ListByKind(db.KindFinding, 1000) // 纯漏洞（事实是独立的 KindFact，不进报告）

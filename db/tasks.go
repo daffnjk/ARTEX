@@ -1,10 +1,12 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Autumn-27/artex/control"
 	"strconv"
 	"time"
 )
@@ -478,29 +480,43 @@ func (d *DB) SetQueued(id int64, queued bool) error {
 // stable); moving back to a non-terminal state clears it, so a re-run has no stale
 // finish time.
 func (d *DB) SetStatus(id int64, status string) error {
-	_, err := d.Exec(`
-UPDATE tasks
-   SET status = $1,
-       completed_at = CASE WHEN $1 IN ('done','failed','timeout') THEN COALESCE(completed_at, now()) ELSE NULL END
- WHERE id = $2`, status, id)
-	return err
+	tx, err := d.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var mode, phase string
+	if err = tx.QueryRow(`SELECT control_mode,control_phase FROM tasks WHERE id=$1 FOR UPDATE`, id).Scan(&mode, &phase); err != nil {
+		return err
+	}
+	if mode != "legacy" {
+		if IsTerminal(status) {
+			reason := closeReason(status, "compat:status")
+			if status == "done" {
+				reason = control.StopUnknown
+			}
+			if _, err = closeControlTaskTx(context.Background(), tx, id, ControlCloseRequest{Reason: reason, Source: "compat:status"}); err != nil {
+				return err
+			}
+			return tx.Commit()
+		}
+		if phase != "accepting" {
+			return control.ContractRevoked
+		}
+	}
+	_, err = tx.Exec(`UPDATE tasks SET status=$1,completed_at=CASE WHEN $1 IN ('done','failed','timeout') THEN COALESCE(completed_at,now()) ELSE NULL END WHERE id=$2`, status, id)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // SetTerminalStatusGuarded sets a terminal status only when the task is NOT already
 // terminal, so a completed↔timeout race resolves to the first writer (won=true).
 // Returns won=false (no error) when another terminal status already stuck — the
 // caller then leaves it alone. Non-terminal transitions / re-run still use SetStatus.
-func (d *DB) SetTerminalStatusGuarded(id int64, status string) (won bool, err error) {
-	res, err := d.Exec(`
-UPDATE tasks
-   SET status = $1,
-       completed_at = COALESCE(completed_at, now())
- WHERE id = $2 AND status NOT IN ('done','failed','timeout')`, status, id)
-	if err != nil {
-		return false, err
-	}
-	n, _ := res.RowsAffected()
-	return n > 0, nil
+func (d *DB) SetTerminalStatusGuarded(id int64, status string) (bool, error) {
+	return d.CompleteTaskGuarded(id, status, "compat:terminal")
 }
 
 // StampFirstRun records a task's first-real-run moment and computes its absolute

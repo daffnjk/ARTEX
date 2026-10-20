@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Autumn-27/artex/agent"
+	"github.com/Autumn-27/artex/control"
 	"github.com/Autumn-27/artex/db"
 	"github.com/Autumn-27/artex/intercept"
 	"github.com/Autumn-27/norma/harness"
@@ -882,6 +883,16 @@ func (e *Engine) plannerLoop(ctx context.Context, t *Task) {
 		switch {
 		case err != nil && ectx.Err() == nil:
 			log.Printf("[planner] task %s 规划出错: %v", t.ID, err)
+			if errors.Is(err, control.PlannerStalled) || errors.Is(err, control.BudgetExhausted) || errors.Is(err, control.ContractRevoked) || errors.Is(err, control.ContractExpired) {
+				reason := control.StopUnknown
+				if errors.Is(err, control.BudgetExhausted) {
+					reason = control.StopBudget
+				}
+				if errors.Is(err, control.ContractRevoked) || errors.Is(err, control.ContractExpired) {
+					reason = control.StopRevoked
+				}
+				e.closeControlledTask(ctx, t, reason)
+			}
 		case met:
 			log.Printf("[planner] task %s 判定目标达成: %s", t.ID, reason)
 			// 所有目标达成 → 持久化任务状态为 done（前端 DTO 会优先展示该终态）。

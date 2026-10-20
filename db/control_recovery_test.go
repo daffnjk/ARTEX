@@ -9,9 +9,9 @@ import (
 	"github.com/Autumn-27/artex/execution"
 )
 
-func leasedControlFixture(t *testing.T) (*DB, *Task, execution.Attempt) {
+func leasedControlFixture(t *testing.T, options ...func(*control.Contract)) (*DB, *Task, execution.Attempt) {
 	t.Helper()
-	d, task, p := admissionFixture(t)
+	d, task, p := admissionFixture(t, options...)
 	record, err := d.AdmitAndReserve(t.Context(), control.TaskID(task.ID), p)
 	if err != nil {
 		t.Fatal(err)

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Autumn-27/artex/agent"
+	"github.com/Autumn-27/artex/control"
 	"github.com/Autumn-27/artex/db"
 )
 
@@ -182,6 +183,17 @@ func (e *Engine) deadlineCoordinator(ctx context.Context, t *Task) {
 
 // settleTask runs the ordered settle sequence once (§4 steps ①–⑥).
 func (e *Engine) settleTask(ctx context.Context, t *Task) {
+	if id, err := strconv.ParseInt(t.ID, 10, 64); err == nil && e.m != nil && e.m.pg != nil {
+		mode, modeErr := e.m.pg.ControlMode(ctx, id)
+		if modeErr != nil {
+			return
+		}
+		if mode != "legacy" {
+			e.closeControlledTask(ctx, t, control.StopDeadline)
+			return
+		}
+	}
+
 	if !e.markSettling(t.ID) {
 		return
 	}

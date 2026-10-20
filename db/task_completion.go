@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -43,12 +44,20 @@ func (d *DB) CompleteTaskGuarded(id int64, status, source string) (won bool, err
 	}
 	defer tx.Rollback()
 	var explorationID int64
-	err = tx.QueryRow(`SELECT exploration_id FROM tasks WHERE id=$1 FOR UPDATE`, id).Scan(&explorationID)
+	var mode string
+	err = tx.QueryRow(`SELECT exploration_id,control_mode FROM tasks WHERE id=$1 FOR UPDATE`, id).Scan(&explorationID, &mode)
 	if errors.Is(err, sql.ErrNoRows) {
 		return false, fmt.Errorf("CompleteTaskGuarded: task %d not found", id)
 	}
 	if err != nil {
 		return false, err
+	}
+	if mode != "legacy" {
+		result, closeErr := closeControlTaskTx(context.Background(), tx, id, ControlCloseRequest{Reason: closeReason(status, source), Source: source})
+		if closeErr != nil {
+			return false, closeErr
+		}
+		return result.Won, tx.Commit()
 	}
 	if status == "done" {
 		// 图一致性：仍有 open goal 则拒绝（事务内权威读，锁下无竞态）。

@@ -1446,6 +1446,14 @@ func (m *Manager) SetTaskStatus(id, status string) error {
 	if err := m.pg.SetStatus(n, status); err != nil {
 		return err
 	}
+	persisted, readErr := m.pg.GetTask(n)
+	if readErr != nil {
+		return readErr
+	}
+	if persisted == nil {
+		return fmt.Errorf("task disappeared after status update")
+	}
+	status = persisted.Status
 	m.mu.Lock()
 	if t := m.tasks[id]; t != nil {
 		t.updateLifecycle(func(state *taskLifecycleState) {

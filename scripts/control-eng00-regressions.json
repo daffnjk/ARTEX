@@ -261,6 +261,10 @@
     {
       "package": "github.com/Autumn-27/artex/server",
       "name": "TestControlCloseReserveProtected"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskStatusWriteSurfaceIsPinned"
     }
   ]
 }

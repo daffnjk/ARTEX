@@ -1,0 +1,71 @@
+{
+  "task_id": "ENG-14",
+  "status": "verified_local",
+  "review": "needs_independent_review",
+  "code_tree_sha256": "fcee1fe35e9197ca224e2e39728cee84907806181ab9bfeb9dde152f1715dba5",
+  "required": {
+    "status": "PASS",
+    "required_count": 5,
+    "event_count": 294,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "regression": {
+    "status": "PASS",
+    "required_count": 66,
+    "event_count": 372,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "raw_receipts": "reports/ENG-14/runs/04",
+  "log_hashes": {
+    "required.jsonl": "a5085c75a54b4a12567585d00b56c893ecf75546527227f054f369fb73dba563",
+    "regression.jsonl": "66d31be7c3e7cb2bc8f16b139e30bf781e84c3460d90937085cc9d6004db2b85",
+    "required.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "regression.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "limits": [
+    "Not final aggregate acceptance; independent review deferred",
+    "No production or real target execution"
+  ],
+  "notes": [
+    "Five required roots plus goal success, drain/handoff and invented-budget rejection; 66 regression roots pass; go build ./... and affected-package go vet exit0"
+  ],
+  "extra_checks": [
+    {
+      "command": [
+        "go",
+        "build",
+        "./..."
+      ],
+      "exit_code": 0,
+      "seconds": 3.7467329502105713,
+      "source_receipt": "../runs/04/source.json",
+      "log_sha256": {
+        "0.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "0.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "command": [
+        "go",
+        "vet",
+        "./control",
+        "./execution",
+        "./db",
+        "./agent",
+        "./server",
+        "./report"
+      ],
+      "exit_code": 0,
+      "seconds": 0.6929581165313721,
+      "source_receipt": "../runs/04/source.json",
+      "log_sha256": {
+        "1.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "1.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    }
+  ]
+}
