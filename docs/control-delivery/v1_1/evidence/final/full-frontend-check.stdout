@@ -1,9 +1,0 @@
-
-> artex-web@2.2.0 check
-> biome check
-
-The number of diagnostics exceeds the limit allowed. Use --max-diagnostics to increase it.
-Diagnostics not shown: 858.
-Checked 142 files in 831ms. No fixes applied.
-Found 138 warnings.
-Found 740 infos.

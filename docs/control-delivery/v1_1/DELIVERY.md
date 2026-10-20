@@ -2,7 +2,7 @@
 
 Status: **LOCAL_VALIDATED_SYNC_PENDING**. ENG-00 through ENG-19 are verified_local; independent review remains needs_independent_review. This is engineering validation, not merge, deployment or real-model approval. Structured states and actual receipts: [DELIVERY.json](DELIVERY.json), [release-readiness.json](release-readiness.json).
 
-Final runtime map SHA-256: `063a50d68790856024e7b9857d200b1af058ac233b6b4405ecf44195dbf508b9`. It covers all 749 non-doc Git-visible files, including Go, frontend and CI. Documentation/checkpoint metadata can advance without changing that runtime map. Final code checkpoint and remote synchronization are recorded after push.
+Final runtime map SHA-256: `063a50d68790856024e7b9857d200b1af058ac233b6b4405ecf44195dbf508b9`. It covers all 749 non-doc Git-visible files, including Go, frontend and CI. Documentation/checkpoint metadata can advance without changing that runtime map. Final code checkpoint: `a8715a4` (runtime map unchanged); remote synchronization is recorded after push.
 
 | Final verification | Actual result |
 |---|---|
@@ -16,7 +16,7 @@ Final runtime map SHA-256: `063a50d68790856024e7b9857d200b1af058ac233b6b4405ecf4
 | Packet/preflight/runner unit checks | exit 0; metadata checks do not substitute for Go tests |
 | Remote safe CI | NOT_RUN before push; actual result recorded subsequently |
 
-Final aggregate runs/06 and full-package extra-04 have identical runtime maps. Their selected original JSONL/stderr/commands/exits/hashes are committed under [evidence/final](evidence/final/MANIFEST.json); JSONL files are gzip compressed losslessly, with raw and compressed hashes. All earlier failures and full raw local histories remain in the original ignored reports directory. They were not replaced by stitched green results.
+Final aggregate runs/06 and full-package extra-04 have identical runtime maps. Their selected original JSONL/stderr/commands/exits/hashes are committed under [evidence/final](evidence/final/MANIFEST.json); JSONL and raw stdout/stderr logs are gzip compressed losslessly, with raw and compressed hashes. All earlier failures and full raw local histories remain in the original ignored reports directory. They were not replaced by stitched green results.
 
 ENG-16 screenshot self-check: [synthetic partial-result UI](ENG-16-ui.png). It shows partial, lost/unknown, unconfirmed cleanup, invalid incomplete evidence and same_host_advisory identity. Collecting references the original execution; the display fixture request log contains no POST. This is not independent UI review. Real admin/task/revision behavior is tested against Go middleware and PG.
 
