@@ -373,6 +373,66 @@
     {
       "package": "github.com/Autumn-27/artex/harness",
       "name": "TestDigestKnownValue"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlMigrationTwice"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlArchiveRoundTrip"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlRestoreDoesNotReplay"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlLegacyNotPromoted"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlDeleteWithLateResult"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlDeleteRacePreservesAudit"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestFindingEvidenceLockNamespace"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestFindingTrafficLegacyArchiveDefaults"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestQueryArchiveRowsStreamsJSON"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestWriteArchiveRowsProducesJSONSequence"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskArchiveFormatCompatibility"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskArchiveDatabaseRoundTrip"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskArchiveBlockersIgnoreQueuedDependents"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestRecoverInterruptedArchiveRequiresManualRetry"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestTaskArchiveAPIQueueListAndLimits"
     }
   ]
 }

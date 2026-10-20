@@ -290,6 +290,15 @@ func (s *Server) restoreTaskArchive(job *pgdb.TaskArchive) (runErr error) {
 }
 
 func (s *Server) restoreTaskArchivePayload(job *pgdb.TaskArchive, snapshot *pgdb.TaskArchiveSnapshot, extracted string) (runErr error) {
+	if snapshot.Control != nil {
+		id, err := s.m.pg.RestoreControlTaskArchive(s.ctx, job.ID, snapshot)
+		if err != nil {
+			return err
+		}
+		s.loadRestoredTask(id)
+		return nil
+	}
+
 	var err error
 	var llmRecordsFile *os.File
 	relative, hasStreamedLLMRecords := snapshot.StreamedTables["llm_records"]

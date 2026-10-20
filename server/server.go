@@ -678,6 +678,7 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("POST /api/tasks/{id}/control/{operation}", s.requireControlAdmin(http.HandlerFunc(s.controlContractChange)))
 	mux.Handle("GET /api/tasks/{id}/control/observations/{observation}", s.requireControlAdmin(http.HandlerFunc(s.controlObservation)))
+	mux.Handle("GET /api/tasks/{id}/control/restored-history", s.requireControlAdmin(http.HandlerFunc(s.controlRestoredHistory)))
 	mux.Handle("GET /api/tasks/{id}/control/status", s.requireControlAdmin(http.HandlerFunc(s.controlStatus)))
 	mux.Handle("GET /api/tasks/{id}/control/executions/{execution}", s.requireControlAdmin(http.HandlerFunc(s.controlExecutionRead)))
 	s.registerSideRoutes(mux)

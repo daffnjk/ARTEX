@@ -172,3 +172,31 @@ func (s *Server) controlExecutionRead(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, 200, map[string]any{"execution_id": record.ID, "outcome": record.Outcome, "result": result})
 }
+
+// History is a host-only download; it cannot be consumed as live control state.
+func (s *Server) controlRestoredHistory(w http.ResponseWriter, r *http.Request) {
+	if controlAdminFrom(r.Context()) == "" {
+		http.Error(w, "administrator required", 403)
+		return
+	}
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil || id <= 0 {
+		http.Error(w, "invalid task", 400)
+		return
+	}
+	task, err := s.m.pg.GetTask(id)
+	if err != nil || task == nil {
+		http.Error(w, "task unavailable", 404)
+		return
+	}
+	history, err := s.m.pg.ControlRestoreHistory(r.Context(), id)
+	if err != nil {
+		http.Error(w, "history unavailable", 404)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Disposition", `attachment; filename="restored-control-history.json"`)
+	_ = json.NewEncoder(w).Encode(history)
+}

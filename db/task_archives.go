@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	TaskArchiveFormatVersion       = 3
+	TaskArchiveFormatVersion       = 4
 	TaskArchiveLegacyFormatVersion = 1
 	TaskArchiveLLMRecordsPath      = "database/llm_records.ndjson"
 )
@@ -115,6 +115,7 @@ type TaskArchivePage struct {
 // Small tables remain JSON arrays in Tables. Large v2 tables are streamed to
 // package files listed in StreamedTables so their size is not bounded by memory.
 type TaskArchiveSnapshot struct {
+	Control           *ControlArchiveSnapshot    `json:"control,omitempty"`
 	FormatVersion     int                        `json:"format_version"`
 	CreatedAt         time.Time                  `json:"created_at"`
 	TaskID            int64                      `json:"task_id"`
@@ -649,6 +650,10 @@ func (d *DB) snapshotTaskArchive(taskID int64, llmRecords io.Writer) (*TaskArchi
 		ExplorationID: expID, SourceTaskIDs: sources, Hosts: hosts, ExclusiveHosts: exclusiveHosts,
 		ExclusiveAssetIDs: exclusiveAssetIDs, Tables: tables, StreamedTables: streamedTables,
 		DataCounts: counts, AggregateStats: stats,
+	}
+	snapshot.Control, err = snapshotControlArchive(tx, taskID, expID)
+	if err != nil {
+		return nil, err
 	}
 	return snapshot, tx.Commit()
 }

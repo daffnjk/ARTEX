@@ -75,7 +75,7 @@ func (d *DB) CommitControlHTTPResult(ctx context.Context, attempt execution.Atte
 	}
 	defer tx.Rollback()
 	var task int64
-	if err = tx.QueryRowContext(ctx, `SELECT id FROM tasks WHERE id=$1 FOR UPDATE`, int64(attempt.TaskID)).Scan(&task); err != nil {
+	if err = tx.QueryRowContext(ctx, `SELECT id FROM tasks WHERE id=$1 AND deleted_at IS NULL FOR UPDATE`, int64(attempt.TaskID)).Scan(&task); err != nil {
 		return err
 	}
 	var epoch int64

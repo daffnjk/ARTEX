@@ -2,10 +2,12 @@ package db
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Autumn-27/artex/control"
 	"io"
 	"strconv"
 	"strings"
@@ -59,6 +61,19 @@ WHERE relation.source_task_id=$1 LIMIT 1`, taskID).Scan(&dependent)
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
 		return err
+	}
+
+	if snapshot.Control != nil {
+		if _, err := closeControlTaskTx(context.Background(), tx, taskID, ControlCloseRequest{Reason: control.StopUnknown, Source: "host:archive", Handoff: true}); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(`UPDATE tasks SET archived_at=now(),deleted_at=now(),paused=true,queued=false WHERE id=$1`, taskID); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(`UPDATE task_archives SET state='ready',phase='ready',progress=100,archive_path=$2,sha256=$3,original_size=$4,compressed_size=$5,data_counts=$6,aggregate_stats=$7,format_version=$8,archived_at=now() WHERE id=$1`, archiveID, archivePath, sha256, originalSize, compressedSize, string(countsRaw), string(statsRaw), snapshot.FormatVersion); err != nil {
+			return err
+		}
+		return tx.Commit()
 	}
 	// Prevent task/asset ownership from changing while exclusivity is rechecked.
 	if _, err := tx.Exec(`LOCK TABLE assets, exploration_anchors IN SHARE ROW EXCLUSIVE MODE`); err != nil {
@@ -169,6 +184,20 @@ func (d *DB) restoreTaskArchive(
 ) ([]string, error) {
 	if snapshot == nil || !IsTaskArchiveFormatSupported(snapshot.FormatVersion) {
 		return nil, ErrTaskArchiveFormatMismatch
+	}
+	rows, decodeErr := decodeArchiveRows(snapshot.Tables["tasks"])
+	if decodeErr != nil || len(rows) != 1 {
+		return nil, ErrTaskArchiveFormatMismatch
+	}
+	if mode, _ := rows[0]["control_mode"].(string); mode != "" && mode != "legacy" && snapshot.Control == nil {
+		return nil, ErrTaskArchiveFormatMismatch
+	}
+	if snapshot.Control != nil {
+		id, err := d.RestoreControlTaskArchive(context.Background(), archiveID, snapshot)
+		if err != nil {
+			return nil, err
+		}
+		return []string{fmt.Sprintf("Restored history to new task %d; approval required", id)}, nil
 	}
 	streamedLLMRecords := snapshot.StreamedTables["llm_records"]
 	if (len(snapshot.StreamedTables) > 0 && snapshot.FormatVersion < 2) ||

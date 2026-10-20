@@ -575,11 +575,25 @@ func (d *DB) DeleteTaskCascadePrepared(
 	}
 	defer tx.Rollback()
 	var expID int64
-	if err := tx.QueryRow(`SELECT exploration_id FROM tasks WHERE id=$1 FOR UPDATE`, id).Scan(&expID); err != nil {
+	if err := tx.QueryRow(`SELECT exploration_id FROM tasks WHERE id=$1 AND deleted_at IS NULL FOR UPDATE`, id).Scan(&expID); err != nil {
 		if err == sql.ErrNoRows {
 			return result, nil // already gone
 		}
 		return result, err
+	}
+
+	var controlled bool
+	if err := tx.QueryRow(`SELECT control_mode<>'legacy' FROM tasks WHERE id=$1`, id).Scan(&controlled); err != nil {
+		return result, err
+	}
+	if controlled {
+		if _, err := closeControlTaskTx(context.Background(), tx, id, ControlCloseRequest{Reason: control.StopUnknown, Source: "host:delete", Handoff: true}); err != nil {
+			return result, err
+		}
+		if _, err := tx.Exec(`UPDATE tasks SET deleted_at=now(),paused=true,queued=false WHERE id=$1`, id); err != nil {
+			return result, err
+		}
+		return result, tx.Commit()
 	}
 
 	// SHARE ROW EXCLUSIVE conflicts with every INSERT/UPDATE/DELETE on these
