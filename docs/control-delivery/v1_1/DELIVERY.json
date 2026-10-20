@@ -206,7 +206,11 @@
   },
   "migration_restore_cancel": "PASS in final required and full affected suites",
   "ci": {
-    "status": "NOT_RUN_BEFORE_PUSH"
+    "status": "NOT_RUN_BEFORE_PUSH",
+    "availability": {
+      "enabled": true,
+      "source": "GitHub Actions permissions read"
+    }
   },
   "review": "needs_independent_review",
   "release_status": "READY_FOR_APPROVAL",
@@ -231,5 +235,7 @@
     "Full suite has optional TestLiveContextReview skip; no required or related required subtest skip",
     "report package has no test files",
     "All original full-run failures retained; no prior green substituted for final tree"
-  ]
+  ],
+  "final_code_commit": "a8715a41b78b23d209aa31b36c01814be8da92a8",
+  "secret_scan": "secret-scan.json"
 }
