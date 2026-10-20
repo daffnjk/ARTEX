@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "task_id": "ENG-05",
+  "required": [
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlAdmissionRollback"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlAdmissionReplay"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlIdempotencyConflict"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlCloseAdmissionRace"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlRevokeAdmissionRace"
+    }
+  ]
+}

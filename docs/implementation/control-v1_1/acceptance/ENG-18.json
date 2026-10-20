@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "task_id": "ENG-18",
+  "required": [
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlE2EValidAnswer"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlE2EExpiredSession"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlE2ERevocation"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlE2EUnknownEffect"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlE2EBudgetPartial"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlE2EUntrustedContent"
+    }
+  ]
+}

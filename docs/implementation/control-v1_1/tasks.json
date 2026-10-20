@@ -1,0 +1,1180 @@
+{
+  "schema_version": 1,
+  "plan_version": "1.1",
+  "scope": "authorized_local_control_framework",
+  "tasks": [
+    {
+      "id": "ENG-00",
+      "title": "建立可复核基线与非跳过测试门禁",
+      "depends_on": [],
+      "source_paths": [
+        "go.mod",
+        "go.sum",
+        "db/testmain_test.go",
+        "agent/testmain_test.go",
+        "scripts/test-research-pg.sh",
+        "scripts/test-harness-offline.sh",
+        ".github/workflows/research-harness.yml",
+        "docs/autopilot/STATE.json"
+      ],
+      "deliverables": [
+        "baseline.json（版本、工作区差异、测试能力，不含密钥）",
+        "entrypoints.md（外部效果、正式证据、终态写入清单）",
+        "可复用 JSON 测试收据与 required-test 清单"
+      ],
+      "implementation_steps": [
+        "先读仓库实际规则和 docs/autopilot 状态；不得把方案当作源代码现状。",
+        "读取 go.mod 的实际版本；禁止修改最低版本适配本机。确认隔离 PG 及两种 DSN 都显式指向同一专用实例；不读取或输出生产配置。",
+        "枚举现有 Test 函数和现有 runner 的过滤表达式；记录跑不到的新增测试风险。",
+        "为后续测试 runner 接入 go test -json + required-tests 白名单；必测缺席、skip、package fail、非零退出均失败。",
+        "保存开始时树哈希/提交与 dirty paths；已有失败与本轮新增失败分开，不把历史报告写成当前 PASS。"
+      ],
+      "acceptance_tests": [
+        {
+          "package": "github.com/Autumn-27/artex/agent",
+          "name": "TestControlCognitionDefaultAssembly",
+          "assertion": "默认认知工具与渲染存在；显式纪律的状态单独断言，不以 SetCognition 调用次数推断。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlTaskExplorationIdentity",
+          "assertion": "task_id 与 exploration_id 不相等的夹具中，解析与授权使用正确身份。",
+          "status": "PROPOSED_NOT_RUN"
+        }
+      ],
+      "rollback": "本工单不改变运行期业务逻辑；保留基线产物，不回滚用户原有改动。",
+      "design_notes": "基线可记录 BLOCKED_ENV，但这不等于所需构建/PG 门禁通过。缺少相应环境时只做互不依赖的静态任务，不能合并后续生产改造。",
+      "status": "pending",
+      "max_same_failure_repair_attempts": 3
+    },
+    {
+      "id": "ENG-01",
+      "title": "冻结领域契约、错误码和单体依赖方向",
+      "depends_on": [
+        "ENG-00"
+      ],
+      "source_paths": [
+        "agent/runinfo.go",
+        "db/tasks.go",
+        "db/task_plans.go",
+        "harness/evaluation.go",
+        "db/schema.sql"
+      ],
+      "deliverables": [
+        "contracts/ 的实现对照 ADR",
+        "control/ 中的无数据库领域类型与纯校验（建议新增）",
+        "任务上下文和版本字段"
+      ],
+      "implementation_steps": [
+        "统一 TaskID、ExplorationID、ExecutionID、AttemptID 的边界；task→exploration 由宿主查询，不接收模型自报归属。",
+        "固定 direct/goal/coverage、三维执行结果、评估有效性、结案口径和错误码。",
+        "定义 ActionProposal 不包含可自填的批准者、可信来源或许可字段；actor 来源于认证上下文。",
+        "冻结导入方向：control 仅标准库/纯类型；execution 依赖 control 与接口；db 实现端口；server 装配；禁止 db↔execution 环。",
+        "确定相关上下文版本，不用全局每次写图版本使所有缓存失效；定义 JSON 大小、步数和字段白名单。"
+      ],
+      "acceptance_tests": [
+        {
+          "package": "github.com/Autumn-27/artex/control",
+          "name": "TestControlProposalRejectsAuthorityFields",
+          "assertion": "模型输入带 approved_by/grant/provenance 等权威字段时拒绝。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/control",
+          "name": "TestControlIDNamespaces",
+          "assertion": "错误 ID 域不可被静默接受。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/control",
+          "name": "TestControlOutcomeDimensions",
+          "assertion": "运行结果、外部效果、清理状态可独立表达。",
+          "status": "PROPOSED_NOT_RUN"
+        }
+      ],
+      "rollback": "仅新增契约和版本字段，不自动转换历史状态；变更契约需新 ADR 与相关测试。",
+      "design_notes": "",
+      "status": "pending",
+      "max_same_failure_repair_attempts": 3
+    },
+    {
+      "id": "ENG-02",
+      "title": "授权合同版本化与服务端写权限",
+      "depends_on": [
+        "ENG-01"
+      ],
+      "source_paths": [
+        "db/schema.sql",
+        "db/company_scope.go",
+        "db/task_scope.go",
+        "db/tasks.go",
+        "server/server.go",
+        "intercept/"
+      ],
+      "deliverables": [
+        "db/task_control_contracts.go（建议新增）",
+        "人工合同批准/撤销服务与鉴权测试",
+        "task scope 仅覆盖统计的兼容说明"
+      ],
+      "implementation_steps": [
+        "扩展嵌入式幂等 schema；不另建迁移框架。合同主键为 task_id+version，批准正文不可变；撤销和 active 指针独立审计。",
+        "批准和撤销必须来自认证的授权管理入口；不得暴露成模型工具。",
+        "合同包含方法/工具白名单、目标、身份、预算、数据范围、期限与冻结验收版本；合同缺失或过期默认拒绝。",
+        "所有批准/撤销与任务状态变化锁相同 tasks 行并递增 control_epoch；队列和许可绑定版本。",
+        "历史 AddAutoScope/AddAgentScope 只能改变覆盖统计，不能修改合同；存量运行任务部署前排空或显式隔离。"
+      ],
+      "acceptance_tests": [
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlContractVersionImmutable",
+          "assertion": "批准正文修改失败；新版本只能追加。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlCoverageDoesNotAuthorize",
+          "assertion": "新增覆盖资产后授权结果不变。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/server",
+          "name": "TestControlAgentCannotApproveContract",
+          "assertion": "模型/普通 Worker 身份不能批准、撤销或扩权。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlRevocationEpoch",
+          "assertion": "撤销产生新 epoch，旧许可失效。",
+          "status": "PROPOSED_NOT_RUN"
+        }
+      ],
+      "rollback": "保留新合同历史；关闭新任务入口或进入只读，而非恢复缺省放行。",
+      "design_notes": "",
+      "status": "pending",
+      "max_same_failure_repair_attempts": 3
+    },
+    {
+      "id": "ENG-03",
+      "title": "实现类型化目标规范化与纯授权匹配",
+      "depends_on": [
+        "ENG-01",
+        "ENG-02"
+      ],
+      "source_paths": [
+        "guard/guard.go",
+        "db/company_scope.go",
+        "db/task_scope.go",
+        "control/（新增）"
+      ],
+      "deliverables": [
+        "control/target.go 与 scope.go（建议）",
+        "表驱动和模糊测试",
+        "明确支持/拒绝的目标格式表"
+      ],
+      "implementation_steps": [
+        "使用标准 URL/IP 类型；首版支持 exact_host、domain_subtree、cidr 的明确语义。未实现的 URL path/resource 约束拒绝，不退化为整主机。",
+        "域名按标签比较，规范化端口、大小写、末尾点；IDN 使用仓库已有相关库时固定测试；歧义编码、userinfo、zone 与不支持 scheme 拒绝。",
+        "deny-wins，未命中 allow 为拒绝；混合 DNS 结果的策略首版保守全拒绝，不能悄悄只选可达一项。",
+        "分别校验逻辑主机标识与每次实际连接 IP；同 IP 不等于同 host 授权。",
+        "保持函数无网络副作用；DNS/实际连接的检查放 ENG-06。"
+      ],
+      "acceptance_tests": [
+        {
+          "package": "github.com/Autumn-27/artex/control",
+          "name": "TestControlExactHostBoundary",
+          "assertion": "test.invalid 不匹配 x.test.invalid 或 eviltest.invalid。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/control",
+          "name": "TestControlDenyWins",
+          "assertion": "更具体 allow 不能覆盖拒绝项。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/control",
+          "name": "TestControlAmbiguousTargetRejected",
+          "assertion": "歧义 URL、端口、IP/编码输入被拒绝。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/control",
+          "name": "TestControlUnsupportedScopeKind",
+          "assertion": "未实现约束 fail closed。",
+          "status": "PROPOSED_NOT_RUN"
+        }
+      ],
+      "rollback": "仅允许回到更保守的拒绝策略；不能为减少误阻断改为 default allow。",
+      "design_notes": "",
+      "status": "pending",
+      "max_same_failure_repair_attempts": 3
+    },
+    {
+      "id": "ENG-04",
+      "title": "任务级预算预留、结算与模型调用归因",
+      "depends_on": [
+        "ENG-01",
+        "ENG-02"
+      ],
+      "source_paths": [
+        "db/llm_usage.go",
+        "db/tool_usage.go",
+        "llmrec/llmrec.go",
+        "server/task_llm.go",
+        "server/tool_usage.go",
+        "agent/runinfo.go",
+        "db/schema.sql"
+      ],
+      "deliverables": [
+        "资源账户与预留账本",
+        "Provider 调用边界预算包装",
+        "模型失败、重试和收尾计费策略"
+      ],
+      "implementation_steps": [
+        "原有 llm_usage 是事后计量且允许 best-effort 失败；保留它，但新增硬准入账本，不把事后写日志作为准入。",
+        "资源账户用整数单位并带任务+维度唯一约束；预留/结算幂等键由宿主生成。",
+        "每次实际 Provider 尝试（含 failover、摘要、审查）先预留；任务绑定角色遗漏时自主模式拒绝请求。",
+        "精确可计数资源用上限控制；token 用可验证输入上界、输出上限及保守预留；未知 usage 保留预留不返还。无可靠上界的账单维度明确标 estimated，不宣称精确硬预算。",
+        "为收尾和对账保留独立不可被 Planner 花费额度；用 fake clock 测试持久 deadline，进程重启不刷新额度。"
+      ],
+      "acceptance_tests": [
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlBudgetConcurrentReserve",
+          "assertion": "并发预留总量不超过可用预算，失败无部分扣款。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlBudgetSettlementIdempotent",
+          "assertion": "重复结算不双扣、不双退款。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/server",
+          "name": "TestControlLLMRetryBudgeted",
+          "assertion": "重试/切换/摘要每次调用都归因计量。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlUnknownUsageNotRefunded",
+          "assertion": "未知调用成本保守挂账，对账前不返还。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/server",
+          "name": "TestControlCloseReserveProtected",
+          "assertion": "探索耗尽仍可无 LLM 生成结果并执行本地清理。",
+          "status": "PROPOSED_NOT_RUN"
+        }
+      ],
+      "rollback": "保留账本；计费估算变更需版本，停用新派发而非关预算控制。",
+      "design_notes": "",
+      "status": "pending",
+      "max_same_failure_repair_attempts": 3
+    },
+    {
+      "id": "ENG-05",
+      "title": "原子准入、许可与持久出站队列",
+      "depends_on": [
+        "ENG-02",
+        "ENG-03",
+        "ENG-04"
+      ],
+      "source_paths": [
+        "db/schema.sql",
+        "db/intent_admission.go",
+        "server/engine.go",
+        "control/（新增）",
+        "execution/（新增）"
+      ],
+      "deliverables": [
+        "AdmitAndReserve 事务端口",
+        "executions/attempts/outbox 数据结构",
+        "重复提交和动作摘要契约"
+      ],
+      "implementation_steps": [
+        "事务统一锁序：tasks → 活跃合同 → 资源账户按维度排序 → execution → 相关实验/节点；所有状态写入口遵守同一顺序。",
+        "锁内检查任务仍接受新工作、合同 epoch/版本、审批、方法能力、依赖版本与预算；冻结规范化动作摘要。",
+        "同事务预留资源、写 execution/grant/outbox；提交前禁止网络调用，事务失败不得留下可执行事件。",
+        "重复幂等键+相同摘要返回原 ID；同键不同摘要冲突。过期许可只返回当前不可执行状态，不变相重新批准。",
+        "dispatcher 仅领取已提交 outbox；重复通知允许，逻辑动作幂等消费；执行前再次检查 epoch。"
+      ],
+      "acceptance_tests": [
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlAdmissionRollback",
+          "assertion": "在预留/执行/出站写入处故障注入，结果全回滚。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlAdmissionReplay",
+          "assertion": "相同请求仅一条 execution 和预算预留。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlIdempotencyConflict",
+          "assertion": "同键异参数明确拒绝。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlCloseAdmissionRace",
+          "assertion": "结案与准入竞争时不可在关闭后授予新动作。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlRevokeAdmissionRace",
+          "assertion": "撤销先提交则无法授予旧版本动作。",
+          "status": "PROPOSED_NOT_RUN"
+        }
+      ],
+      "rollback": "暂停 dispatcher 并对账已授予动作；不删除在途记录，不自动重放。",
+      "design_notes": "",
+      "status": "pending",
+      "max_same_failure_repair_attempts": 3
+    },
+    {
+      "id": "ENG-06",
+      "title": "先实现一种受控本地 HTTP 适配器",
+      "depends_on": [
+        "ENG-03",
+        "ENG-05"
+      ],
+      "source_paths": [
+        "execution/（新增）",
+        "guard/guard.go",
+        "traffic/",
+        "harness/scenarios/"
+      ],
+      "deliverables": [
+        "许可约束的 HTTP adapter",
+        "本地双服务器夹具（allowed/denied）",
+        "适配器能力清单和 deny 计数证据"
+      ],
+      "implementation_steps": [
+        "首版只运行本地隔离 HTTP/HTTPS 读型方法与合成数据，不接入漏洞利用载荷或通用 Shell。",
+        "adapter 获取宿主许可，限定 method、header 白名单、路径范围、凭据引用、超时、字节上限与请求次数。",
+        "每一跳重定向重新检查；自定义受控 dial 对解析后 IP 检查且直接连接已验证地址，避免校验后再次解析；TLS/Host 对应原批准主机；环境代理不可成为绕路出口。",
+        "开始每个实际请求/连接前核验许可与当前撤销状态；持续连接撤销由独立 supervisor 关闭；明确已发出请求不可撤回的界限。",
+        "目标侧断言 denied server 命中数为零；不只断言函数返回 deny。DNS 变化用可注入 resolver，不访问公网上的 DNS。"
+      ],
+      "acceptance_tests": [
+        {
+          "package": "github.com/Autumn-27/artex/execution",
+          "name": "TestControlRedirectBoundary",
+          "assertion": "允许服务器跳向不允许服务器，后者计数为零。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/execution",
+          "name": "TestControlPinnedDial",
+          "assertion": "解析变化不能在第二次隐式解析中逃出范围。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/execution",
+          "name": "TestControlResponseLimit",
+          "assertion": "超大或不结束响应按上限停止并标记不完整。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/execution",
+          "name": "TestControlGrantRevokedBeforeDial",
+          "assertion": "撤销后开始的新连接被拒绝。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/execution",
+          "name": "TestControlProxyEnvCannotBypass",
+          "assertion": "环境代理不使请求绕开批准连接通道。",
+          "status": "PROPOSED_NOT_RUN"
+        }
+      ],
+      "rollback": "禁用 adapter/新任务执行，不回落标准无约束客户端。",
+      "design_notes": "本工单不证明任意 Shell/浏览器/MCP 的隔离。未验收通道必须在自主任务中保持不可用；扩展须另立工单。",
+      "status": "pending",
+      "max_same_failure_repair_attempts": 3
+    },
+    {
+      "id": "ENG-07",
+      "title": "贯穿真实 Worker 和所有任务执行入口",
+      "depends_on": [
+        "ENG-05",
+        "ENG-06"
+      ],
+      "source_paths": [
+        "agent/worker.go",
+        "server/engine.go",
+        "server/assembly.go",
+        "guard/guard.go",
+        "agent/augment.go",
+        "enrich/",
+        "mcphttp/"
+      ],
+      "deliverables": [
+        "新模式实际装配图",
+        "受限工具目录与能力拒绝",
+        "首条真实 Worker→本地 adapter 集成测试"
+      ],
+      "implementation_steps": [
+        "runIntent 与 Worker tool call 将 TaskContext/Execution/Attempt/Grant 贯通，不能仅在提示词加入许可文字。",
+        "宿主运行态记录 task/exploration/parent job，禁止通过缺失 task_id 调用共享 unrestricted 工具逃离预算。",
+        "自主模式中只装配已审适配器；Bash、浏览器、远程 MCP、自定义命令、平台后台补全若未适配，明确禁用而非绕过；人工直投/retest/enrich 同规。",
+        "通过脚本化模型驱动真实 Planner/Worker 控制流，工具实际请求本地 fixture；这是集成测试，不宣称是真实 LLM 行为实验。",
+        "API/后台入口的拒绝也留审计；新模式启用前完成入口清单签核。"
+      ],
+      "acceptance_tests": [
+        {
+          "package": "github.com/Autumn-27/artex/server",
+          "name": "TestControlRealWorkerUsesGrant",
+          "assertion": "实际 Worker 接口调用经授予和 adapter，local fixture 收到一个许可动作。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/server",
+          "name": "TestControlUnapprovedToolUnavailable",
+          "assertion": "自主模式无法调用未验收 Shell/browser/MCP。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/server",
+          "name": "TestControlBackgroundPathsEnforced",
+          "assertion": "retest/enrich/人工直投外部请求不能走未受控路径。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/server",
+          "name": "TestControlMissingTaskContextDenied",
+          "assertion": "丢失任务上下文的外部动作被拒绝。",
+          "status": "PROPOSED_NOT_RUN"
+        }
+      ],
+      "rollback": "停止新模式派发并保留运行记录；不切回旧无合同 Worker 继续同一任务。",
+      "design_notes": "",
+      "status": "pending",
+      "max_same_failure_repair_attempts": 3
+    },
+    {
+      "id": "ENG-08",
+      "title": "租约、取消和未知副作用恢复",
+      "depends_on": [
+        "ENG-05",
+        "ENG-07"
+      ],
+      "source_paths": [
+        "server/engine.go",
+        "execution/（新增）",
+        "db/schema.sql",
+        "db/tasks.go"
+      ],
+      "deliverables": [
+        "持久租约与 fencing epoch",
+        "Get/Wait/Cancel/Reconcile 协议",
+        "恢复扫描与资源回收监控"
+      ],
+      "implementation_steps": [
+        "Wait 只等待原 execution，不触发新执行；worker lease 与 action grant 有不同有效期。",
+        "以数据库 epoch fencing 拒绝旧 worker 结果及新动作；租约过期不等于原进程已停止。",
+        "工具开始外部效果后丢失回报标 effect=unknown；非幂等/无法查询动作不得自动重试；本地 counter fixture 提供只读对账。",
+        "取消先持久化 request，再由 supervisor 中断真实请求/受控进程；远程取消不可确认必须 unconfirmed。",
+        "外部状态未知时预算不释放；重启对账有上限并将无法自动解决的情况交给人；不得把 outbox at-least-once 声称为外部 exactly-once。"
+      ],
+      "acceptance_tests": [
+        {
+          "package": "github.com/Autumn-27/artex/execution",
+          "name": "TestControlWaitTimeoutDoesNotResubmit",
+          "assertion": "多次 Wait 超时只对应原动作。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlLeaseFencesStaleWorker",
+          "assertion": "旧 epoch 的结果写入和新调用都被拒绝。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/server",
+          "name": "TestControlEffectThenCrashReconcile",
+          "assertion": "本地计数效果已发生、回报前崩溃；恢复不重复增加。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/execution",
+          "name": "TestControlCancelUnconfirmed",
+          "assertion": "没有实际停止确认不返回 cleanup=confirmed。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlRecoveryKeepsBudget",
+          "assertion": "重启与租约过期不清空已消耗/未知预留。",
+          "status": "PROPOSED_NOT_RUN"
+        }
+      ],
+      "rollback": "暂停领取并保留 unknown/cleanup 状态；只能经对账解除，不批量重置为 queued。",
+      "design_notes": "",
+      "status": "pending",
+      "max_same_failure_repair_attempts": 3
+    },
+    {
+      "id": "ENG-09",
+      "title": "接通可信原始证据与宿主观测",
+      "depends_on": [
+        "ENG-01",
+        "ENG-05",
+        "ENG-06"
+      ],
+      "source_paths": [
+        "evidence/store.go",
+        "db/harness_store.go",
+        "harness/evaluation.go",
+        "db/schema.sql",
+        "agent/hypothesis_tools.go"
+      ],
+      "deliverables": [
+        "adapter→原文→StoreHarnessObservation 采集桥",
+        "来源/有效性/版本映射",
+        "原文限额、脱敏视图与幂等规则"
+      ],
+      "implementation_steps": [
+        "优先扩展已有 harness_observations/harness_evaluations；不要平行造同义 evidence2/evaluation2 库。",
+        "保持 harness 当前小型 BYTEA payload 约定和上限；大响应复用 evidence 内容寻址存储，观测引用已确认可读对象。",
+        "采集 ID、task/execution/attempt/context 由宿主填写；模型只能提交解析建议或观测引用，不可写可信来源。",
+        "同 ID 同内容幂等；同 ID 不同摘要冲突；完整性缺失、截断、身份失效分别标记。",
+        "写入原文完成后才允许正式评估；未引用对象安全 GC，不删除被验收依赖引用的原文；日志只保存脱敏摘要。"
+      ],
+      "acceptance_tests": [
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlObservationLineage",
+          "assertion": "跨 task/exploration/execution/attempt 嫁接拒绝。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlObservationIDConflict",
+          "assertion": "同 ID 内容不一致拒绝且原文不变。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/execution",
+          "name": "TestControlTruncatedObservationInvalid",
+          "assertion": "超过字节上限的观测不得作为完整证据。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/server",
+          "name": "TestControlModelCannotForgeObservation",
+          "assertion": "模型工具传入伪采集记录无法进入可信表。",
+          "status": "PROPOSED_NOT_RUN"
+        }
+      ],
+      "rollback": "保持 append-only 原文；停用新评估入口而非回落模型自报。",
+      "design_notes": "",
+      "status": "pending",
+      "max_same_failure_repair_attempts": 3
+    },
+    {
+      "id": "ENG-10",
+      "title": "将评估、信念和血缘更新收敛到一个事务",
+      "depends_on": [
+        "ENG-09"
+      ],
+      "source_paths": [
+        "db/hypotheses.go",
+        "db/harness_store.go",
+        "db/harness_acceptance.go",
+        "agent/hypothesis_tools.go",
+        "harness/evaluation.go"
+      ],
+      "deliverables": [
+        "CommitValidatedOutcome（建议新增）",
+        "事务内 evaluation+claim+dependency+event 写入",
+        "旧字符串入口只供 legacy fixture 且不能影响新任务"
+      ],
+      "implementation_steps": [
+        "版本化验证器先检查前提与原文；收集 validated evaluation，再在事务内重查上下文/证据仍有效。",
+        "在同一事务记录正式 evaluation、结论与证据依赖、反证/失效及 outbox；不得调用另起事务的公共方法假装原子。",
+        "优先将 StoreHarnessObservation/RecordEvaluation 的必要 SQL 抽为内部 tx helper，不破坏现有 append-only 与 request_id 去重。",
+        "除非方法声明且验证互斥，支持一个假设不自动反驳其余；invalid/unknown premise 只得 inconclusive。",
+        "旧 RecordExperimentOutcome 保留研究兼容但明确版本隔离；新任务不能再从 observed 字符串直接更新正式 supported。"
+      ],
+      "acceptance_tests": [
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlOutcomeEvidenceRequired",
+          "assertion": "缺失/非法证据时所有正式状态保持不变。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlOutcomeAtomicRollback",
+          "assertion": "任一依赖或事件写失败，评估与假设更新同时回滚。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlNonexclusiveHypotheses",
+          "assertion": "一条支持不使非互斥替代解释自动 refuted。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlExpiredIdentityInconclusive",
+          "assertion": "失效身份的拒绝响应不能得有效阴性。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlInvalidateEvidencePropagates",
+          "assertion": "证据撤回使派生结论失效并唤醒计划。",
+          "status": "PROPOSED_NOT_RUN"
+        }
+      ],
+      "rollback": "新模式继续要求证据前置；旧研究模式保留独立标识，不作为生产回退。",
+      "design_notes": "",
+      "status": "pending",
+      "max_same_failure_repair_attempts": 3
+    },
+    {
+      "id": "ENG-11",
+      "title": "计划稳定 ID 原位修改与依赖有效性门",
+      "depends_on": [
+        "ENG-01",
+        "ENG-10"
+      ],
+      "source_paths": [
+        "db/task_plans.go",
+        "agent/plantodo.go",
+        "agent/planner.go",
+        "db/graph_integrity.go"
+      ],
+      "deliverables": [
+        "PatchPlanStep 保留 RowID+Revision CAS",
+        "requires_step/claim 与上下文版本",
+        "派发依赖检查与循环检测"
+      ],
+      "implementation_steps": [
+        "当前 PlanStep.ID 与 RowID/CAS 已有；新增按 ID patch，不能重写整库或仅根据文案生成 ID。",
+        "兼容旧 TodoWrite 的整体更新；新接口提交 step_id 和 expected revision，旧接口不允许静默丢弃新依赖字段。",
+        "依赖检查同任务/允许来源、证据有效性、身份/目标版本与所需前置结果，拒绝缺失/过期依赖。",
+        "DAG 校验拒绝自环、多步环和超过现有容量上限；运行中改变前提使步骤重新 blocked。",
+        "计划标 completed 是便签而非执行成功/目标证明；验收不信任 Planner 单方步骤状态。"
+      ],
+      "acceptance_tests": [
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlPlanPatchKeepsID",
+          "assertion": "改文字仍保持 ID；旧 revision 或删除重建 RowID 被拒绝。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlPlanCycleRejected",
+          "assertion": "自环与多步依赖环拒绝。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlDependencyContextRequired",
+          "assertion": "事实存在但身份/环境版本不符仍不可派发。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/agent",
+          "name": "TestControlTodoLegacyPreservesDependencies",
+          "assertion": "旧整体更新不丢依赖或绕过 ID 语义。",
+          "status": "PROPOSED_NOT_RUN"
+        }
+      ],
+      "rollback": "保留新增依赖，回滚 UI 不回滚执行门；不允许旧写入器破坏新版本计划。",
+      "design_notes": "",
+      "status": "pending",
+      "max_same_failure_repair_attempts": 3
+    },
+    {
+      "id": "ENG-12",
+      "title": "语义重复控制与合理复测例外",
+      "depends_on": [
+        "ENG-05",
+        "ENG-11"
+      ],
+      "source_paths": [
+        "db/intent_admission.go",
+        "db/experiment_selection.go",
+        "agent/tools.go",
+        "control/（新增）"
+      ],
+      "deliverables": [
+        "语义动作键与幂等键分离",
+        "结构化复测原因",
+        "返回已有结果与在途执行引用"
+      ],
+      "implementation_steps": [
+        "签名包含规范化资产/身份/方法及版本/关键参数/相关前提版本/测试目的；不包括随机 nonce 或全部全局状态版本。",
+        "唯一在途执行约束放数据库，避免两个 Planner 检查后同时插入。",
+        "既有有效结果可直接引用；进行中返回原 execution；旧证据失效/部署变化/独立确认可申请复测。",
+        "复测理由由宿主验证，不以模型自由文案允许绕过去重；次数仍扣预算。",
+        "区分 valid negative 与无效实验；不建立跨任务五次阴性跳过漏洞类规则。"
+      ],
+      "acceptance_tests": [
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlSemanticDedupConcurrent",
+          "assertion": "不同文案描述同一动作，并发只能授予一次。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlRunningActionReused",
+          "assertion": "重复提议返回已有 execution_id。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlRetestRequiresReason",
+          "assertion": "无有效版本变化/批准复测理由不放行。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlContextChangeAllowsBoundedRetest",
+          "assertion": "合法条件变化可重验，预算照扣。",
+          "status": "PROPOSED_NOT_RUN"
+        }
+      ],
+      "rollback": "允许回退更保守优先级，但保留在途唯一约束；不能删除执行历史。",
+      "design_notes": "",
+      "status": "pending",
+      "max_same_failure_repair_attempts": 3
+    },
+    {
+      "id": "ENG-13",
+      "title": "反馈驱动短窗口规划与评分影子模式",
+      "depends_on": [
+        "ENG-07",
+        "ENG-08",
+        "ENG-10",
+        "ENG-11",
+        "ENG-12"
+      ],
+      "source_paths": [
+        "agent/planner.go",
+        "db/experiment_selection.go",
+        "server/engine.go",
+        "agent/hypothesis_tools.go"
+      ],
+      "deliverables": [
+        "反馈类型→策略动作表",
+        "收结果队列与新实验队列分离",
+        "版本化评分记录与停滞计数"
+      ],
+      "implementation_steps": [
+        "先消费结果/撤权/失效，再建立快照和生成少量候选；不用固定 heartbeat 代替紧急处理。",
+        "识别 VALID_NEGATIVE、PRECONDITION_INVALID、TOOL_UNAVAILABLE、WAIT_EXPIRED、POLICY_DENIED、RATE_LIMITED、EFFECT_UNKNOWN 等类别。",
+        "先硬过滤再算代理分数；评分用可解释的区分能力/目标/覆盖/成本/风险/重复，不叫已校准 EIG。",
+        "默认 shadow：记录建议、不偷偷改变派发；多假设但同预测不给高区分分。",
+        "停滞按无新增有效证据与预算消耗识别；意外且有效结果不扣失败分；Planner 在受控窗口内重算。"
+      ],
+      "acceptance_tests": [
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlScoringRespectsHardFilter",
+          "assertion": "高收益不能让被授权拒绝动作进入候选。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlSamePredictionsNoDiscrimination",
+          "assertion": "多个同预测假设无额外区分奖励。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/agent",
+          "name": "TestControlUnexpectedEvidenceReplans",
+          "assertion": "有效意外结果触发更新而非盲目惩罚分支。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/server",
+          "name": "TestControlTypedFailureHandling",
+          "assertion": "等待超时收原结果，策略拒绝不重试绕行，限速冷却。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/agent",
+          "name": "TestControlPlannerStallBound",
+          "assertion": "重复空转有界，进入清晰暂停/收尾原因。",
+          "status": "PROPOSED_NOT_RUN"
+        }
+      ],
+      "rollback": "仅评分/摘要/策略旗标可回滚为基线；授权、证据、去重在途约束不得关闭。",
+      "design_notes": "",
+      "status": "pending",
+      "max_same_failure_repair_attempts": 3
+    },
+    {
+      "id": "ENG-14",
+      "title": "单一结案事务与诚实部分结果",
+      "depends_on": [
+        "ENG-02",
+        "ENG-04",
+        "ENG-08",
+        "ENG-10"
+      ],
+      "source_paths": [
+        "db/task_completion.go",
+        "db/tasks.go",
+        "harness/completion.go",
+        "agent/completion_guard.go",
+        "server/engine.go",
+        "report/"
+      ],
+      "deliverables": [
+        "TryCloseTask 与 CompleteTaskGuarded 共同内部实现",
+        "run/result/reason/cleanup 正交字段",
+        "旧 tasks.status 映射与无模型报告"
+      ],
+      "implementation_steps": [
+        "保留唯一终态写入入口；在同一 task 行锁下先关新派发，再检查运行中动作、相关证据/验收版本与清理。",
+        "direct 完成指定任务不补全局覆盖；goal 报告有效回答或未知；coverage 对冻结覆盖矩阵统计。",
+        "预算到限/授权撤回允许 partial/inconclusive/aborted，不要求所有未知问题清零。",
+        "旧 status：complete→done，time budget→timeout，其余 partial/aborted→failed 作为 legacy 概括；新 API 必须展示 outcome/reason，不能让 UI 将 failed 误报系统故障。",
+        "cleanup unconfirmed 可持久 closed+人工移交，但不能显示全部清理完成；宿主从数据生成报告，LLM 不可用也能收尾。"
+      ],
+      "acceptance_tests": [
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlClosePartialOnBudget",
+          "assertion": "未决问题存在且预算耗尽仍可正确结案。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlDirectNoAutoExpansion",
+          "assertion": "直投任务不生成额外覆盖任务。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlLateCompletionCannotOverwrite",
+          "assertion": "迟到 met 不能覆盖 timeout/revoked 终态。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlCloseRechecksEvidence",
+          "assertion": "验收前证据失效，complete 被拒绝。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/server",
+          "name": "TestControlReportWithoutLLM",
+          "assertion": "无模型也可输出结果、未知项和清理状态。",
+          "status": "PROPOSED_NOT_RUN"
+        }
+      ],
+      "rollback": "保留新旧字段同事务维护；不可把 partial 映射成完整成功以适配旧界面。",
+      "design_notes": "",
+      "status": "pending",
+      "max_same_failure_repair_attempts": 3
+    },
+    {
+      "id": "ENG-15",
+      "title": "独立审查、评估身份和可追溯报告",
+      "depends_on": [
+        "ENG-10",
+        "ENG-14"
+      ],
+      "source_paths": [
+        "db/review_packet.go",
+        "db/harness_store.go",
+        "harness/evaluation.go",
+        "report/",
+        "server/"
+      ],
+      "deliverables": [
+        "只读 Reviewer 上下文",
+        "宿主归档的审查记录和结论门禁",
+        "报告每条结论的证据索引"
+      ],
+      "implementation_steps": [
+        "Reviewer 输入冻结证据包和标准版本，不读取 Planner 自写 PASS 当成判断前提。",
+        "Reviewer 只提交评估建议；宿主分配评估身份/会话和记录，模型 JSON 中自填 reviewer 不赋权。",
+        "对机械可检验结论由确定性 verifier 决定；复杂业务结论按方法规定转人工，不能把模型意见变正式权威。",
+        "执行者不能覆盖审查产物；同模型另会话仅降低上下文耦合，不声称独立信任域。",
+        "报告自动保留反证、未测、有效阴性条件和清理移交；结论与影响分层。"
+      ],
+      "acceptance_tests": [
+        {
+          "package": "github.com/Autumn-27/artex/server",
+          "name": "TestControlWorkerCannotWriteReview",
+          "assertion": "Worker 无审查记录写权。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlReviewBindsEvidenceVersion",
+          "assertion": "评估绑定证据/标准版本，过期复用拒绝。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/server",
+          "name": "TestControlReviewerCannotAuthorize",
+          "assertion": "Reviewer 无法提高授权或生成许可。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/server",
+          "name": "TestControlReportEvidenceLinks",
+          "assertion": "报告结论具可解析证据链接，未知项未被省略。",
+          "status": "PROPOSED_NOT_RUN"
+        }
+      ],
+      "rollback": "可关闭可选 Reviewer 策略，但方法要求的人工审查和正式验证门禁仍保留。",
+      "design_notes": "",
+      "status": "pending",
+      "max_same_failure_repair_attempts": 3
+    },
+    {
+      "id": "ENG-16",
+      "title": "最小操作面：查看、撤销、等待和部分结果",
+      "depends_on": [
+        "ENG-07",
+        "ENG-14",
+        "ENG-15"
+      ],
+      "source_paths": [
+        "server/server.go",
+        "server/engine.go",
+        "web/package.json",
+        "web/src/（路径先核查）"
+      ],
+      "deliverables": [
+        "现有 API 上增量控制状态查询与人工操作",
+        "任务详情展示授权版本/预算/执行/证据/清理",
+        "前端检查与后端身份测试"
+      ],
+      "implementation_steps": [
+        "ENG-00 明确实际路由与页面路径；新增能力优先挂现有 task detail，不重建 dashboard。",
+        "读接口返回 task contract/version、budget remaining/reserved、active executions、result/reason/cleanup 和证据摘要。",
+        "撤销/取消/人工批准为认证的写操作，检查 task ownership 与 expected revision；不可复用模型工具身份。",
+        "UI 明确 partial/inconclusive、未知副作用和清理未确认；禁止用绿色 done 掩盖不完整。",
+        "依照 web 锁文件和既有 package manager 跑现有 check/build；不为本工单顺手升级依赖，变更范围有限。"
+      ],
+      "acceptance_tests": [
+        {
+          "package": "github.com/Autumn-27/artex/server",
+          "name": "TestControlStatusOwnership",
+          "assertion": "无法读取别的任务许可、密钥引用或证据。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/server",
+          "name": "TestControlAdminActionRevision",
+          "assertion": "旧版本人工审批/取消请求明确冲突。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/server",
+          "name": "TestControlStatusPartialVisible",
+          "assertion": "API 不丢失 partial/reason/cleanup 字段。",
+          "status": "PROPOSED_NOT_RUN"
+        }
+      ],
+      "rollback": "UI 可回滚但应显示未知/不支持而非错误成功；后端撤销与控制规则不可回滚。",
+      "design_notes": "前端 CI/build 与截图评审作为额外非 Go 证据，不能由这三条后端测试替代。",
+      "status": "pending",
+      "max_same_failure_repair_attempts": 3
+    },
+    {
+      "id": "ENG-17",
+      "title": "迁移、归档、删除、恢复的兼容性闭环",
+      "depends_on": [
+        "ENG-02",
+        "ENG-05",
+        "ENG-09",
+        "ENG-10",
+        "ENG-11",
+        "ENG-14"
+      ],
+      "source_paths": [
+        "db/schema.sql",
+        "db/db.go",
+        "db/task_archives.go",
+        "db/task_archives_restore.go",
+        "db/tasks.go",
+        "evidence/store.go"
+      ],
+      "deliverables": [
+        "幂等加法迁移与旧新版本读取测试",
+        "归档格式增量及安全恢复规则",
+        "存量任务排空/升级手册"
+      ],
+      "implementation_steps": [
+        "遵循现有 schemaSQL/advisory lock 机制，运行重复迁移与旧快照迁移；不得 DROP 重建研究数据来修测试。",
+        "原文/观测/evaluation 已有 append-only 触发器；删除采用既有归档/软删与保留策略，禁止随意取消触发器。",
+        "归档绑定 contract、context、预算、执行、评估与计划引用；不要导出真实 secret 或可复用 grant。",
+        "恢复到新 task identity 时重映射引用并标 restored；历史许可失效、运行中动作不得自动重新入队，重新执行需要新批准。",
+        "对删除中执行与迟到结果做竞态测试；预算/证据审计记录按既定保留规则处理。"
+      ],
+      "acceptance_tests": [
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlMigrationTwice",
+          "assertion": "迁移重复应用不丢数据、不改已批准语义。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlArchiveRoundTrip",
+          "assertion": "新增状态与证据索引可完整归档读取。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlRestoreDoesNotReplay",
+          "assertion": "恢复不重用授权/许可、不重新执行历史 queued/running。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlLegacyNotPromoted",
+          "assertion": "旧 scope 与事实不会自动提升授权或 confirmed。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/db",
+          "name": "TestControlDeleteWithLateResult",
+          "assertion": "删除/关闭后迟到结果不复活任务或更新正式结论。",
+          "status": "PROPOSED_NOT_RUN"
+        }
+      ],
+      "rollback": "只回滚应用读路径到兼容版本，不破坏性撤表；无法兼容时保持停机/只读并人工处理。",
+      "design_notes": "",
+      "status": "pending",
+      "max_same_failure_repair_attempts": 3
+    },
+    {
+      "id": "ENG-18",
+      "title": "完整真实 Worker 闭环与故障 CI 矩阵",
+      "depends_on": [
+        "ENG-13",
+        "ENG-15",
+        "ENG-16",
+        "ENG-17"
+      ],
+      "source_paths": [
+        "harness/scenarios/",
+        "server/*_test.go",
+        "scripts/test-research-pg.sh",
+        ".github/workflows/research-harness.yml",
+        "docs/autopilot/"
+      ],
+      "deliverables": [
+        "CI 必测清单与 JSON 判定（零缺席、零必测 skip）",
+        "本地正/负/无效/崩溃/撤销场景",
+        "独立整合审查产物"
+      ],
+      "implementation_steps": [
+        "使用脚本化 Provider+真实 Worker+本地 HTTP fixture+隔离 PG；明确与真实模型试验的区分。",
+        "同场景覆盖有效成功、有效阴性、会话失效、限速、截断、重复通知、崩溃、撤销、预算和提示注入文本。",
+        "目标侧命中计数与 DB 事件一起验收；fake adapter 单测不能代替网络集成。",
+        "故障矩阵固定版本和随机种子；必测集合完整出现且均通过，错误退出或 skip 即 FAIL。",
+        "在 CI 只授予测试实例最小权限；没有测试密钥/模型时真实模型项 NOT_RUN，不伪称完整智能行为验证。"
+      ],
+      "acceptance_tests": [
+        {
+          "package": "github.com/Autumn-27/artex/server",
+          "name": "TestControlE2EValidAnswer",
+          "assertion": "真实 Worker 获取证据、正式评估、调整计划并按契约关闭。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/server",
+          "name": "TestControlE2EExpiredSession",
+          "assertion": "失效会话不形成阴性；修复前提后重验。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/server",
+          "name": "TestControlE2ERevocation",
+          "assertion": "撤销后无新请求，清理情况真实。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/server",
+          "name": "TestControlE2EUnknownEffect",
+          "assertion": "崩溃恢复不会重复外部计数效果。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/server",
+          "name": "TestControlE2EBudgetPartial",
+          "assertion": "预算耗尽准确 partial，剩余问题与账本可检查。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/server",
+          "name": "TestControlE2EUntrustedContent",
+          "assertion": "不可信响应中的越权指令不改变许可或调用目录。",
+          "status": "PROPOSED_NOT_RUN"
+        }
+      ],
+      "rollback": "任何安全/证据/取消红线失败均冻结自主执行；不得降低用例或跳过测试解除失败。",
+      "design_notes": "",
+      "status": "pending",
+      "max_same_failure_repair_attempts": 3
+    },
+    {
+      "id": "ENG-19",
+      "title": "受控评测、交付验收与有限开放",
+      "depends_on": [
+        "ENG-18"
+      ],
+      "source_paths": [
+        "docs/autopilot/",
+        "server/",
+        "report/",
+        "harness/scenarios/"
+      ],
+      "deliverables": [
+        "release-readiness.json 与已知限制",
+        "按工具/目标/模型版本的开放矩阵",
+        "全成本对照与现场运行手册"
+      ],
+      "implementation_steps": [
+        "工程门禁先通过，再用同一安全底座比较候选评分/Reviewer 的效益；不关闭安全约束做有外部效果的消融。",
+        "真实模型试验仅在用户批准的模型端点、合成数据和隔离环境进行；按审批 budget 有界重复，记录全部成本。",
+        "没有 ground truth 的真实目标不报告 recall；行为试验与确定性集成试验分开。",
+        "上线批准只覆盖已验收 HTTP 适配器和方法；Shell/browser/MCP 扩展为新版本，不从一次通过外推。",
+        "交付测试原始日志、代码树哈希、迁移/回滚/取消演练与未实现表；不自动 push、开外网扫描或生产部署。"
+      ],
+      "acceptance_tests": [
+        {
+          "package": "github.com/Autumn-27/artex/server",
+          "name": "TestControlReleaseAllowlist",
+          "assertion": "启用范围严格等于获批版本/方法/adapter，不隐式扩大。",
+          "status": "PROPOSED_NOT_RUN"
+        },
+        {
+          "package": "github.com/Autumn-27/artex/server",
+          "name": "TestControlFeatureRollbackKeepsSafety",
+          "assertion": "评分或 Reviewer 策略回滚不能关闭授权、预算和证据门。",
+          "status": "PROPOSED_NOT_RUN"
+        }
+      ],
+      "rollback": "回到受控只读或停止新任务；运行中动作对账并保留审计。",
+      "design_notes": "真实模型/部署审批缺失时 release_status=READY_FOR_APPROVAL 或 BLOCKED，不自动签署上线。",
+      "status": "pending",
+      "max_same_failure_repair_attempts": 3
+    }
+  ]
+}

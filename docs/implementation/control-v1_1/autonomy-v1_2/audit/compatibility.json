@@ -1,0 +1,40 @@
+{
+  "task_count": 20,
+  "required_test_count": 84,
+  "status": "PASS",
+  "note": "Read-only task-graph simulation; no actual ticket, progress, test or repository state changed.",
+  "scenarios": [
+    {
+      "scenario": "original pending state",
+      "result": {
+        "action": "start",
+        "task_id": "ENG-00",
+        "ticket": "tasks/ENG-00.md"
+      }
+    },
+    {
+      "scenario": "ENG-00 review pending; do not auto-PASS",
+      "result": {
+        "action": "verify_local_evidence",
+        "task_id": "ENG-00",
+        "ticket": "tasks/ENG-00.md",
+        "instruction": "Validate current implementation, required tests, regressions and receipts; only then record verified_local. Preserve actual review status; no human approval is required for this development transition."
+      }
+    },
+    {
+      "scenario": "SIMULATION: ENG-00 evidence already validated; review deferred",
+      "result": {
+        "action": "start",
+        "task_id": "ENG-01",
+        "ticket": "tasks/ENG-01.md"
+      }
+    },
+    {
+      "scenario": "SIMULATION ONLY: all tickets marked local; must still integrate, not push",
+      "result": {
+        "action": "final_integration",
+        "instruction": "Run final-tree aggregate acceptance, regression, migration, security and delivery checks. Only after success may the authorized coding agent push the verified delivery branch. This script has not tested, committed, pushed, merged or deployed anything."
+      }
+    }
+  ]
+}

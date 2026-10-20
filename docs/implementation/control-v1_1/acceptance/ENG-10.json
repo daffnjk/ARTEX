@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "task_id": "ENG-10",
+  "required": [
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlOutcomeEvidenceRequired"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlOutcomeAtomicRollback"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlNonexclusiveHypotheses"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlExpiredIdentityInconclusive"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlInvalidateEvidencePropagates"
+    }
+  ]
+}

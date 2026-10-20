@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "ENG-03",
+  "required": [
+    {
+      "package": "github.com/Autumn-27/artex/control",
+      "name": "TestControlExactHostBoundary"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/control",
+      "name": "TestControlDenyWins"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/control",
+      "name": "TestControlAmbiguousTargetRejected"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/control",
+      "name": "TestControlUnsupportedScopeKind"
+    }
+  ]
+}

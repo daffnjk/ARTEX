@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "plan_version": "1.1",
+  "note": "ENG-00 本地必测与17项相关回归通过，待独立审查；未解锁ENG-01，不代表全仓测试或CI通过。",
+  "current_task": "ENG-01",
+  "tasks": {
+    "ENG-00": {
+      "status": "verified_local",
+      "attempts": 2,
+      "evidence": [
+        "reports/ENG-00/result.json",
+        "reports/ENG-00/runs/02/required.gate.json",
+        "reports/ENG-00/runs/02/regression.gate.json",
+        "reports/ENG-00/review-snapshot.tar.gz",
+        "reports/ENG-00/autonomy-resume-20261020.json"
+      ],
+      "review": "needs_independent_review"
+    },
+    "ENG-01": {
+      "status": "pending",
+      "attempts": 0,
+      "evidence": [],
+      "review": "not_started"
+    },
+    "ENG-02": {
+      "status": "pending",
+      "attempts": 0,
+      "evidence": [],
+      "review": "not_started"
+    },
+    "ENG-03": {
+      "status": "pending",
+      "attempts": 0,
+      "evidence": [],
+      "review": "not_started"
+    },
+    "ENG-04": {
+      "status": "pending",
+      "attempts": 0,
+      "evidence": [],
+      "review": "not_started"
+    },
+    "ENG-05": {
+      "status": "pending",
+      "attempts": 0,
+      "evidence": [],
+      "review": "not_started"
+    },
+    "ENG-06": {
+      "status": "pending",
+      "attempts": 0,
+      "evidence": [],
+      "review": "not_started"
+    },
+    "ENG-07": {
+      "status": "pending",
+      "attempts": 0,
+      "evidence": [],
+      "review": "not_started"
+    },
+    "ENG-08": {
+      "status": "pending",
+      "attempts": 0,
+      "evidence": [],
+      "review": "not_started"
+    },
+    "ENG-09": {
+      "status": "pending",
+      "attempts": 0,
+      "evidence": [],
+      "review": "not_started"
+    },
+    "ENG-10": {
+      "status": "pending",
+      "attempts": 0,
+      "evidence": [],
+      "review": "not_started"
+    },
+    "ENG-11": {
+      "status": "pending",
+      "attempts": 0,
+      "evidence": [],
+      "review": "not_started"
+    },
+    "ENG-12": {
+      "status": "pending",
+      "attempts": 0,
+      "evidence": [],
+      "review": "not_started"
+    },
+    "ENG-13": {
+      "status": "pending",
+      "attempts": 0,
+      "evidence": [],
+      "review": "not_started"
+    },
+    "ENG-14": {
+      "status": "pending",
+      "attempts": 0,
+      "evidence": [],
+      "review": "not_started"
+    },
+    "ENG-15": {
+      "status": "pending",
+      "attempts": 0,
+      "evidence": [],
+      "review": "not_started"
+    },
+    "ENG-16": {
+      "status": "pending",
+      "attempts": 0,
+      "evidence": [],
+      "review": "not_started"
+    },
+    "ENG-17": {
+      "status": "pending",
+      "attempts": 0,
+      "evidence": [],
+      "review": "not_started"
+    },
+    "ENG-18": {
+      "status": "pending",
+      "attempts": 0,
+      "evidence": [],
+      "review": "not_started"
+    },
+    "ENG-19": {
+      "status": "pending",
+      "attempts": 0,
+      "evidence": [],
+      "review": "not_started"
+    }
+  }
+}

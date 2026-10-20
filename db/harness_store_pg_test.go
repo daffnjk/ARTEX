@@ -121,7 +121,7 @@ func TestHarnessResolverTaskScopeAndFullStackEvaluation(t *testing.T) {
 		t.Fatalf("evaluation record mismatch: %+v", got[0])
 	}
 	// 存档同样不可变。
-	if _, err := d.Exec(`DELETE FROM harness_evaluations WHERE request_id=$1`, "m21-eval-1"); err == nil || !strings.Contains(err.Error(), "append-only") {
+	if _, err := d.Exec(`DELETE FROM harness_evaluations WHERE request_id=$1`, report.RequestID); err == nil || !strings.Contains(err.Error(), "append-only") {
 		t.Fatalf("evaluation DELETE must be rejected, got %v", err)
 	}
 }

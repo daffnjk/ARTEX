@@ -1,0 +1,13 @@
+{
+  "version": "1.2",
+  "files": {
+    "AUTONOMOUS_EXECUTION.md": "9c0bd9300b195de1aecd3bff695555cacce8540849cc4c9801e7b973b224aca3",
+    "README.md": "0d8cf1f78037ded22713266cc9c7226d98349a9666357ad79540a809d096c184",
+    "audit/compatibility.json": "6fab503294a3e6708dcddca2f52b3cacb22b6ffa9288fa8d4d7c336e15b7e242",
+    "audit/receipt.json": "805818a7901054746823e6f179c393ce96d2269e67796ed95ff05d3518a8a07e",
+    "audit/unittest.stderr": "2282f0a4ac0f14c58357f6572c81ba81b3a19664c9cb73feee2719b86aa60918",
+    "audit/unittest.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "scripts/next_task_autonomous.py": "89623558d353be309e8cea6da9d7a6c4c28b3623832ac5928ba42436df148c98",
+    "tests/test_next_task_autonomous.py": "a680b50a33a9fae9dd8d6e44de751c624eb99c920bfa4e2593da2fc58864e338"
+  }
+}

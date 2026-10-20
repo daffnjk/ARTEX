@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "task_id": "ENG-04",
+  "required": [
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlBudgetConcurrentReserve"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlBudgetSettlementIdempotent"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlLLMRetryBudgeted"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlUnknownUsageNotRefunded"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlCloseReserveProtected"
+    }
+  ]
+}

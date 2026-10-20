@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "ENG-15",
+  "required": [
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlWorkerCannotWriteReview"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlReviewBindsEvidenceVersion"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlReviewerCannotAuthorize"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlReportEvidenceLinks"
+    }
+  ]
+}

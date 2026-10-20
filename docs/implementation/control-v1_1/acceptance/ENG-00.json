@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "task_id": "ENG-00",
+  "required": [
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestControlCognitionDefaultAssembly"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlTaskExplorationIdentity"
+    }
+  ]
+}

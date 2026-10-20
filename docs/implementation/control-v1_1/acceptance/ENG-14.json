@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "task_id": "ENG-14",
+  "required": [
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlClosePartialOnBudget"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlDirectNoAutoExpansion"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlLateCompletionCannotOverwrite"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlCloseRechecksEvidence"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlReportWithoutLLM"
+    }
+  ]
+}

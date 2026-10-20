@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "ENG-09",
+  "required": [
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlObservationLineage"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlObservationIDConflict"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/execution",
+      "name": "TestControlTruncatedObservationInvalid"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlModelCannotForgeObservation"
+    }
+  ]
+}

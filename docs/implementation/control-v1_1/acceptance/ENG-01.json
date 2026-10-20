@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "task_id": "ENG-01",
+  "required": [
+    {
+      "package": "github.com/Autumn-27/artex/control",
+      "name": "TestControlProposalRejectsAuthorityFields"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/control",
+      "name": "TestControlIDNamespaces"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/control",
+      "name": "TestControlOutcomeDimensions"
+    }
+  ]
+}

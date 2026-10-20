@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "ENG-11",
+  "required": [
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlPlanPatchKeepsID"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlPlanCycleRejected"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlDependencyContextRequired"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestControlTodoLegacyPreservesDependencies"
+    }
+  ]
+}

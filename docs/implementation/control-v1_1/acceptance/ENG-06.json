@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "task_id": "ENG-06",
+  "required": [
+    {
+      "package": "github.com/Autumn-27/artex/execution",
+      "name": "TestControlRedirectBoundary"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/execution",
+      "name": "TestControlPinnedDial"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/execution",
+      "name": "TestControlResponseLimit"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/execution",
+      "name": "TestControlGrantRevokedBeforeDial"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/execution",
+      "name": "TestControlProxyEnvCannotBypass"
+    }
+  ]
+}

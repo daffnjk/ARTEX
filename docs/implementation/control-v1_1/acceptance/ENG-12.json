@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "ENG-12",
+  "required": [
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlSemanticDedupConcurrent"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlRunningActionReused"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlRetestRequiresReason"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlContextChangeAllowsBoundedRetest"
+    }
+  ]
+}

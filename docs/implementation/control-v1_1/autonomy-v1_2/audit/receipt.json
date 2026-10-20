@@ -1,0 +1,11 @@
+{
+  "kind": "auxiliary_scheduler_unittests",
+  "command": "python -m unittest discover -s autonomy-v1_2/tests -v",
+  "exit_code": 0,
+  "tests": 20,
+  "result": "PASS",
+  "python": "3.13.5",
+  "stdout": "audit/unittest.stdout",
+  "stderr": "audit/unittest.stderr",
+  "notice": "Not ARTEX tests or deployment; not a code audit approval."
+}

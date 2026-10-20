@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "ENG-07",
+  "required": [
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlRealWorkerUsesGrant"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlUnapprovedToolUnavailable"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlBackgroundPathsEnforced"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlMissingTaskContextDenied"
+    }
+  ]
+}

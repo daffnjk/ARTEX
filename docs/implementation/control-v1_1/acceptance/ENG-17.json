@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "task_id": "ENG-17",
+  "required": [
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlMigrationTwice"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlArchiveRoundTrip"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlRestoreDoesNotReplay"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlLegacyNotPromoted"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlDeleteWithLateResult"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+test_active_cannot_bypass_dependencies (test_next_task_autonomous.SchedulerTests.test_active_cannot_bypass_dependencies) ... ok
+test_active_resumes (test_next_task_autonomous.SchedulerTests.test_active_resumes) ... ok
+test_all_local_is_not_a_push (test_next_task_autonomous.SchedulerTests.test_all_local_is_not_a_push) ... ok
+test_cli_blocked_exit (test_next_task_autonomous.SchedulerTests.test_cli_blocked_exit) ... ok
+test_cli_missing_file_exit (test_next_task_autonomous.SchedulerTests.test_cli_missing_file_exit) ... ok
+test_cli_reads_without_writing (test_next_task_autonomous.SchedulerTests.test_cli_reads_without_writing) ... ok
+test_cycle_rejected (test_next_task_autonomous.SchedulerTests.test_cycle_rejected) ... ok
+test_duplicate_task_rejected (test_next_task_autonomous.SchedulerTests.test_duplicate_task_rejected) ... ok
+test_false_completed_descendant_rejected (test_next_task_autonomous.SchedulerTests.test_false_completed_descendant_rejected) ... ok
+test_independent_task_can_continue (test_next_task_autonomous.SchedulerTests.test_independent_task_can_continue) ... ok
+test_legacy_verified_unlocks (test_next_task_autonomous.SchedulerTests.test_legacy_verified_unlocks) ... ok
+test_missing_progress_rejected (test_next_task_autonomous.SchedulerTests.test_missing_progress_rejected) ... ok
+test_missing_review_does_not_block (test_next_task_autonomous.SchedulerTests.test_missing_review_does_not_block) ... ok
+test_multiple_active_rejected (test_next_task_autonomous.SchedulerTests.test_multiple_active_rejected) ... ok
+test_needs_review_requires_evidence_not_approval (test_next_task_autonomous.SchedulerTests.test_needs_review_requires_evidence_not_approval) ... ok
+test_starts_first_pending (test_next_task_autonomous.SchedulerTests.test_starts_first_pending) ... ok
+test_true_blocker_blocks_dependent (test_next_task_autonomous.SchedulerTests.test_true_blocker_blocks_dependent) ... ok
+test_unknown_dependency_rejected (test_next_task_autonomous.SchedulerTests.test_unknown_dependency_rejected) ... ok
+test_unknown_status_rejected (test_next_task_autonomous.SchedulerTests.test_unknown_status_rejected) ... ok
+test_verified_local_unlocks (test_next_task_autonomous.SchedulerTests.test_verified_local_unlocks) ... ok
+
+----------------------------------------------------------------------
+Ran 20 tests in 0.005s
+
+OK

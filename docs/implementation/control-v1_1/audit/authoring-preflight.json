@@ -1,0 +1,28 @@
+{
+  "kind": "metadata_preflight_only",
+  "status": "BLOCKED_TOOLCHAIN",
+  "repository": "/mnt/data/artex_inspect/ARTEX-main",
+  "required_go": "1.26.3",
+  "local_go": "go version go1.23.2 linux/amd64",
+  "git_head": null,
+  "git_porcelain": null,
+  "source_sha256": {
+    "go.mod": "19d2ff9f7effa9f31c31b372bf2562f4086b8d554ea6700d5e4184371d719d62",
+    "go.sum": "babf7ca62ae7135bac6580e8018a7ceb6e851489ed9110e5f79b5974f9b57480",
+    "db/schema.sql": "1822041852c5a39bac7aa8b34b42321ca7eebeb872aa156276c7fb8ab6b74bd1",
+    "db/task_plans.go": "a261a28d7b7377348914b997ac04f27470639c0c9be2f87229f43d3f19d56a69",
+    "db/task_completion.go": "ff0a8f4cf9d0ba6d3b91ea9df41f6c4871d9b70e60e764b9f0217dec5b685b3f",
+    "db/hypotheses.go": "f8ad9b7afc605b3322cc3884128b0e8c5d53ddf9e4adcdf7348f0611a5cfa838",
+    "db/harness_store.go": "684beee1752287d298a58fe37e6e83da209c3181a2b8bfa665dde6e222bec619",
+    "agent/planner.go": "c25e6d28c4b9b03e5fc551d119e15625ddf98ba46f5b33a5ddc2073ebc077763",
+    "agent/worker.go": "3b23500bc9025876f1c06fdfd3d60b43965de7f62b718b3d010ce3c67c62b0cf",
+    "server/engine.go": "9f01b9b89e68340e13da3aa2cbf025144db7ba1278107383fa0f1d328f9dadd1",
+    "scripts/test-research-pg.sh": "e9e34e672cca215def88ab6c3be9ca016e84c44adc9156ff02e3f1489357cfe4",
+    "scripts/test-harness-offline.sh": "e9e218e8df7b8f6eb807363f19def58d7c372e6332874a33c4e095c5480b4077"
+  },
+  "database_checked": false,
+  "repo_tests_run": false,
+  "toolchain_downloaded": false,
+  "read_sensitive_config": false,
+  "next_gate": "ENG-00 must validate isolated DB, test inventory and actual build. METADATA_OK is not test PASS."
+}

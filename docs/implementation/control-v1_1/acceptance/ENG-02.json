@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "ENG-02",
+  "required": [
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlContractVersionImmutable"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlCoverageDoesNotAuthorize"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlAgentCannotApproveContract"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlRevocationEpoch"
+    }
+  ]
+}

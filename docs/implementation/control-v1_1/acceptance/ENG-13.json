@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "task_id": "ENG-13",
+  "required": [
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlScoringRespectsHardFilter"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlSamePredictionsNoDiscrimination"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestControlUnexpectedEvidenceReplans"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlTypedFailureHandling"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestControlPlannerStallBound"
+    }
+  ]
+}

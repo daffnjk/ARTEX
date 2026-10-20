@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:artex:control:action-proposal:1",
+  "title": "Proposed ActionProposal v1; implementation contract, not deployed API",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "method_id",
+    "method_version",
+    "target",
+    "purpose",
+    "context_version",
+    "idempotency_key"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "method_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "method_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scheme",
+        "host",
+        "port",
+        "path"
+      ],
+      "properties": {
+        "scheme": {
+          "enum": [
+            "http",
+            "https"
+          ]
+        },
+        "host": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 253
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^/",
+          "maxLength": 2048
+        }
+      }
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "context_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "identity_ref": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 128
+    },
+    "experiment_id": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1
+    },
+    "step_id": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1
+    },
+    "required_claim_ids": {
+      "type": "array",
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": {
+        "type": "integer",
+        "minimum": 1
+      }
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    }
+  },
+  "$comment": "Task identity and authority come from host context; schema alone does not enforce scope, grant, or ownership."
+}

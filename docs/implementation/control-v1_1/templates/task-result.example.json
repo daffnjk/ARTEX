@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "task_id": "ENG-00",
+  "status": "blocked",
+  "baseline_commit": null,
+  "implemented_tree_sha256": null,
+  "changed_paths": [],
+  "checks": [
+    {
+      "name": "required_go_tests",
+      "status": "NOT_RUN",
+      "command": null,
+      "exit_code": null,
+      "stdout_log": null,
+      "stderr_log": null,
+      "log_sha256": null,
+      "required_inventory": null
+    }
+  ],
+  "regression_checks": [],
+  "migration_checks": [],
+  "acceptance_coverage": {
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "missing": 0
+  },
+  "review": {
+    "status": "needs_independent_review",
+    "run_id": null,
+    "reviewed_tree_sha256": null,
+    "report": null
+  },
+  "blockers": [
+    "模板示例：必须替换为实际事实；此文件不代表已执行 ENG-00。"
+  ],
+  "limitations": [],
+  "rollback_note": null,
+  "next_safe_step": null
+}

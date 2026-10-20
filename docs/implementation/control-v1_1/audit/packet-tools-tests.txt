@@ -1,0 +1,24 @@
+test_bad_json (__main__.TestLogGate.test_bad_json) ... ok
+test_duplicate_expected (__main__.TestLogGate.test_duplicate_expected) ... ok
+test_duplicate_runs (__main__.TestLogGate.test_duplicate_runs) ... ok
+test_empty_expected (__main__.TestLogGate.test_empty_expected) ... ok
+test_fabricated_text_pass (__main__.TestLogGate.test_fabricated_text_pass) ... ok
+test_json_array (__main__.TestLogGate.test_json_array) ... ok
+test_missing_package_terminal (__main__.TestLogGate.test_missing_package_terminal) ... ok
+test_missing_test (__main__.TestLogGate.test_missing_test) ... ok
+test_no_run_event (__main__.TestLogGate.test_no_run_event) ... ok
+test_nonzero_exit (__main__.TestLogGate.test_nonzero_exit) ... ok
+test_package_fail (__main__.TestLogGate.test_package_fail) ... ok
+test_skip (__main__.TestLogGate.test_skip) ... ok
+test_subtest_skip (__main__.TestLogGate.test_subtest_skip) ... ok
+test_unrelated_failure_is_failure (__main__.TestLogGate.test_unrelated_failure_is_failure) ... ok
+test_unrelated_skip_is_not_required (__main__.TestLogGate.test_unrelated_skip_is_not_required) ... ok
+test_valid (__main__.TestLogGate.test_valid) ... ok
+test_missing (__main__.TestVersion.test_missing) ... ok
+test_required (__main__.TestVersion.test_required) ... ok
+test_version (__main__.TestVersion.test_version) ... ok
+
+----------------------------------------------------------------------
+Ran 19 tests in 0.001s
+
+OK

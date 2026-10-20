@@ -1,0 +1,33 @@
+{
+  "kind": "proposed_execution_protocol",
+  "execution_states": [
+    "queued",
+    "running",
+    "succeeded",
+    "failed",
+    "cancelled",
+    "timed_out",
+    "lost"
+  ],
+  "effect_states": [
+    "not_applicable",
+    "known_applied",
+    "known_not_applied",
+    "unknown"
+  ],
+  "cleanup_states": [
+    "not_required",
+    "pending",
+    "confirmed",
+    "unconfirmed",
+    "failed"
+  ],
+  "rules": [
+    "wait_timeout does not create an attempt",
+    "lease_expired does not prove external execution stopped",
+    "unknown effect does not allow non-idempotent replay",
+    "cancel_ack does not imply cleanup_confirmed",
+    "terminal outcome update requires current lease/context",
+    "restored archives never reuse execution grants"
+  ]
+}
