@@ -40,8 +40,11 @@ type observationWriter interface {
 }
 
 func storeHarnessObservation(ctx context.Context, w observationWriter, o harness.Observation, meta *controlCaptureMetadata) error {
-	if o.ID == "" || o.TaskID <= 0 || o.ExperimentID == "" || o.ContextVersion == "" || len(o.Payload) > harness.MaxArtifactBytes {
+	if o.ID == "" || o.TaskID <= 0 || o.ExperimentID == "" || o.ContextVersion == "" {
 		return fmt.Errorf("invalid bounded harness observation")
+	}
+	if len(o.Payload) > harness.MaxArtifactBytes {
+		return fmt.Errorf("harness observation payload exceeds %d bytes", harness.MaxArtifactBytes)
 	}
 	digest := harness.Digest(o.Payload)
 	compare := func() (bool, error) {
@@ -130,12 +133,26 @@ func (s *HarnessStore) Resolver() harness.Resolver { return pgResolver{d: s.d, t
 
 // RecordEvaluation 追加一条评估报告存档（append-only，不可改不可删）。
 func (s *HarnessStore) RecordEvaluation(r harness.EvaluationReport) error {
+	mode, err := s.d.ControlMode(context.Background(), s.taskID)
+	if err != nil && err != sql.ErrNoRows {
+		return err
+	}
+	if err == nil && mode != "legacy" {
+		return fmt.Errorf("controlled evaluations require atomic validated outcome")
+	}
+	if r.TaskID != s.taskID {
+		return fmt.Errorf("evaluation task binding mismatch")
+	}
+	return recordHarnessEvaluation(context.Background(), s.d, r)
+}
+
+func recordHarnessEvaluation(ctx context.Context, w observationWriter, r harness.EvaluationReport) error {
 	raw, err := json.Marshal(r)
 	if err != nil {
 		return fmt.Errorf("encode evaluation report: %w", err)
 	}
 	// request_id 唯一（审查硬化）：重试重放不重复追加，幂等成功。
-	res, err := s.d.Exec(`
+	res, err := w.ExecContext(ctx, `
 INSERT INTO harness_evaluations(request_id, task_id, goal_id, experiment_id, context_version,
     criterion_id, criterion_version, validity, conclusion, disposition, report)
 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
@@ -146,7 +163,26 @@ ON CONFLICT (request_id) DO NOTHING`,
 		return fmt.Errorf("record evaluation %s: %w", r.RequestID, err)
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		return nil // 同 request_id 已存档——幂等
+		var prior []byte
+		if err := w.QueryRowContext(ctx, `SELECT report FROM harness_evaluations WHERE request_id=$1`, r.RequestID).Scan(&prior); err != nil {
+			return err
+		}
+		var existing harness.EvaluationReport
+		if err := json.Unmarshal(prior, &existing); err != nil {
+			return err
+		}
+		oldDigest, err := actionHash(existing)
+		if err != nil {
+			return err
+		}
+		newDigest, err := actionHash(r)
+		if err != nil {
+			return err
+		}
+		if oldDigest != newDigest {
+			return fmt.Errorf("evaluation request_id content conflict")
+		}
+		return nil
 	}
 	return nil
 }

@@ -11,10 +11,13 @@ import (
 )
 
 func capturedControlFixture(t *testing.T) (*DB, *Task, execution.Attempt, []harness.Observation) {
+	return capturedControlStatusFixture(t, 200)
+}
+func capturedControlStatusFixture(t *testing.T, status int) (*DB, *Task, execution.Attempt, []harness.Observation) {
 	t.Helper()
 	d, task, a := leasedControlFixture(t)
 	payload := []byte("synthetic captured bytes")
-	result := execution.HTTPResult{ExecutionID: a.ExecutionID, ContextVersion: "initial", Requests: 1, ResponseBytes: int64(len(payload)), Complete: true, Outcome: control.Outcome{Run: control.RunSucceeded, Effect: control.EffectUnknown, Cleanup: control.CleanupConfirmed}, Hops: []execution.HTTPHop{{Target: control.Target{Scheme: "http", Host: "localhost", Port: 8080, Path: "/fixture"}, StatusCode: 200, Body: payload, SHA256: harness.Digest(payload), Complete: true}}}
+	result := execution.HTTPResult{ExecutionID: a.ExecutionID, ContextVersion: "initial", Requests: 1, ResponseBytes: int64(len(payload)), Complete: true, Outcome: control.Outcome{Run: control.RunSucceeded, Effect: control.EffectUnknown, Cleanup: control.CleanupConfirmed}, Hops: []execution.HTTPHop{{Target: control.Target{Scheme: "http", Host: "localhost", Port: 8080, Path: "/fixture"}, StatusCode: status, Body: payload, SHA256: harness.Digest(payload), Complete: true}}}
 	if err := d.CommitControlHTTPResult(t.Context(), a, result); err != nil {
 		t.Fatal(err)
 	}

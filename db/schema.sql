@@ -1731,3 +1731,34 @@ BEGIN
 END $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS trg_control_result_immutable ON action_executions;
 CREATE TRIGGER trg_control_result_immutable BEFORE UPDATE ON action_executions FOR EACH ROW EXECUTE FUNCTION forbid_control_result_rewrite();
+
+CREATE TABLE IF NOT EXISTS control_claims (
+ id BIGSERIAL PRIMARY KEY,task_id BIGINT NOT NULL,hypothesis_id BIGINT NOT NULL,
+ request_id TEXT NOT NULL UNIQUE,request_digest TEXT NOT NULL,context_version TEXT NOT NULL,
+ validity TEXT NOT NULL CHECK(validity IN ('valid','invalid','unknown')),
+ conclusion TEXT NOT NULL CHECK(conclusion IN ('supported','refuted','inconclusive')),
+ created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS control_claim_dependencies (
+ task_id BIGINT NOT NULL,claim_id BIGINT NOT NULL REFERENCES control_claims(id),
+ observation_id TEXT NOT NULL REFERENCES harness_observations(id),PRIMARY KEY(claim_id,observation_id)
+);
+CREATE TABLE IF NOT EXISTS control_evidence_invalidations (
+ task_id BIGINT NOT NULL,observation_id TEXT NOT NULL REFERENCES harness_observations(id),
+ actor TEXT NOT NULL,reason TEXT NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+ PRIMARY KEY(task_id,observation_id)
+);
+DROP TRIGGER IF EXISTS trg_control_claim_deps_immutable ON control_claim_dependencies;
+CREATE TRIGGER trg_control_claim_deps_immutable BEFORE UPDATE OR DELETE ON control_claim_dependencies FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
+DROP TRIGGER IF EXISTS trg_control_invalidation_immutable ON control_evidence_invalidations;
+CREATE TRIGGER trg_control_invalidation_immutable BEFORE UPDATE OR DELETE ON control_evidence_invalidations FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
+CREATE OR REPLACE FUNCTION forbid_control_claim_rewrite() RETURNS trigger AS $$
+BEGIN
+ IF ROW(NEW.id,NEW.task_id,NEW.hypothesis_id,NEW.request_id,NEW.request_digest,NEW.context_version,NEW.conclusion)
+ IS DISTINCT FROM ROW(OLD.id,OLD.task_id,OLD.hypothesis_id,OLD.request_id,OLD.request_digest,OLD.context_version,OLD.conclusion)
+ OR (OLD.validity<>'valid' AND NEW.validity='valid')
+ THEN RAISE EXCEPTION 'control claim identity and conclusion are immutable'; END IF;
+ RETURN NEW;
+END $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_control_claim_immutable ON control_claims;
+CREATE TRIGGER trg_control_claim_immutable BEFORE UPDATE ON control_claims FOR EACH ROW EXECUTE FUNCTION forbid_control_claim_rewrite();

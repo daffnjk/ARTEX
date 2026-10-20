@@ -31,6 +31,22 @@ func (d *DB) SetHarnessAcceptance(spec harness.AcceptanceSpec) error {
 		return err
 	}
 	defer tx.Rollback()
+	// Controlled acceptance changes share the task root lock with outcome commits.
+	var mode string
+	err = tx.QueryRow(`SELECT control_mode FROM tasks WHERE id=$1 FOR UPDATE`, spec.TaskID).Scan(&mode)
+	if err != nil && err != sql.ErrNoRows {
+		return err
+	}
+	if err == nil && mode != "legacy" {
+		var owned bool
+		if err = tx.QueryRow(`SELECT EXISTS(SELECT 1 FROM exploration_nodes n JOIN tasks t ON t.exploration_id=n.exploration_id WHERE t.id=$1 AND n.id=$2 AND n.kind='goal')`, spec.TaskID, spec.GoalID).Scan(&owned); err != nil {
+			return err
+		}
+		if !owned {
+			return fmt.Errorf("acceptance goal not owned by task")
+		}
+	}
+
 	// 幂等：当前版本完全一致 → 无操作。
 	var cur harness.AcceptanceSpec
 	var curVersion string

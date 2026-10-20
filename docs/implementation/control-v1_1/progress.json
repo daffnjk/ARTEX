@@ -89,10 +89,12 @@
       "review": "needs_independent_review"
     },
     "ENG-10": {
-      "status": "pending",
-      "attempts": 0,
-      "evidence": [],
-      "review": "not_started"
+      "status": "verified_local",
+      "attempts": 5,
+      "evidence": [
+        "reports/ENG-10/result.json"
+      ],
+      "review": "needs_independent_review"
     },
     "ENG-11": {
       "status": "pending",

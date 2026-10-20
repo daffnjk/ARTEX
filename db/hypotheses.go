@@ -314,6 +314,7 @@ type ExperimentOutcome struct {
 // 期望】与观察文本匹配 → 该假设 supported、其余参试假设 refuted（事件留痕）；
 // 多匹配或全不匹配 → inconclusive，假设状态不动（绝不强拟合）。
 func (s *ExplorationStore) RecordExperimentOutcome(experimentID int64, observed string, factID int64) (ExperimentOutcome, error) {
+
 	if strings.TrimSpace(observed) == "" || len(observed) > MaxExpectationBytes*4 {
 		return ExperimentOutcome{}, fmt.Errorf("observed summary required (bounded)")
 	}
@@ -322,6 +323,15 @@ func (s *ExplorationStore) RecordExperimentOutcome(experimentID int64, observed 
 		return ExperimentOutcome{}, err
 	}
 	defer tx.Rollback()
+	var mode string
+	err = tx.QueryRow(`SELECT control_mode FROM tasks WHERE exploration_id=$1 FOR UPDATE`, s.expID).Scan(&mode)
+	if err != nil && err != sql.ErrNoRows {
+		return ExperimentOutcome{}, err
+	}
+	if err == nil && mode != "legacy" {
+		return ExperimentOutcome{}, fmt.Errorf("controlled tasks require validated evidence outcomes")
+	}
+
 	var (
 		hypIDs []int64
 		expRaw []byte

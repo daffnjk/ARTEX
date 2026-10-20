@@ -137,6 +137,38 @@
     {
       "package": "github.com/Autumn-27/artex/agent",
       "name": "TestProviderDoesNotRetryExplicitQuota429"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestHypothesisLifecycle"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestExperimentPreRegistrationAndOutcome"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestHarnessAcceptanceVersions"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestHarnessAcceptanceFullStackPremise"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestHarnessObservationStoreImmutable"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestSupportedHypothesisInheritsDiscriminatingEvidence"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestDispatchExperimentEnforcesDenyConstraint"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestExperimentSelection"
     }
   ]
 }

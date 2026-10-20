@@ -115,9 +115,13 @@ func (d *DB) ControlObservationResolver(task control.TaskID) harness.Resolver {
 	return controlObservationResolver{d, task}
 }
 func (r controlObservationResolver) Resolve(ctx context.Context, id string) (harness.Observation, error) {
+	return resolveControlObservation(ctx, r.d, int64(r.task), id)
+}
+
+func resolveControlObservation(ctx context.Context, q observationWriter, task int64, id string) (harness.Observation, error) {
 	var o harness.Observation
 	var digest string
-	err := r.d.QueryRowContext(ctx, `SELECT o.id,o.task_id,o.experiment_id,o.execution_id,o.context_version,o.subject_ref,o.object_ref,o.observed_at,o.complete,o.payload,o.payload_sha256 FROM harness_observations o JOIN tasks t ON t.id=o.task_id AND t.exploration_id=o.exploration_id JOIN action_executions e ON e.id=o.execution_id AND e.task_id=o.task_id JOIN execution_attempts a ON a.id=o.attempt_id AND a.execution_id=e.id WHERE o.task_id=$1 AND o.id=$2 AND o.capture_source='host_http_v1' AND a.lease_epoch=o.lease_epoch AND t.deleted_at IS NULL`, int64(r.task), id).Scan(&o.ID, &o.TaskID, &o.ExperimentID, &o.ExecutionID, &o.ContextVersion, &o.SubjectRef, &o.ObjectRef, &o.ObservedAt, &o.Complete, &o.Payload, &digest)
+	err := q.QueryRowContext(ctx, `SELECT o.id,o.task_id,o.experiment_id,o.execution_id,o.context_version,o.subject_ref,o.object_ref,o.observed_at,o.complete,o.payload,o.payload_sha256 FROM harness_observations o JOIN tasks t ON t.id=o.task_id AND t.exploration_id=o.exploration_id JOIN action_executions e ON e.id=o.execution_id AND e.task_id=o.task_id JOIN execution_attempts a ON a.id=o.attempt_id AND a.execution_id=e.id WHERE o.task_id=$1 AND o.id=$2 AND o.capture_source='host_http_v1' AND a.lease_epoch=o.lease_epoch AND t.deleted_at IS NULL AND NOT EXISTS(SELECT 1 FROM control_evidence_invalidations i WHERE i.task_id=o.task_id AND i.observation_id=o.id)`, task, id).Scan(&o.ID, &o.TaskID, &o.ExperimentID, &o.ExecutionID, &o.ContextVersion, &o.SubjectRef, &o.ObjectRef, &o.ObservedAt, &o.Complete, &o.Payload, &digest)
 	if err != nil {
 		return o, control.EvidenceUnavailable
 	}

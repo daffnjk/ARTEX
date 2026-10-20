@@ -1,0 +1,7 @@
+# ENG-10: validated outcome transaction
+
+The host supplies trusted versioned verifier code; models supply only a bounded request and evidence references. The existing harness evaluator runs against transaction-scoped observation and acceptance resolvers. A task root lock serializes approval, revocation, acceptance change, invalidation and outcome commit. Current context, capture lineage, payload digest and contract acceptance version are checked before evaluation. Expired/revoked identity premises produce inconclusive, never a negative finding.
+
+Evaluation archive, the evaluated hypothesis only, claim, observation dependencies, hypothesis event and controller outbox commit together. Fault tests inject failures in claim, dependency and outbox writes. Nonexclusive alternatives remain active. Request replay checks an immutable request digest; a conflict cannot silently inherit another report. Legacy observation/evaluation/string outcome paths refuse controlled tasks. The old research mode remains available for historical fixtures.
+
+Withdrawal appends an immutable invalidation, invalidates dependent claims, downgrades unsupported hypotheses and wakes the planner without deleting raw bytes. Another valid support preserves a hypothesis. Cross-claim prerequisites are added in ENG-11; arbitrary implicit dependency inference is not supported. Migration adds bounded tables without deleting historical data. Rollback must disable controlled evaluation, never enable string-based completion. Independent review remains pending.
