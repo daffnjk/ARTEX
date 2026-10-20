@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "release_status": "READY_FOR_APPROVAL",
-  "engineering_status": "LOCAL_VALIDATED_SYNC_PENDING",
+  "engineering_status": "COMPLETE_SYNCED_REVIEW_PENDING",
   "independent_review": "needs_independent_review",
   "real_model_trials": {
     "status": "NOT_RUN",
@@ -54,5 +54,10 @@
     "Mechanical body SHA256 criterion only; business criteria require manual review",
     "Local cancellation confirms local resource closure only"
   ],
-  "runtime_source_sha256": "063a50d68790856024e7b9857d200b1af058ac233b6b4405ecf44195dbf508b9"
+  "runtime_source_sha256": "063a50d68790856024e7b9857d200b1af058ac233b6b4405ecf44195dbf508b9",
+  "ci": {
+    "status": "PASS",
+    "run_id": 39383571322,
+    "source_tree_sha256": "063a50d68790856024e7b9857d200b1af058ac233b6b4405ecf44195dbf508b9"
+  }
 }

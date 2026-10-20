@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "plan_version": "1.1",
-  "note": "v1.2 autonomous development; final-tree aggregate84 and regression116 PASS; independent review pending; branch sync pending",
+  "note": "ENG-00..19 verified_local; final aggregate84/fixed116/full621 local PASS, safe CI84/116/build/vet/frontend PASS, dedicated branch synced; independent review pending",
   "current_task": null,
   "tasks": {
     "ENG-00": {

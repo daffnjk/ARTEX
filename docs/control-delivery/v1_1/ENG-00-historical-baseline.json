@@ -1,0 +1,76 @@
+{
+  "captured_at": "2026-10-19T07:43:35.388853+00:00",
+  "head": "eb872ee7ee0359fe6fae183773d4a7511f8e9de6",
+  "git_tree": "f2be56872318d71974bc92aa8eba03a7163d8d87",
+  "branch": "research/autopilot-v2",
+  "tracked_worktree_diff": "",
+  "source_sha256": "33e9436a39df4b74632860dda5af402dc6e4a7bd9f82a459c5e82645a6168418",
+  "required_go": "1.26.3",
+  "local_go": "go1.27.0 darwin/arm64",
+  "packet_ignored": true,
+  "rules_found": [],
+  "database": {
+    "status": "READ_ONLY_IDENTITY_VERIFIED",
+    "host": "localhost",
+    "port": 5432,
+    "database": "artex_research_test",
+    "user": "admin",
+    "version": "17.11",
+    "sandbox_probe": "Operation not permitted",
+    "escalated_read_only_probe_exit": 0,
+    "write_tests_run": false
+  },
+  "tests_enumerated": 743,
+  "required_tests_missing": [
+    "TestControlCognitionDefaultAssembly",
+    "TestControlTaskExplorationIdentity"
+  ],
+  "repo_tests_run": false,
+  "ci": "NOT_RUN",
+  "checks": [
+    {
+      "name": "verify_packet",
+      "command": [
+        "python3",
+        "/Users/admin/Documents/渗透测试/ARTEX/docs/implementation/control-v1_1/scripts/verify_packet.py"
+      ],
+      "exit_code": 0,
+      "stdout_log": "verify_packet.stdout.json",
+      "stderr_log": "verify_packet.stderr.log"
+    },
+    {
+      "name": "preflight",
+      "command": [
+        "python3",
+        "/Users/admin/Documents/渗透测试/ARTEX/docs/implementation/control-v1_1/scripts/preflight.py",
+        "--repo",
+        "."
+      ],
+      "exit_code": 0,
+      "stdout_log": "preflight.stdout.json",
+      "stderr_log": "preflight.stderr.log"
+    }
+  ],
+  "resume": {
+    "date": "2026-10-19",
+    "initial_source_unchanged": true,
+    "go_version": "go1.27.0 darwin/arm64",
+    "current_source_receipt": "runs/02/source.json",
+    "tree_sha256": "05bcafc044732aa1477d809954c3f30e9faa230e3a120e24982d8fbc5c1f6e24",
+    "database": {
+      "host": "localhost",
+      "port": 5432,
+      "role": "admin",
+      "database": "artex_research_test_control_eng00_20261019",
+      "disposable_created_this_session": true,
+      "ddl_dml_transaction_rollback": "PASS",
+      "both_dsns_identical": true
+    },
+    "required": "2/2 PASS; five agent subtests PASS; no skips",
+    "regression": "17/17 PASS; no skips",
+    "build": "go build ./... exit 0",
+    "vet": "go vet ./agent ./db exit 0",
+    "ci": "NOT_RUN",
+    "full_repo_tests": "NOT_RUN"
+  }
+}

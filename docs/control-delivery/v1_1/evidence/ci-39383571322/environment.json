@@ -1,0 +1,14 @@
+{
+  "database": "artex_research_test_control_ci",
+  "host": "localhost",
+  "port": 5432,
+  "role": "control_test",
+  "both_dsns_identical": true,
+  "go_controls": {
+    "GOTOOLCHAIN": "local",
+    "GOWORK": "off",
+    "GOPROXY": "off",
+    "GOSUMDB": "off",
+    "GOFLAGS": "-mod=readonly"
+  }
+}

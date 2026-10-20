@@ -1,0 +1,212 @@
+{
+  "status": "PASS",
+  "run_id": 39383571322,
+  "url": "https://github.com/daffnjk/ARTEX/actions/runs/39383571322",
+  "head_sha": "a6487feb275c3d65516c0dbbb4d2349602dc8a0b",
+  "source_tree_sha256": "063a50d68790856024e7b9857d200b1af058ac233b6b4405ecf44195dbf508b9",
+  "source_matches_local_final": true,
+  "go": "go1.26.3 linux/amd64",
+  "postgres": "artex_research_test_control_ci|control_test|PostgreSQL 17.11 (Debian 17.11-1.pgdg13+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+  "required": {
+    "status": "PASS",
+    "required_count": 84,
+    "event_count": 600,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "regression": {
+    "status": "PASS",
+    "required_count": 116,
+    "event_count": 966,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "workflow_steps": [
+    {
+      "completedAt": "2026-10-20T06:58:51Z",
+      "conclusion": "success",
+      "name": "Set up job",
+      "number": 1,
+      "startedAt": "2026-10-20T06:58:49Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-20T06:59:03Z",
+      "conclusion": "success",
+      "name": "Initialize containers",
+      "number": 2,
+      "startedAt": "2026-10-20T06:58:51Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-20T06:59:05Z",
+      "conclusion": "success",
+      "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+      "number": 3,
+      "startedAt": "2026-10-20T06:59:03Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-20T06:59:14Z",
+      "conclusion": "success",
+      "name": "Run actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff",
+      "number": 4,
+      "startedAt": "2026-10-20T06:59:05Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-20T06:59:14Z",
+      "conclusion": "success",
+      "name": "Create disposable unprivileged database owner",
+      "number": 5,
+      "startedAt": "2026-10-20T06:59:14Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-20T06:59:20Z",
+      "conclusion": "success",
+      "name": "Resolve pinned public modules",
+      "number": 6,
+      "startedAt": "2026-10-20T06:59:14Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-20T07:00:52Z",
+      "conclusion": "success",
+      "name": "Aggregate mandatory and affected regression gates",
+      "number": 7,
+      "startedAt": "2026-10-20T06:59:20Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-20T07:01:40Z",
+      "conclusion": "success",
+      "name": "Build and vet",
+      "number": 8,
+      "startedAt": "2026-10-20T07:00:52Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-20T07:02:51Z",
+      "conclusion": "success",
+      "name": "Existing frontend checks",
+      "number": 9,
+      "startedAt": "2026-10-20T07:01:40Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-20T07:02:52Z",
+      "conclusion": "success",
+      "name": "Keep raw test evidence",
+      "number": 10,
+      "startedAt": "2026-10-20T07:02:51Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-20T07:02:52Z",
+      "conclusion": "success",
+      "name": "Post Run actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff",
+      "number": 18,
+      "startedAt": "2026-10-20T07:02:52Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-20T07:02:52Z",
+      "conclusion": "success",
+      "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+      "number": 19,
+      "startedAt": "2026-10-20T07:02:52Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-20T07:02:52Z",
+      "conclusion": "success",
+      "name": "Stop containers",
+      "number": 20,
+      "startedAt": "2026-10-20T07:02:52Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-20T07:02:52Z",
+      "conclusion": "success",
+      "name": "Complete job",
+      "number": 21,
+      "startedAt": "2026-10-20T07:02:52Z",
+      "status": "completed"
+    }
+  ],
+  "log_manifest": {
+    "source.json": {
+      "raw_sha256": "1d64dfa77fbdc4bddc8216a6e41cf8db35af8b099e74070ed0c7270bc01c7973",
+      "export_sha256": "1d64dfa77fbdc4bddc8216a6e41cf8db35af8b099e74070ed0c7270bc01c7973",
+      "raw_bytes": 78265
+    },
+    "environment.json": {
+      "raw_sha256": "c64842b429aad4711565baf51ae61271a46f32b5840199d5cc968e30d9d99f69",
+      "export_sha256": "c64842b429aad4711565baf51ae61271a46f32b5840199d5cc968e30d9d99f69",
+      "raw_bytes": 295
+    },
+    "required.jsonl.gz": {
+      "raw_sha256": "772125036345e6848160d347306533b7639be3f347530d91fe4051cfb7bb9d0f",
+      "export_sha256": "db90ece5ba2c442a21b278ea2cb1a3f776facc753671d2455c846a1e0af2c071",
+      "raw_bytes": 110693
+    },
+    "required.stderr.log.gz": {
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "export_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "raw_bytes": 0
+    },
+    "required.receipt.json": {
+      "raw_sha256": "bc0d2954c1cdba5058847cec19e8bc4bc1e6470d63089136deace6a867b9478a",
+      "export_sha256": "bc0d2954c1cdba5058847cec19e8bc4bc1e6470d63089136deace6a867b9478a",
+      "raw_bytes": 598
+    },
+    "required.gate.json": {
+      "raw_sha256": "8b64f8695a6fcaaf904caba0bdf2b7e160ce120ed866360fbde657b499daeab5",
+      "export_sha256": "8b64f8695a6fcaaf904caba0bdf2b7e160ce120ed866360fbde657b499daeab5",
+      "raw_bytes": 201
+    },
+    "required.rechecked.json": {
+      "raw_sha256": "8b64f8695a6fcaaf904caba0bdf2b7e160ce120ed866360fbde657b499daeab5",
+      "export_sha256": "8b64f8695a6fcaaf904caba0bdf2b7e160ce120ed866360fbde657b499daeab5",
+      "raw_bytes": 201
+    },
+    "regression.jsonl.gz": {
+      "raw_sha256": "ef47cbef1feea6fa6c47a463affe3da3097333aa05efc402c60159684a38e422",
+      "export_sha256": "43edf62d3b580faca3186a3d854c78af776c9fb1f7eacba6af9d09059a992439",
+      "raw_bytes": 191733
+    },
+    "regression.stderr.log.gz": {
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "export_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "raw_bytes": 0
+    },
+    "regression.receipt.json": {
+      "raw_sha256": "a1ea7b7e2cffbaab39b3dd62b030d21a2243ba431c9e0d3c865c15c9e1441d2c",
+      "export_sha256": "a1ea7b7e2cffbaab39b3dd62b030d21a2243ba431c9e0d3c865c15c9e1441d2c",
+      "raw_bytes": 4937
+    },
+    "regression.gate.json": {
+      "raw_sha256": "ff0c454809c58f11aae7e78dcb210bc2c7c11173bc8ad34034fca300d07d0c9e",
+      "export_sha256": "ff0c454809c58f11aae7e78dcb210bc2c7c11173bc8ad34034fca300d07d0c9e",
+      "raw_bytes": 202
+    },
+    "regression.rechecked.json": {
+      "raw_sha256": "ff0c454809c58f11aae7e78dcb210bc2c7c11173bc8ad34034fca300d07d0c9e",
+      "export_sha256": "ff0c454809c58f11aae7e78dcb210bc2c7c11173bc8ad34034fca300d07d0c9e",
+      "raw_bytes": 202
+    },
+    "pg-preflight.jsonl.gz": {
+      "raw_sha256": "d2cb40232ffb332b70d603ef967406b4356df223c53823b1146ea5a4c7bca1e6",
+      "export_sha256": "2bd1b9913821851dd5e8d63b6d4eabc1ad3d4dbb3b52ecfad6deccbf018b6c81",
+      "raw_bytes": 229
+    },
+    "pg-preflight.receipt.json": {
+      "raw_sha256": "b4dc9c845eb66140ba6d17b5151084d2576ee4753f281362c69a25a500225644",
+      "export_sha256": "b4dc9c845eb66140ba6d17b5151084d2576ee4753f281362c69a25a500225644",
+      "raw_bytes": 793
+    }
+  }
+}

@@ -1,8 +1,8 @@
 # ARTEX control v1.1 engineering delivery
 
-Status: **LOCAL_VALIDATED_SYNC_PENDING**. ENG-00 through ENG-19 are verified_local; independent review remains needs_independent_review. This is engineering validation, not merge, deployment or real-model approval. Structured states and actual receipts: [DELIVERY.json](DELIVERY.json), [release-readiness.json](release-readiness.json).
+Status: **COMPLETE_SYNCED_REVIEW_PENDING**. ENG-00 through ENG-19 are verified_local; independent review remains needs_independent_review. This is engineering validation, not merge, deployment or real-model approval. Structured states and actual receipts: [DELIVERY.json](DELIVERY.json), [release-readiness.json](release-readiness.json).
 
-Final runtime map SHA-256: `063a50d68790856024e7b9857d200b1af058ac233b6b4405ecf44195dbf508b9`. It covers all 749 non-doc Git-visible files, including Go, frontend and CI. Documentation/checkpoint metadata can advance without changing that runtime map. Final code checkpoint: `a8715a4` (runtime map unchanged); remote synchronization is recorded after push.
+Final runtime map SHA-256: `063a50d68790856024e7b9857d200b1af058ac233b6b4405ecf44195dbf508b9`. It covers all 749 non-doc Git-visible files, including Go, frontend and CI. Documentation/checkpoint metadata can advance without changing that runtime map. Final code checkpoint: `a8715a4` (runtime map unchanged). Normal push and remote SHA `a6487fe` verified; subsequent delivery-only records preserve that exact runtime.
 
 | Final verification | Actual result |
 |---|---|
@@ -14,7 +14,7 @@ Final runtime map SHA-256: `063a50d68790856024e7b9857d200b1af058ac233b6b4405ecf4
 | Existing npm run check / npm run build | both exit 0, rules and dependencies unchanged |
 | Additive migration, archive/restore, deletion/late result, cancellation | final-tree Go integration PASS |
 | Packet/preflight/runner unit checks | exit 0; metadata checks do not substitute for Go tests |
-| Remote safe CI | NOT_RUN before push; actual result recorded subsequently |
+| Remote safe CI | [39383571322](https://github.com/daffnjk/ARTEX/actions/runs/39383571322) SUCCESS; Go1.26.3/Linux, PG17.11; raw84/116 gates independently rechecked with original checker |
 
 Final aggregate runs/06 and full-package extra-04 have identical runtime maps. Their selected original JSONL/stderr/commands/exits/hashes are committed under [evidence/final](evidence/final/MANIFEST.json); JSONL and raw stdout/stderr logs are gzip compressed losslessly, with raw and compressed hashes. All earlier failures and full raw local histories remain in the original ignored reports directory. They were not replaced by stitched green results.
 
@@ -29,3 +29,5 @@ Known limits: no approved real-model endpoint/version/budget, no real-target tri
 Startup, configuration, repeating acceptance, cancellation, migration and rollback: [RUNBOOK.md](RUNBOOK.md). Architecture choices and integration self-check are in ADR-001 through ADR-019. Original package manifests and historical reports are preserved. No production configuration, repository visibility, default branch, merge or deployment was changed.
 
 Remote: `https://github.com/daffnjk/ARTEX.git`. Dedicated branch: `feat/artex-control-v1-1`. Normal branch-only push is authorized; no force push or default-branch push. Existing release workflow triggers only v* tags, research workflow push only research/evidence-harness-m1; the new delivery workflow runs synthetic localhost PG tests with contents:read and no production secrets/deploy. Independent reviewer must assess this delivered branch; implementation self-check does not sign release approval.
+
+CI raw selected receipts and unchanged runtime map are committed under evidence/ci-39383571322. The earlier NOT_RUN states in per-ticket historical receipts remain historical. See ENTRYPOINTS.md and preserved ENG-00 historical baseline/inventory for recovery. The current branch tip may advance only for these delivery records; all source-bearing changes correspond to the final map above.
