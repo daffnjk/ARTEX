@@ -70,6 +70,9 @@ func (d *DB) ApproveControlContract(ctx context.Context, taskID, expectedEpoch i
 	if _, err = tx.ExecContext(ctx, `UPDATE tasks SET control_mode=$2,contract_version=$3,control_epoch=$4,control_revoked=false WHERE id=$1`, taskID, string(c.Mode), version, epoch); err != nil {
 		return out, err
 	}
+	if err = initializeControlBudgetTx(ctx, tx, taskID, c.Budgets); err != nil {
+		return out, err
+	}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO control_contract_events(task_id,version,epoch,event,reason,actor) VALUES($1,$2,$3,'approved','new immutable contract',$4)`, taskID, version, epoch, actor); err != nil {
 		return out, err
 	}

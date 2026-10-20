@@ -1643,3 +1643,18 @@ CREATE TABLE IF NOT EXISTS control_contract_events (
 DROP TRIGGER IF EXISTS trg_control_contract_event_immutable ON control_contract_events;
 CREATE TRIGGER trg_control_contract_event_immutable BEFORE UPDATE OR DELETE ON control_contract_events
  FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
+
+CREATE TABLE IF NOT EXISTS task_budget_accounts (
+ task_id BIGINT NOT NULL,dimension TEXT NOT NULL,
+ limit_units BIGINT NOT NULL CHECK(limit_units>=0),used_units BIGINT NOT NULL DEFAULT 0 CHECK(used_units>=0),
+ reserved_units BIGINT NOT NULL DEFAULT 0 CHECK(reserved_units>=0),close_reserve_units BIGINT NOT NULL CHECK(close_reserve_units>=0),
+ measurement_kind TEXT NOT NULL CHECK(measurement_kind IN ('exact','estimated')),
+ overrun BOOLEAN NOT NULL DEFAULT false,PRIMARY KEY(task_id,dimension),
+ CHECK(measurement_kind='estimated' OR used_units+reserved_units<=limit_units)
+);
+CREATE TABLE IF NOT EXISTS task_budget_reservations (
+ task_id BIGINT NOT NULL,request_key TEXT NOT NULL,dimension TEXT NOT NULL,
+ attribution TEXT NOT NULL,digest TEXT NOT NULL,reserved_units BIGINT NOT NULL CHECK(reserved_units>0),
+ actual_units BIGINT CHECK(actual_units>=0),settlement_state TEXT NOT NULL DEFAULT 'reserved',
+ PRIMARY KEY(task_id,request_key,dimension)
+);

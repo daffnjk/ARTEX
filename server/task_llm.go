@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Autumn-27/artex/agent"
+	"github.com/Autumn-27/artex/control"
 	"github.com/Autumn-27/artex/db"
 	"github.com/Autumn-27/artex/llmrec"
 	"github.com/Autumn-27/norma/llm"
@@ -221,6 +222,10 @@ func (r *taskLLMRuntime) streamHooks() taskLLMStreamHooks {
 
 func (r *taskLLMRuntime) Stream(ctx context.Context, req llm.CompletionRequest) iter.Seq2[llm.StreamEvent, error] {
 	ctx = llmrec.WithTaskID(ctx, r.taskID)
+	taskNum, err := parseTaskID(r.taskID)
+	if err == nil {
+		ctx = control.WithCallAttribution(ctx, control.TaskID(taskNum), r.agentKey)
+	}
 	return streamTaskLLM(ctx, r.taskID, req, r.streamHooks())
 }
 
@@ -231,6 +236,10 @@ func (r *taskLLMRuntime) Stream(ctx context.Context, req llm.CompletionRequest) 
 // streaming path needs is unnecessary here).
 func (r *taskLLMRuntime) Complete(ctx context.Context, req llm.CompletionRequest) (llm.Message, string, llm.Usage, error) {
 	ctx = llmrec.WithTaskID(ctx, r.taskID)
+	taskNum, err := parseTaskID(r.taskID)
+	if err == nil {
+		ctx = control.WithCallAttribution(ctx, control.TaskID(taskNum), r.agentKey)
+	}
 	return completeTaskLLM(ctx, r.taskID, req, r.streamHooks())
 }
 

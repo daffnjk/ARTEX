@@ -336,6 +336,14 @@ type quotaAwareTransport struct {
 }
 
 func (t quotaAwareTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if guard, ok := req.Context().Value(modelRequestGuardKey{}).(ModelRequestGuard); ok {
+		ctx, err := guard(req.Context())
+		if err != nil {
+			return nil, err
+		}
+		req = req.Clone(ctx)
+	}
+
 	// Custom session-id header: name is user-configured, value is THIS run's
 	// session id (norma stashes it on the context via transcript.WithSessionID).
 	// Stable across a session's turns and distinct across sessions — exactly what

@@ -1,0 +1,38 @@
+{
+  "task_id": "ENG-04",
+  "status": "verified_local",
+  "review": "needs_independent_review",
+  "code_tree_sha256": "fe69e34d8618e35912025ef94d093d00a3a66b9a3809af653e9e2f91c2d6720e",
+  "required": {
+    "status": "PASS",
+    "required_count": 5,
+    "event_count": 98,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "regression": {
+    "status": "PASS",
+    "required_count": 34,
+    "event_count": 226,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "raw_receipts": "reports/ENG-04/runs/03",
+  "log_hashes": {
+    "required.jsonl": "ba2863b38ee323b3d9156934c13974934e98efd9a092d8db06d12d9b62531a78",
+    "regression.jsonl": "33ded0ee94ac6daebe502f647b2218ac8bb62294460057e4f03f7f8620140922",
+    "required.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "regression.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "limits": [
+    "Not final aggregate acceptance; independent review deferred",
+    "No production or real target execution"
+  ],
+  "notes": [
+    "One compile typo fixed; initial failure receipts retained",
+    "5 required tests including physical SDK/outer retry, failover and stream subtests pass; 34 regressions pass",
+    "Unknown token estimates remain reserved; no real model endpoint used"
+  ]
+}

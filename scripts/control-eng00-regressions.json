@@ -2,22 +2,141 @@
   "schema_version": 1,
   "task_id": "ENG-00",
   "required": [
-    {"package": "github.com/Autumn-27/artex/agent", "name": "TestCognitionLiteAblatesExactlyHypothesisTools"},
-    {"package": "github.com/Autumn-27/artex/agent", "name": "TestGoalCompletionGateCannotBeOverriddenByArguments"},
-    {"package": "github.com/Autumn-27/artex/agent", "name": "TestGoalCompletionLegacyAndUnrelatedTools"},
-    {"package": "github.com/Autumn-27/artex/agent", "name": "TestGoalCompletionAssemblyAfterResolve"},
-    {"package": "github.com/Autumn-27/artex/agent", "name": "TestPlannerTodoToolPersistsBeforeAck"},
-    {"package": "github.com/Autumn-27/artex/agent", "name": "TestPlannerTodoToolConflictIsExplicit"},
-    {"package": "github.com/Autumn-27/artex/agent", "name": "TestPlannerTodoToolValidationRejects"},
-    {"package": "github.com/Autumn-27/artex/agent", "name": "TestPlannerTodoToolStoreErrorStopsNotAcks"},
-    {"package": "github.com/Autumn-27/artex/agent", "name": "TestLoadPlannerPlanStateStopsOnError"},
-    {"package": "github.com/Autumn-27/artex/agent", "name": "TestPlannerTodosProjection"},
-    {"package": "github.com/Autumn-27/artex/db", "name": "TestTaskLifecycleAndDeleteCascade"},
-    {"package": "github.com/Autumn-27/artex/db", "name": "TestTaskRelationsAndLLMFailoverChain"},
-    {"package": "github.com/Autumn-27/artex/db", "name": "TestExplorationDirectSourceReadView"},
-    {"package": "github.com/Autumn-27/artex/db", "name": "TestInheritedActivityReadsRequireTerminalIntent"},
-    {"package": "github.com/Autumn-27/artex/db", "name": "TestCompleteTaskGuardedSemantics"},
-    {"package": "github.com/Autumn-27/artex/db", "name": "TestHarnessResolverTaskScopeAndFullStackEvaluation"},
-    {"package": "github.com/Autumn-27/artex/db", "name": "TestTaskPlanPGMigrationIdempotent"}
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestCognitionLiteAblatesExactlyHypothesisTools"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestGoalCompletionGateCannotBeOverriddenByArguments"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestGoalCompletionLegacyAndUnrelatedTools"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestGoalCompletionAssemblyAfterResolve"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestPlannerTodoToolPersistsBeforeAck"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestPlannerTodoToolConflictIsExplicit"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestPlannerTodoToolValidationRejects"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestPlannerTodoToolStoreErrorStopsNotAcks"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestLoadPlannerPlanStateStopsOnError"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestPlannerTodosProjection"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskLifecycleAndDeleteCascade"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskRelationsAndLLMFailoverChain"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestExplorationDirectSourceReadView"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestInheritedActivityReadsRequireTerminalIntent"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestCompleteTaskGuardedSemantics"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestHarnessResolverTaskScopeAndFullStackEvaluation"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskPlanPGMigrationIdempotent"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestIsQuotaExhaustedError"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestTaskLLMStreamRetriesPreStreamQuotaOnNextProfile"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestTaskLLMStreamRetriesAfterNonContentStartEvent"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestTaskLLMStreamRetriesStalePreStreamFailureAgainstReplacementChain"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestTaskLLMStreamDoesNotSwitchForOrdinaryErrors"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestTaskLLMStreamAdvancesAfterMidStreamQuotaWithoutReplay"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestTaskLLMStreamMarkFailureAfterToolStartSkipsWorkerReplay"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestTaskLLMStreamRetriesTransientPreCommitOnSameProvider"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestTaskLLMStreamSurfacesTransientAfterRetriesExhausted"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestTaskLLMStreamDoesNotRetryDeterministicRejection"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestTaskLLMStreamStopsWhenChainExhausted"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestRoundTripCapturesRawBodies"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestRoundTripCaptures429BodyAlongsideQuotaRewrite"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestRoundTripWithoutCaptureIsUnchanged"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestIsQuotaExhaustedMessage"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestQuotaAwareTransportOnlyNormalizesExplicitQuota429"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestProviderDoesNotRetryExplicitQuota429"
+    }
   ]
 }

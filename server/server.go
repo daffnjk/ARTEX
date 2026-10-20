@@ -440,6 +440,7 @@ func (s *Server) applyLLM(cfg agent.Config) error {
 		if err != nil {
 			return err
 		}
+		prov = &controlBudgetProvider{next: prov, pg: s.m.pg}
 		// Non-persisted/env configs do not have a profile cache key.
 		s.cfgMu.Lock()
 		profName := s.llmProf
@@ -576,6 +577,7 @@ func (s *Server) providerForProfile(id int64) (llm.Provider, agent.Config, bool)
 		log.Printf("[engine] build provider for LLM profile %d failed: %v", id, err)
 		return nil, agent.Config{}, false
 	}
+	prov = &controlBudgetProvider{next: prov, pg: s.m.pg}
 	// Wrap with recorder, tagged with this profile's name.
 	if p, _ := s.m.pg.ProfileByID(id); p != nil {
 		prov = llmrec.Wrap(prov, s.m.PG(), cfg.Model, p.Name, cfg.ThinkingType, cfg.ReasoningEffort, s.m.LLMRecordEnabled)

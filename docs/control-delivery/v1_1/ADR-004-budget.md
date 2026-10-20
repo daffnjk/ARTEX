@@ -1,0 +1,11 @@
+# ADR-004: transactional budgets and physical model attempts
+
+Accounts are task/dimension keyed integers. Reservations lock tasks first, then accounts in dimension order. One host key binds the whole reservation digest/attribution; failure rolls back every dimension. Settlement is idempotent and rejects conflicting values. Unknown dimensions retain reservations until reconciled. Contract renewal cannot reset consumed resources or reduce limits below used+reserved. Historical accounting survives task deletion for audit.
+
+Exact resources cannot settle above their reservation. Estimated token overrun is recorded honestly and blocks further reservation. Ordinary exploration cannot spend protected close-reserve units; only host cleanup/reconcile roles can request that reserve. Contract expiry is persisted and does not reset on process restart. Local reports/account reads need no model calls.
+
+The provider alone is too high to count SDK HTTP retries. A host-only context guard runs inside agent.quotaAwareTransport at every actual RoundTrip, before network I/O. Each physical request gets its own UUID, attributed role and requests+estimated-token reservation. Requests are charged at the admitted attempt boundary, including failed attempts. Final positive reported usage settles the last attempt; unreported/failed attempt usage stays unknown and reserved. Known zero and missing usage are intentionally not conflated. Request bytes plus output cap is an estimate, not a promised tokenizer or monetary hard bound. The exact request budget and expiry remain hard stops.
+
+Server decorates each concrete configured provider before recorder/pool wrapping, so SDK retries, outer retries and pool/failover candidates cannot hide physical HTTP requests. Task runtime supplies host task+role context; missing role or conflicting task identity fails closed for controlled tasks. Legacy and non-task calls preserve their previous behavior. Controlled background/tool entry points remain unexposed pending ENG-07. No model endpoint is contacted in tests: the retry fixture is localhost HTTP with synthetic JSON.
+
+The fixed regression inventory is extended with the touched provider transport and task retry/failover tests. Raw ledger rows and model contexts are not committed; only sanitized receipts/digests are included.
