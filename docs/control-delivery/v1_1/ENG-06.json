@@ -1,0 +1,38 @@
+{
+  "task_id": "ENG-06",
+  "status": "verified_local",
+  "review": "needs_independent_review",
+  "code_tree_sha256": "26784713d32d3a6a3db772213b05c12de5e90d48947b2ff65853372f88b1a091",
+  "required": {
+    "status": "PASS",
+    "required_count": 5,
+    "event_count": 41,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "regression": {
+    "status": "PASS",
+    "required_count": 34,
+    "event_count": 226,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "raw_receipts": "reports/ENG-06/runs/02",
+  "log_hashes": {
+    "required.jsonl": "cb34fb8d5263f0736706645aa97dc5d54c955f291adb4fc0623264591bcf34aa",
+    "regression.jsonl": "2f7a6608dc4a069811327a0a74e55a29f2643691aa7bfca125b9ef8f02df8b0d",
+    "required.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "regression.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "limits": [
+    "Not final aggregate acceptance; independent review deferred",
+    "No production or real target execution"
+  ],
+  "notes": [
+    "Five required tests and 34 regressions pass",
+    "TLS peer trust and logical-host mismatch tested; supervisor cancellation observed at actual fixture connection within one second",
+    "Only read-only synthetic loopback HTTP/HTTPS; no OS sandbox claim"
+  ]
+}

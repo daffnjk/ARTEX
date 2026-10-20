@@ -220,3 +220,22 @@ func (d *DB) PendingControlEvents(ctx context.Context, limit int) ([]execution.O
 	}
 	return out, rows.Err()
 }
+
+func (d *DB) ExecutionPolicy(ctx context.Context, taskID control.TaskID, id control.ExecutionID) (execution.Record, control.Contract, error) {
+	var none execution.Record
+	if err := d.CheckExecutionGrant(ctx, taskID, id); err != nil {
+		return none, control.Contract{}, err
+	}
+	record, err := scanControlExecution(d.QueryRowContext(ctx, `SELECT `+controlExecutionColumns+` FROM action_executions WHERE task_id=$1 AND id=$2`, int64(taskID), string(id)))
+	if err != nil {
+		return none, control.Contract{}, err
+	}
+	c, err := d.ActiveControlContract(ctx, int64(taskID))
+	if err != nil {
+		return none, control.Contract{}, err
+	}
+	if c.Version != record.ContractVersion || c.Epoch != record.ControlEpoch {
+		return none, control.Contract{}, control.StaleContext
+	}
+	return record, c.Body, nil
+}
