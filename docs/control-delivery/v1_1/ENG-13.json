@@ -1,0 +1,36 @@
+{
+  "task_id": "ENG-13",
+  "status": "verified_local",
+  "review": "needs_independent_review",
+  "code_tree_sha256": "df5db515573d74288b3e10e4c499207293216b7157553487a0e223693a834fc3",
+  "required": {
+    "status": "PASS",
+    "required_count": 5,
+    "event_count": 302,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "regression": {
+    "status": "PASS",
+    "required_count": 65,
+    "event_count": 368,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "raw_receipts": "reports/ENG-13/runs/05",
+  "log_hashes": {
+    "required.jsonl": "13efe107def994d510ea689f96111e9b887b38e60b33aff5bad312e7bdbf224e",
+    "regression.jsonl": "c53843dac5d2126302d3415f572fe0898226bca69b31820d591533377d553946",
+    "required.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "regression.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "limits": [
+    "Not final aggregate acceptance; independent review deferred",
+    "No production or real target execution"
+  ],
+  "notes": [
+    "Five required roots plus actual Planner/window/host feedback tests and 65 regression roots pass; first compile mismatch and unchanged whitelist regression failure preserved and fixed"
+  ]
+}

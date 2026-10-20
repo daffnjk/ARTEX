@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/Autumn-27/artex/control"
 	"github.com/Autumn-27/artex/db"
 	"github.com/Autumn-27/artex/intercept"
 	"github.com/Autumn-27/norma/agentcore"
@@ -390,6 +392,22 @@ func (p *Planner) Plan(ctx context.Context, taskID int64, as *db.AssetStore, ts 
 		return false, "", bindingErr
 	}
 
+	var controlWindow control.PlanningWindow
+	if controlled {
+		controlWindow, err = ts.PrepareControlPlanningWindow(ctx, taskID)
+		if err != nil {
+			return false, "", err
+		}
+		if controlWindow.Backlog {
+			return false, controlWindow.Reason, control.WaitExpired
+		}
+		if controlWindow.Paused {
+			return false, controlWindow.Reason, control.PlannerStalled
+		}
+		if time.Now().Before(controlWindow.CooldownUntil) {
+			return false, controlWindow.Reason, control.RateLimited
+		}
+	}
 	// cold-digest §2.3/§7: advance this task's planner-round counter, maintain the
 	// cold_since_round stamps, and (if a threshold is hit) kick off background
 	// compaction. Synchronous part is cheap (a few queries); the LLM compaction
@@ -433,6 +451,9 @@ func (p *Planner) Plan(ctx context.Context, taskID int64, as *db.AssetStore, ts 
 			base = append(base, planState.patchTool(taskID))
 		}
 	}
+	if controlled {
+		base = controlWindowTools(base, controlWindow)
+	}
 	ctx = WithRunInfo(ctx, RunInfo{TaskID: taskID, ExplorationID: explorationID(ts)})
 	tools, def, cleanup := base, DeferredInfo{}, func() {}
 	if !controlled {
@@ -443,6 +464,10 @@ func (p *Planner) Plan(ctx context.Context, taskID int64, as *db.AssetStore, ts 
 	// 只留静态规划正文。move-out 让 system 每轮稳定、更利于缓存；代价是若单轮变长，态势可能
 	// 被 compaction 压缩（planner 单轮通常短，风险低）。situational 会拼进下方 input。
 	situational := renderTriggers(ts, triggers) + renderGraphOverview(tsx.graphOverviewData())
+	if controlled {
+		windowJSON, _ := json.Marshal(controlWindow)
+		situational = "[host controlled feedback and queues]\n" + string(windowJSON) + "\n" + situational
+	}
 	// 任务级 deadline / 终局模式(经 ctx 注入,见 taskclock.go)。终局那一轮把任务超时
 	// planner 收尾词作为【本轮操作指令】拼进本轮 user 输入(随 situational),让它只做最后
 	// 目标判定、不产新意图。
@@ -535,6 +560,9 @@ func (p *Planner) Plan(ctx context.Context, taskID int64, as *db.AssetStore, ts 
 		if active, err := ts.HasActiveIntent(); err == nil && !active {
 			lead = "本轮是**定时巡检（心跳到点）**的唤醒,且当前**已没有任何 open 或 running 的意图**——没有 worker 在跑、也没有排队中的方向,探索已停摆。你**必须**在本轮产出一个或多个向目标推进、且与图中既有意图**互不重复**的新意图(不得产出 0 意图);先据下面的态势判定目标是否已达成,未达成则立即补方向："
 		}
+	}
+	if controlled {
+		lead = "按宿主反馈先收原执行结果、刷新失效前提或等待冷却。窗口最多一个新意图；allow_new=false 时不产生新意图。不将意外有效结果记作失败，评分仅作影子记录。"
 	}
 	// 跨唤醒待办渲染：持久化模式取权威计划投影；内存模式取 SDK store 快照。
 	var crossRoundTodos []actool.Todo

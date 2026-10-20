@@ -1787,3 +1787,9 @@ DROP TRIGGER IF EXISTS trg_control_base_immutable ON action_executions;
 CREATE TRIGGER trg_control_base_immutable BEFORE UPDATE ON action_executions FOR EACH ROW EXECUTE FUNCTION forbid_control_base_rewrite();
 DROP TRIGGER IF EXISTS trg_control_retest_no_delete ON control_retest_approvals;
 CREATE TRIGGER trg_control_retest_no_delete BEFORE DELETE ON control_retest_approvals FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
+
+CREATE SEQUENCE IF NOT EXISTS control_feedback_seq;
+CREATE TABLE IF NOT EXISTS control_planner_windows(task_id BIGINT PRIMARY KEY,state JSONB NOT NULL,updated_at TIMESTAMPTZ NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS control_score_snapshots(id BIGSERIAL PRIMARY KEY,task_id BIGINT NOT NULL,context_version TEXT NOT NULL,scorer_version TEXT NOT NULL,mode TEXT NOT NULL CHECK(mode='shadow'),scores JSONB NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT now());
+DROP TRIGGER IF EXISTS trg_control_score_immutable ON control_score_snapshots;
+CREATE TRIGGER trg_control_score_immutable BEFORE UPDATE OR DELETE ON control_score_snapshots FOR EACH ROW EXECUTE FUNCTION forbid_mutation();

@@ -94,7 +94,7 @@ func (s *Server) controlledWorkerTools(ctx context.Context, ri agent.RunInfo) ([
 				return actool.Text(string(view)), nil
 			}
 			if err != nil {
-				return actool.Errorf(err.Error()), nil
+				return s.controlFeedbackResult(ctx, control.TaskID(ri.TaskID), record.ID, feedbackKind(err))
 			}
 			if record.Outcome.Run != control.RunQueued {
 				existing, err := s.m.pg.ControlExecutionResult(ctx, record.TaskID, record.ID)
@@ -132,7 +132,14 @@ func (s *Server) controlledWorkerTools(ctx context.Context, ri agent.RunInfo) ([
 				return actool.Errorf("host observation capture failed; no formal evidence is available"), nil
 			}
 			if runErr != nil {
-				return actool.Errorf(runErr.Error()), nil
+				kind := feedbackKind(runErr)
+				if result.Outcome.Effect == control.EffectUnknown {
+					kind = control.FeedbackEffectUnknown
+				}
+				return s.controlFeedbackResult(ctx, record.TaskID, record.ID, kind)
+			}
+			if len(result.Hops) > 0 && result.Hops[len(result.Hops)-1].StatusCode == 429 {
+				return s.controlFeedbackResult(ctx, record.TaskID, record.ID, control.FeedbackRateLimited)
 			}
 			output, err := json.Marshal(execution.RedactedHTTPResult(result))
 			if err != nil {

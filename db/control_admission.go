@@ -156,7 +156,7 @@ func (d *DB) AdmitAndReserve(ctx context.Context, taskID control.TaskID, p contr
 	attribution := control.CallAttributionFrom(ctx)
 	closing := attribution.Role == "reconcile" && attribution.TaskID == taskID
 	var unresolved bool
-	if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM action_executions WHERE task_id=$1 AND state='lost' AND effect_status='unknown')`, int64(taskID)).Scan(&unresolved); err != nil {
+	if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM action_executions WHERE task_id=$1 AND state IN ('lost','failed','cancelled','timed_out') AND effect_status='unknown')`, int64(taskID)).Scan(&unresolved); err != nil {
 		return none, err
 	}
 	if unresolved && !closing {

@@ -94,7 +94,7 @@ func (d *DB) ApproveControlRetest(ctx context.Context, task control.TaskID, prio
 	if record.Outcome.Run == control.RunQueued || record.Outcome.Run == control.RunRunning {
 		return "", control.AlreadyRunning
 	}
-	if record.Outcome.Run == control.RunLost && record.Outcome.Effect == control.EffectUnknown {
+	if record.Outcome.Run != control.RunSucceeded && record.Outcome.Effect == control.EffectUnknown {
 		return "", control.EffectUncertain
 	}
 	switch reason {
