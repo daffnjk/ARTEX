@@ -44,6 +44,7 @@ func TestControlArchiveRoundTrip(t *testing.T) {
 	if _, err := d.SaveTaskPlan(TaskPlan{ExplorationID: task.ExplorationID, Steps: []PlanStep{{ID: 1, Content: "historical", Status: "pending", ContextVersion: "initial"}}}); err != nil {
 		t.Fatal(err)
 	}
+	ensureControlArchiveTables(t, d)
 	snap, err := d.SnapshotTaskArchive(task.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -74,6 +75,7 @@ func TestControlRestoreDoesNotReplay(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ensureControlArchiveTables(t, d)
 	snap, err := d.SnapshotTaskArchive(task.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -136,6 +138,7 @@ func TestControlLegacyNotPromoted(t *testing.T) {
 	if _, err := d.Exploration(task.ExplorationID).AddFactWithYields(map[string]any{"summary": "PASS"}, nil, "model", 0); err != nil {
 		t.Fatal(err)
 	}
+	ensureControlArchiveTables(t, d)
 	snap, err := d.SnapshotTaskArchive(task.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -184,5 +187,15 @@ func TestControlDeleteRacePreservesAudit(t *testing.T) {
 	}
 	if _, err := d.CaptureControlObservations(t.Context(), a); err == nil {
 		t.Fatal("deleted task created fresh evidence")
+	}
+}
+
+func ensureControlArchiveTables(t *testing.T, d *DB) {
+	t.Helper()
+	if err := d.EnsureLLMRecordsTable(); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.EnsureLLMUsageTable(); err != nil {
+		t.Fatal(err)
 	}
 }

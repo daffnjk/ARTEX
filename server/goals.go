@@ -116,6 +116,9 @@ func (s *Server) admitTaskWhen(t *Task, mode string, requirePaused bool) (queued
 	}
 	s.concMu.Lock()
 	defer s.concMu.Unlock()
+	if s.closed {
+		return false, fmt.Errorf("server is closing")
+	}
 	// Delete installs its barrier under concMu as well. Re-resolve after acquiring
 	// the lock so a request that captured a task pointer before successful deletion
 	// cannot revive that stale handle after StopTask clears its Engine maps.
@@ -253,6 +256,9 @@ func (s *Server) startAdmittedTask(t *Task, mode string) {
 func (s *Server) reconcileConcurrency() {
 	s.concMu.Lock()
 	defer s.concMu.Unlock()
+	if s.closed {
+		return
+	}
 	enabled, limit := s.m.ConcurrencyLimit()
 
 	// A task whose provider chain becomes unavailable cannot do useful work and

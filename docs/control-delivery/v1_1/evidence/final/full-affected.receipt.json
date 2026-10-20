@@ -1,0 +1,32 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-json",
+    "-race",
+    "-count=1",
+    "-timeout=10m",
+    "./control",
+    "./execution",
+    "./db",
+    "./agent",
+    "./server",
+    "./harness",
+    "./evidence",
+    "./report"
+  ],
+  "cwd": ".",
+  "exit_code": 0,
+  "seconds": 64.924,
+  "stdout": "affected.jsonl",
+  "stderr": "affected.stderr",
+  "stdout_sha256": "452d291bd2c21fdb45ee615f579447646d24ee0b042dc92c641daa070c52e078",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "source_unchanged": true,
+  "passed_roots": 621,
+  "failed": [],
+  "skipped": [
+    "github.com/Autumn-27/artex/report",
+    "TestLiveContextReview"
+  ]
+}

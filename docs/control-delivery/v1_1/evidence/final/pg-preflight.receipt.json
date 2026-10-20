@@ -1,0 +1,24 @@
+{
+  "command": [
+    "psql",
+    "-X",
+    "-w",
+    "-h",
+    "localhost",
+    "-p",
+    "5432",
+    "-U",
+    "admin",
+    "-d",
+    "artex_research_test_control_final_20261020",
+    "-v",
+    "ON_ERROR_STOP=1",
+    "-Atc",
+    "SELECT current_database(),current_user,version(); BEGIN; CREATE TABLE eng00_runner_write_probe(id integer PRIMARY KEY); INSERT INTO eng00_runner_write_probe VALUES(1); UPDATE eng00_runner_write_probe SET id=2; DELETE FROM eng00_runner_write_probe; DROP TABLE eng00_runner_write_probe; ROLLBACK;"
+  ],
+  "exit_code": 0,
+  "stdout": "pg-preflight.jsonl",
+  "stderr": "pg-preflight.stderr.log",
+  "stdout_sha256": "8771c06d2bb6dbbcb214c2b210d496f221420eaf69696985d07a97b3b2bec646",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

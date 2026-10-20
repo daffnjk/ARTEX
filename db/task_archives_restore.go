@@ -23,7 +23,7 @@ func (d *DB) CompleteTaskArchive(
 	archivePath, sha256 string,
 	originalSize, compressedSize int64,
 ) error {
-	if snapshot == nil || snapshot.FormatVersion != TaskArchiveFormatVersion {
+	if snapshot == nil || (snapshot.Control != nil && snapshot.FormatVersion != TaskArchiveFormatVersion) || (snapshot.Control == nil && snapshot.FormatVersion != 3) {
 		return ErrTaskArchiveFormatMismatch
 	}
 	countsRaw, err := json.Marshal(snapshot.DataCounts)
@@ -63,6 +63,13 @@ WHERE relation.source_task_id=$1 LIMIT 1`, taskID).Scan(&dependent)
 		return err
 	}
 
+	var controlMode string
+	if err := tx.QueryRow(`SELECT control_mode FROM tasks WHERE id=$1`, taskID).Scan(&controlMode); err != nil {
+		return err
+	}
+	if (controlMode != "legacy") != (snapshot.Control != nil) {
+		return ErrTaskArchiveFormatMismatch
+	}
 	if snapshot.Control != nil {
 		if _, err := closeControlTaskTx(context.Background(), tx, taskID, ControlCloseRequest{Reason: control.StopUnknown, Source: "host:archive", Handoff: true}); err != nil {
 			return err

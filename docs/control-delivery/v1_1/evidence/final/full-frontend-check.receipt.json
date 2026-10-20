@@ -1,0 +1,15 @@
+{
+  "command": [
+    "npm",
+    "run",
+    "check"
+  ],
+  "cwd": "web",
+  "exit_code": 0,
+  "seconds": 1.32,
+  "stdout": "frontend-check.stdout",
+  "stderr": "frontend-check.stderr",
+  "stdout_sha256": "e830ee5aba8b96dbcafc1bb799b60a91ae8f1cbe01b00829c1a98241d63a31dc",
+  "stderr_sha256": "e2dc8d41b8c11f84dbc2b440c3e3b1b13fd35bcf0c5f12612e6eabf297e0e383",
+  "source_unchanged": true
+}

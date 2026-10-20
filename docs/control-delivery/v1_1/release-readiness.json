@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "release_status": "READY_FOR_APPROVAL",
-  "engineering_status": "FINAL_VALIDATION_PENDING",
+  "engineering_status": "LOCAL_VALIDATED_SYNC_PENDING",
   "independent_review": "needs_independent_review",
   "real_model_trials": {
     "status": "NOT_RUN",
@@ -16,7 +16,7 @@
       "version": "1",
       "target": "explicitly contracted localhost/loopback only",
       "identity": "anonymous",
-      "status": "LOCAL_SYNTHETIC_VALIDATED_PENDING_FINAL_AGGREGATE"
+      "status": "FINAL_LOCAL_SYNTHETIC_VALIDATED"
     },
     {
       "adapter": "Shell/browser/MCP/custom/background",
@@ -53,5 +53,6 @@
     "Restored history quarantined; fresh plan and approval required",
     "Mechanical body SHA256 criterion only; business criteria require manual review",
     "Local cancellation confirms local resource closure only"
-  ]
+  ],
+  "runtime_source_sha256": "063a50d68790856024e7b9857d200b1af058ac233b6b4405ecf44195dbf508b9"
 }

@@ -1,0 +1,8 @@
+{
+  "status": "PASS",
+  "required_count": 84,
+  "event_count": 5286,
+  "original_exit_code": 0,
+  "errors": [],
+  "notice": "Log validation only; not proof of log authenticity or independent review."
+}

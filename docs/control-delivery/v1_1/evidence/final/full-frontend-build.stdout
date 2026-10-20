@@ -1,0 +1,54 @@
+
+> artex-web@2.2.0 build
+> next build
+
+▲ Next.js 16.2.9 (Turbopack)
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 14.0s
+  Running TypeScript ...
+  Finished TypeScript in 8.1s ...
+  Collecting page data using 9 workers ...
+  Generating static pages using 9 workers (0/31) ...
+  Generating static pages using 9 workers (7/31) 
+  Generating static pages using 9 workers (15/31) 
+  Generating static pages using 9 workers (23/31) 
+✓ Generating static pages using 9 workers (31/31) in 465ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /chat
+├ ○ /dashboard
+├ ○ /function/assets
+├ ○ /function/commands
+├ ○ /function/findings
+├ ○ /function/findings/detail
+├ ○ /function/llm-records
+├ ○ /function/sync
+├ ○ /function/tasks
+├ ○ /function/tasks/detail
+├ ○ /function/traffic
+├ ○ /function/workspace
+├ ○ /icon.png
+├ ○ /login
+├ ○ /setup
+├ ○ /system/agents
+├ ○ /system/agents/detail
+├ ○ /system/intercept
+├ ○ /system/intercept/approvals
+├ ○ /system/intercept/assets
+├ ○ /system/llm
+├ ○ /system/logs
+├ ○ /system/mcp
+├ ○ /system/notify
+├ ○ /system/settings
+├ ○ /system/skills
+└ ○ /system/tools
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)  prerendered as static content
+

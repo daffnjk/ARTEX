@@ -1,0 +1,470 @@
+{
+  "schema_version": 1,
+  "task_id": "ENG-00",
+  "required": [
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestCognitionLiteAblatesExactlyHypothesisTools"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestGoalCompletionGateCannotBeOverriddenByArguments"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestGoalCompletionLegacyAndUnrelatedTools"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestGoalCompletionAssemblyAfterResolve"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestPlannerTodoToolPersistsBeforeAck"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestPlannerTodoToolConflictIsExplicit"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestPlannerTodoToolValidationRejects"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestPlannerTodoToolStoreErrorStopsNotAcks"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestLoadPlannerPlanStateStopsOnError"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestPlannerTodosProjection"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskLifecycleAndDeleteCascade"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskRelationsAndLLMFailoverChain"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestExplorationDirectSourceReadView"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestInheritedActivityReadsRequireTerminalIntent"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestCompleteTaskGuardedSemantics"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestHarnessResolverTaskScopeAndFullStackEvaluation"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskPlanPGMigrationIdempotent"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestIsQuotaExhaustedError"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestTaskLLMStreamRetriesPreStreamQuotaOnNextProfile"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestTaskLLMStreamRetriesAfterNonContentStartEvent"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestTaskLLMStreamRetriesStalePreStreamFailureAgainstReplacementChain"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestTaskLLMStreamDoesNotSwitchForOrdinaryErrors"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestTaskLLMStreamAdvancesAfterMidStreamQuotaWithoutReplay"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestTaskLLMStreamMarkFailureAfterToolStartSkipsWorkerReplay"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestTaskLLMStreamRetriesTransientPreCommitOnSameProvider"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestTaskLLMStreamSurfacesTransientAfterRetriesExhausted"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestTaskLLMStreamDoesNotRetryDeterministicRejection"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestTaskLLMStreamStopsWhenChainExhausted"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestRoundTripCapturesRawBodies"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestRoundTripCaptures429BodyAlongsideQuotaRewrite"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestRoundTripWithoutCaptureIsUnchanged"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestIsQuotaExhaustedMessage"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestQuotaAwareTransportOnlyNormalizesExplicitQuota429"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestProviderDoesNotRetryExplicitQuota429"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestHypothesisLifecycle"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestExperimentPreRegistrationAndOutcome"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestHarnessAcceptanceVersions"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestHarnessAcceptanceFullStackPremise"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestHarnessObservationStoreImmutable"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestSupportedHypothesisInheritsDiscriminatingEvidence"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestDispatchExperimentEnforcesDenyConstraint"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestExperimentSelection"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestMergePlanStepsKeepsIDAcrossReorder"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestMergePlanStepsAssignsNewIDsAndDropsRemoved"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestMergePlanStepsDuplicateContentGetsDistinctIDs"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestValidatePlanStepsBounds"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskPlanPGRoundTrip"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskPlanPGConcurrentSameRevisionUpdate"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskPlanPGConcurrentFirstWrite"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskPlanPGStaleWriteRejected"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskPlanPGStaleWriteAfterRowDeleted"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskPlanPGDeleteRecreateRejectsABA"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskPlanPGIsolationAndBasisOwnership"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskPlanPGDeleteCascases"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskPlanPGErrorSurfaces"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskPlanPGArchivePurgeRemovesPlan"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlEffectThenCrashReconcile"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlAgentCannotApproveContract"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlRealWorkerUsesGrant"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlUnapprovedToolUnavailable"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlBackgroundPathsEnforced"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlMissingTaskContextDenied"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlModelCannotForgeObservation"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlLLMRetryBudgeted"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlCloseReserveProtected"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskStatusWriteSurfaceIsPinned"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestReviewPacket"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestControlHTTPBodyHashVerifier"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestRequiresGoalReview"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestChangeProposalRequiresReviewAndReplay"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestVerifierRequiresTrustedGoalAcceptance"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestScenarioRegistryLoads"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestScenarioReplay"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestScenarioInventorySummary"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestPremiseMarkerVerifier"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestFrozenAcceptanceBinding"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestAcceptanceResolverIdentityAndValidity"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestAcceptanceChangeDiscardsVerdict"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestAcceptanceResolutionFailureAndCancellation"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestFrozenAcceptanceSourceSnapshotsAndValidates"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestFrozenAcceptanceConcurrentEvaluation"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestAcceptanceAllowsDifferentControlIdentities"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestAcceptanceMissingRegisteredRule"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestCancellationAfterLastEvidenceCannotReachVerifier"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestUnimplementedCriterionNeverConfirms"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestEvidenceFailuresCannotReachVerifier"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestMissingResolverAndEvidence"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestTrustedVerifierResults"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestRegistryVersionAndSnapshot"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestVerifierCannotMutateStoredPayload"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestPanicAndCancellationFailClosed"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestEvidenceResourceBounds"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestDigestKnownValue"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlMigrationTwice"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlArchiveRoundTrip"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlRestoreDoesNotReplay"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlLegacyNotPromoted"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlDeleteWithLateResult"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlDeleteRacePreservesAudit"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestFindingEvidenceLockNamespace"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestFindingTrafficLegacyArchiveDefaults"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestQueryArchiveRowsStreamsJSON"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestWriteArchiveRowsProducesJSONSequence"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskArchiveFormatCompatibility"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskArchiveDatabaseRoundTrip"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestTaskArchiveBlockersIgnoreQueuedDependents"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestRecoverInterruptedArchiveRequiresManualRetry"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestTaskArchiveAPIQueueListAndLimits"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlCooldownFeedbackAtomic"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestSideTaskArchiveVersions"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestGraphIntegrityReportDetectsSeededOrphans"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlHostShutdownDrainsRuntime"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestInheritedActivityDetailAndRelationDeletion"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestWorkerControlRoutes"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestTaskMetadataPatchReturnsRenameAndPin"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestConversationBatchDeleteReportsMissing"
+    }
+  ]
+}

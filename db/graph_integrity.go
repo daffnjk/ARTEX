@@ -43,31 +43,37 @@ var integrityQueries = map[IntegrityCheck]string{
 SELECT n.exploration_id, n.id, '' FROM exploration_nodes n
 WHERE n.kind='fact' AND n.state <> 'origin'
   AND NOT EXISTS (SELECT 1 FROM exploration_edges e WHERE e.dst_id=n.id AND e.rel='yields')
+ORDER BY n.id DESC
 LIMIT 200`,
 	CheckIntentNoDerived: `
 SELECT n.exploration_id, n.id, n.origin FROM exploration_nodes n
 WHERE n.kind='intent'
   AND NOT EXISTS (SELECT 1 FROM exploration_edges e WHERE e.dst_id=n.id AND e.rel='derived_from')
+ORDER BY n.id DESC
 LIMIT 200`,
 	CheckGoalNoSpawns: `
 SELECT n.exploration_id, n.id, '' FROM exploration_nodes n
 WHERE n.kind='goal'
   AND NOT EXISTS (SELECT 1 FROM exploration_edges e WHERE e.dst_id=n.id AND e.rel='spawns')
+ORDER BY n.id DESC
 LIMIT 200`,
 	CheckFindingNoYields: `
 SELECT n.exploration_id, n.id, '' FROM exploration_nodes n
 WHERE n.kind='finding'
   AND NOT EXISTS (SELECT 1 FROM exploration_edges e WHERE e.dst_id=n.id AND e.rel='yields')
+ORDER BY n.id DESC
 LIMIT 200`,
 	CheckMetGoalNoProves: `
 SELECT n.exploration_id, n.id, '' FROM exploration_nodes n
 WHERE n.kind='goal' AND n.state='met'
   AND NOT EXISTS (SELECT 1 FROM exploration_edges e WHERE e.dst_id=n.id AND e.rel='proves')
+ORDER BY n.id DESC
 LIMIT 200`,
 	CheckFindingNodeBroken: `
 SELECT COALESCE(n.exploration_id, 0), COALESCE(f.node_id, 0), ''
 FROM findings f LEFT JOIN exploration_nodes n ON n.id=f.node_id
 WHERE f.node_id IS NOT NULL AND (n.id IS NULL OR n.kind <> 'finding')
+ORDER BY f.id DESC
 LIMIT 200`,
 	CheckDanglingToolUse: `
 SELECT u.exploration_id, 0, u.id
@@ -75,6 +81,7 @@ FROM activity u
 LEFT JOIN activity r ON r.exploration_id=u.exploration_id
   AND r.tool_use_id=u.tool_use_id AND r.kind='tool_result'
 WHERE u.kind='tool_use' AND r.id IS NULL AND u.tool_use_id IS NOT NULL
+ORDER BY u.id DESC
 LIMIT 200`,
 }
 

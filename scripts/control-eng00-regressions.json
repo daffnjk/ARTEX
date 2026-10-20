@@ -437,6 +437,34 @@
     {
       "package": "github.com/Autumn-27/artex/db",
       "name": "TestControlCooldownFeedbackAtomic"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestSideTaskArchiveVersions"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestGraphIntegrityReportDetectsSeededOrphans"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlHostShutdownDrainsRuntime"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestInheritedActivityDetailAndRelationDeletion"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestWorkerControlRoutes"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestTaskMetadataPatchReturnsRenameAndPin"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestConversationBatchDeleteReportsMissing"
     }
   ]
 }

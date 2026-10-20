@@ -1,0 +1,341 @@
+{
+  "schema_version": 1,
+  "required": [
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestControlCognitionDefaultAssembly"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlTaskExplorationIdentity"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/control",
+      "name": "TestControlProposalRejectsAuthorityFields"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/control",
+      "name": "TestControlIDNamespaces"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/control",
+      "name": "TestControlOutcomeDimensions"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlContractVersionImmutable"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlCoverageDoesNotAuthorize"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlAgentCannotApproveContract"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlRevocationEpoch"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/control",
+      "name": "TestControlExactHostBoundary"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/control",
+      "name": "TestControlDenyWins"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/control",
+      "name": "TestControlAmbiguousTargetRejected"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/control",
+      "name": "TestControlUnsupportedScopeKind"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlBudgetConcurrentReserve"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlBudgetSettlementIdempotent"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlLLMRetryBudgeted"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlUnknownUsageNotRefunded"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlCloseReserveProtected"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlAdmissionRollback"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlAdmissionReplay"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlIdempotencyConflict"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlCloseAdmissionRace"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlRevokeAdmissionRace"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/execution",
+      "name": "TestControlRedirectBoundary"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/execution",
+      "name": "TestControlPinnedDial"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/execution",
+      "name": "TestControlResponseLimit"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/execution",
+      "name": "TestControlGrantRevokedBeforeDial"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/execution",
+      "name": "TestControlProxyEnvCannotBypass"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlRealWorkerUsesGrant"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlUnapprovedToolUnavailable"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlBackgroundPathsEnforced"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlMissingTaskContextDenied"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/execution",
+      "name": "TestControlWaitTimeoutDoesNotResubmit"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlLeaseFencesStaleWorker"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlEffectThenCrashReconcile"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/execution",
+      "name": "TestControlCancelUnconfirmed"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlRecoveryKeepsBudget"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlObservationLineage"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlObservationIDConflict"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/execution",
+      "name": "TestControlTruncatedObservationInvalid"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlModelCannotForgeObservation"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlOutcomeEvidenceRequired"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlOutcomeAtomicRollback"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlNonexclusiveHypotheses"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlExpiredIdentityInconclusive"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlInvalidateEvidencePropagates"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlPlanPatchKeepsID"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlPlanCycleRejected"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlDependencyContextRequired"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestControlTodoLegacyPreservesDependencies"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlSemanticDedupConcurrent"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlRunningActionReused"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlRetestRequiresReason"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlContextChangeAllowsBoundedRetest"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlScoringRespectsHardFilter"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlSamePredictionsNoDiscrimination"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestControlUnexpectedEvidenceReplans"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlTypedFailureHandling"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/agent",
+      "name": "TestControlPlannerStallBound"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlClosePartialOnBudget"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlDirectNoAutoExpansion"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlLateCompletionCannotOverwrite"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlCloseRechecksEvidence"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlReportWithoutLLM"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlWorkerCannotWriteReview"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlReviewBindsEvidenceVersion"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlReviewerCannotAuthorize"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlReportEvidenceLinks"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlStatusOwnership"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlAdminActionRevision"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlStatusPartialVisible"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlMigrationTwice"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlArchiveRoundTrip"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlRestoreDoesNotReplay"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlLegacyNotPromoted"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlDeleteWithLateResult"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlE2EValidAnswer"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlE2EExpiredSession"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlE2ERevocation"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlE2EUnknownEffect"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlE2EBudgetPartial"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlE2EUntrustedContent"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlReleaseAllowlist"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlFeatureRollbackKeepsSafety"
+    }
+  ]
+}

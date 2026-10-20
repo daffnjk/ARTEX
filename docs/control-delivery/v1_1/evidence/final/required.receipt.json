@@ -1,0 +1,22 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-json",
+    "-race",
+    "-count=1",
+    "-timeout=5m",
+    "-run",
+    "^TestControl",
+    "github.com/Autumn-27/artex/agent",
+    "github.com/Autumn-27/artex/control",
+    "github.com/Autumn-27/artex/db",
+    "github.com/Autumn-27/artex/execution",
+    "github.com/Autumn-27/artex/server"
+  ],
+  "exit_code": 0,
+  "stdout": "required.jsonl",
+  "stderr": "required.stderr.log",
+  "stdout_sha256": "f3d94fcedfd8808865497954f4911e5f0afb8371ba14e2b83836d4d21e377547",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

@@ -655,6 +655,9 @@ func (d *DB) snapshotTaskArchive(taskID int64, llmRecords io.Writer) (*TaskArchi
 	if err != nil {
 		return nil, err
 	}
+	if snapshot.Control == nil {
+		snapshot.FormatVersion = 3
+	}
 	return snapshot, tx.Commit()
 }
 

@@ -1,0 +1,235 @@
+{
+  "schema_version": 1,
+  "status": "LOCAL_VALIDATED_SYNC_PENDING",
+  "runtime_source_sha256": "063a50d68790856024e7b9857d200b1af058ac233b6b4405ecf44195dbf508b9",
+  "code_base_commit": "1430dd3676f86fe83e26501341ac373a96b9c8b9",
+  "branch": "feat/artex-control-v1-1",
+  "remote": "https://github.com/daffnjk/ARTEX.git",
+  "tasks": {
+    "ENG-00": {
+      "status": "verified_local",
+      "review": "needs_independent_review"
+    },
+    "ENG-01": {
+      "status": "verified_local",
+      "review": "needs_independent_review"
+    },
+    "ENG-02": {
+      "status": "verified_local",
+      "review": "needs_independent_review"
+    },
+    "ENG-03": {
+      "status": "verified_local",
+      "review": "needs_independent_review"
+    },
+    "ENG-04": {
+      "status": "verified_local",
+      "review": "needs_independent_review"
+    },
+    "ENG-05": {
+      "status": "verified_local",
+      "review": "needs_independent_review"
+    },
+    "ENG-06": {
+      "status": "verified_local",
+      "review": "needs_independent_review"
+    },
+    "ENG-07": {
+      "status": "verified_local",
+      "review": "needs_independent_review"
+    },
+    "ENG-08": {
+      "status": "verified_local",
+      "review": "needs_independent_review"
+    },
+    "ENG-09": {
+      "status": "verified_local",
+      "review": "needs_independent_review"
+    },
+    "ENG-10": {
+      "status": "verified_local",
+      "review": "needs_independent_review"
+    },
+    "ENG-11": {
+      "status": "verified_local",
+      "review": "needs_independent_review"
+    },
+    "ENG-12": {
+      "status": "verified_local",
+      "review": "needs_independent_review"
+    },
+    "ENG-13": {
+      "status": "verified_local",
+      "review": "needs_independent_review"
+    },
+    "ENG-14": {
+      "status": "verified_local",
+      "review": "needs_independent_review"
+    },
+    "ENG-15": {
+      "status": "verified_local",
+      "review": "needs_independent_review"
+    },
+    "ENG-16": {
+      "status": "verified_local",
+      "review": "needs_independent_review"
+    },
+    "ENG-17": {
+      "status": "verified_local",
+      "review": "needs_independent_review"
+    },
+    "ENG-18": {
+      "status": "verified_local",
+      "review": "needs_independent_review"
+    },
+    "ENG-19": {
+      "status": "verified_local",
+      "review": "needs_independent_review"
+    }
+  },
+  "required": {
+    "status": "PASS",
+    "required_count": 84,
+    "event_count": 612,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "regression": {
+    "status": "PASS",
+    "required_count": 116,
+    "event_count": 1192,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "full_affected": {
+    "command": [
+      "go",
+      "test",
+      "-json",
+      "-race",
+      "-count=1",
+      "-timeout=10m",
+      "./control",
+      "./execution",
+      "./db",
+      "./agent",
+      "./server",
+      "./harness",
+      "./evidence",
+      "./report"
+    ],
+    "cwd": ".",
+    "exit_code": 0,
+    "seconds": 64.924,
+    "stdout": "affected.jsonl",
+    "stderr": "affected.stderr",
+    "stdout_sha256": "452d291bd2c21fdb45ee615f579447646d24ee0b042dc92c641daa070c52e078",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_unchanged": true,
+    "passed_roots": 621,
+    "failed": [],
+    "skipped": [
+      "github.com/Autumn-27/artex/report",
+      "TestLiveContextReview"
+    ]
+  },
+  "checks": {
+    "build": {
+      "command": [
+        "go",
+        "build",
+        "./..."
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "seconds": 3.864,
+      "stdout": "build.stdout",
+      "stderr": "build.stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_unchanged": true
+    },
+    "vet": {
+      "command": [
+        "go",
+        "vet",
+        "./control",
+        "./execution",
+        "./db",
+        "./agent",
+        "./server",
+        "./harness",
+        "./evidence",
+        "./report"
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "seconds": 0.549,
+      "stdout": "vet.stdout",
+      "stderr": "vet.stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_unchanged": true
+    },
+    "frontend-check": {
+      "command": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "cwd": "web",
+      "exit_code": 0,
+      "seconds": 1.32,
+      "stdout": "frontend-check.stdout",
+      "stderr": "frontend-check.stderr",
+      "stdout_sha256": "e830ee5aba8b96dbcafc1bb799b60a91ae8f1cbe01b00829c1a98241d63a31dc",
+      "stderr_sha256": "e2dc8d41b8c11f84dbc2b440c3e3b1b13fd35bcf0c5f12612e6eabf297e0e383",
+      "source_unchanged": true
+    },
+    "frontend-build": {
+      "command": [
+        "npm",
+        "run",
+        "build"
+      ],
+      "cwd": "web",
+      "exit_code": 0,
+      "seconds": 24.123,
+      "stdout": "frontend-build.stdout",
+      "stderr": "frontend-build.stderr",
+      "stdout_sha256": "4115290119de7def81d4eb58fafe14ff4a6629f49d8e639a09ed1afefd9d5a15",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_unchanged": true
+    }
+  },
+  "migration_restore_cancel": "PASS in final required and full affected suites",
+  "ci": {
+    "status": "NOT_RUN_BEFORE_PUSH"
+  },
+  "review": "needs_independent_review",
+  "release_status": "READY_FOR_APPROVAL",
+  "real_model_trials": "NOT_RUN_NO_APPROVED_ENDPOINT_VERSION_BUDGET",
+  "deployment": "NOT_RUN_NOT_AUTHORIZED",
+  "evidence": "evidence/final/MANIFEST.json",
+  "known_limits": [
+    "No independent integration/release review",
+    "No real target tests or production migration/deploy",
+    "Control archive keeps hot audit and cold package; no automatic purge/space reclamation",
+    "Restored history quarantined; fresh plan and approval required",
+    "Mechanical body SHA256 criterion only; business criteria require manual review",
+    "Local cancellation confirms local resource closure only"
+  ],
+  "prior_failures_retained": [
+    "FINAL/extra-01",
+    "FINAL/extra-02",
+    "FINAL/extra-03",
+    "FINAL/runs/02"
+  ],
+  "notes": [
+    "Full suite has optional TestLiveContextReview skip; no required or related required subtest skip",
+    "report package has no test files",
+    "All original full-run failures retained; no prior green substituted for final tree"
+  ]
+}

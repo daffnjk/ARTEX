@@ -1,0 +1,20 @@
+{
+  "branch": "feat/artex-control-v1-1",
+  "production_deployment_triggered_by_branch": false,
+  "scope": "Inspected checked-in workflows and local hooks; no claim about unknown third-party integrations",
+  "workflows": {
+    ".github/workflows/research-harness.yml": {
+      "sha256": "a5f782eb9d3a12494c5943560686e9e27dd4b728d4fba56d9fefea6746fb561c",
+      "trigger": "research/evidence-harness-m1 push or PR/manual"
+    },
+    ".github/workflows/release.yml": {
+      "sha256": "2493385bf152549e96b4855d03a403a1411761812146c48ceca0795340d8a829",
+      "trigger": "v* tags only"
+    },
+    ".github/workflows/control-validation.yml": {
+      "sha256": "a8c58ad102b23e3214680d4947e6829a3f8fa053d209e750e02b9928444825af",
+      "trigger": "dedicated delivery branch push or manual; synthetic PG; read-only repository permission; no deploy"
+    }
+  },
+  "hooks": []
+}

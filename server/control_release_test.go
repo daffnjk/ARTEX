@@ -100,3 +100,26 @@ func TestControlFeatureRollbackKeepsSafety(t *testing.T) {
 		})
 	}
 }
+
+func TestControlHostShutdownDrainsRuntime(t *testing.T) {
+	m, err := NewManager(t.TempDir(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := New(context.Background(), m, t.TempDir(), t.TempDir(), t.TempDir())
+	if err = m.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if s.ctx.Err() == nil {
+		t.Fatal("manager closed without cancelling owned server")
+	}
+	s.engine.runtimeMu.Lock()
+	remaining := len(s.engine.runtimes)
+	s.engine.runtimeMu.Unlock()
+	if remaining != 0 {
+		t.Fatal("manager left task writers after store shutdown", remaining)
+	}
+	if err = m.Close(); err != nil {
+		t.Fatal("close is not idempotent", err)
+	}
+}

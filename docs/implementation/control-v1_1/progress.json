@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "plan_version": "1.1",
-  "note": "v1.2 autonomous execution; verified_local does not imply independent review or final aggregate PASS",
+  "note": "v1.2 autonomous development; final-tree aggregate84 and regression116 PASS; independent review pending; branch sync pending",
   "current_task": null,
   "tasks": {
     "ENG-00": {
@@ -12,7 +12,8 @@
         "reports/ENG-00/runs/02/required.gate.json",
         "reports/ENG-00/runs/02/regression.gate.json",
         "reports/ENG-00/review-snapshot.tar.gz",
-        "reports/ENG-00/autonomy-resume-20261020.json"
+        "reports/ENG-00/autonomy-resume-20261020.json",
+        "reports/FINAL/result.json"
       ],
       "review": "needs_independent_review"
     },
@@ -20,7 +21,8 @@
       "status": "verified_local",
       "attempts": 1,
       "evidence": [
-        "reports/ENG-01/result.json"
+        "reports/ENG-01/result.json",
+        "reports/FINAL/result.json"
       ],
       "review": "needs_independent_review"
     },
@@ -28,7 +30,8 @@
       "status": "verified_local",
       "attempts": 1,
       "evidence": [
-        "reports/ENG-02/result.json"
+        "reports/ENG-02/result.json",
+        "reports/FINAL/result.json"
       ],
       "review": "needs_independent_review"
     },
@@ -36,7 +39,8 @@
       "status": "verified_local",
       "attempts": 1,
       "evidence": [
-        "reports/ENG-03/result.json"
+        "reports/ENG-03/result.json",
+        "reports/FINAL/result.json"
       ],
       "review": "needs_independent_review"
     },
@@ -44,7 +48,8 @@
       "status": "verified_local",
       "attempts": 3,
       "evidence": [
-        "reports/ENG-04/result.json"
+        "reports/ENG-04/result.json",
+        "reports/FINAL/result.json"
       ],
       "review": "needs_independent_review"
     },
@@ -52,7 +57,8 @@
       "status": "verified_local",
       "attempts": 2,
       "evidence": [
-        "reports/ENG-05/result.json"
+        "reports/ENG-05/result.json",
+        "reports/FINAL/result.json"
       ],
       "review": "needs_independent_review"
     },
@@ -60,7 +66,8 @@
       "status": "verified_local",
       "attempts": 2,
       "evidence": [
-        "reports/ENG-06/result.json"
+        "reports/ENG-06/result.json",
+        "reports/FINAL/result.json"
       ],
       "review": "needs_independent_review"
     },
@@ -68,7 +75,8 @@
       "status": "verified_local",
       "attempts": 3,
       "evidence": [
-        "reports/ENG-07/result.json"
+        "reports/ENG-07/result.json",
+        "reports/FINAL/result.json"
       ],
       "review": "needs_independent_review"
     },
@@ -76,7 +84,8 @@
       "status": "verified_local",
       "attempts": 2,
       "evidence": [
-        "reports/ENG-08/result.json"
+        "reports/ENG-08/result.json",
+        "reports/FINAL/result.json"
       ],
       "review": "needs_independent_review"
     },
@@ -84,7 +93,8 @@
       "status": "verified_local",
       "attempts": 2,
       "evidence": [
-        "reports/ENG-09/result.json"
+        "reports/ENG-09/result.json",
+        "reports/FINAL/result.json"
       ],
       "review": "needs_independent_review"
     },
@@ -92,7 +102,8 @@
       "status": "verified_local",
       "attempts": 5,
       "evidence": [
-        "reports/ENG-10/result.json"
+        "reports/ENG-10/result.json",
+        "reports/FINAL/result.json"
       ],
       "review": "needs_independent_review"
     },
@@ -100,7 +111,8 @@
       "status": "verified_local",
       "attempts": 3,
       "evidence": [
-        "reports/ENG-11/result.json"
+        "reports/ENG-11/result.json",
+        "reports/FINAL/result.json"
       ],
       "review": "needs_independent_review"
     },
@@ -108,7 +120,8 @@
       "status": "verified_local",
       "attempts": 3,
       "evidence": [
-        "reports/ENG-12/result.json"
+        "reports/ENG-12/result.json",
+        "reports/FINAL/result.json"
       ],
       "review": "needs_independent_review"
     },
@@ -116,7 +129,8 @@
       "status": "verified_local",
       "attempts": 5,
       "evidence": [
-        "reports/ENG-13/result.json"
+        "reports/ENG-13/result.json",
+        "reports/FINAL/result.json"
       ],
       "review": "needs_independent_review"
     },
@@ -124,7 +138,8 @@
       "status": "verified_local",
       "attempts": 4,
       "evidence": [
-        "reports/ENG-14/result.json"
+        "reports/ENG-14/result.json",
+        "reports/FINAL/result.json"
       ],
       "review": "needs_independent_review"
     },
@@ -132,7 +147,8 @@
       "status": "verified_local",
       "attempts": 4,
       "evidence": [
-        "reports/ENG-15/result.json"
+        "reports/ENG-15/result.json",
+        "reports/FINAL/result.json"
       ],
       "review": "needs_independent_review"
     },
@@ -140,7 +156,8 @@
       "status": "verified_local",
       "attempts": 5,
       "evidence": [
-        "reports/ENG-16/result.json"
+        "reports/ENG-16/result.json",
+        "reports/FINAL/result.json"
       ],
       "review": "needs_independent_review"
     },
@@ -148,7 +165,8 @@
       "status": "verified_local",
       "attempts": 5,
       "evidence": [
-        "reports/ENG-17/result.json"
+        "reports/ENG-17/result.json",
+        "reports/FINAL/result.json"
       ],
       "review": "needs_independent_review"
     },
@@ -156,7 +174,8 @@
       "status": "verified_local",
       "attempts": 7,
       "evidence": [
-        "reports/ENG-18/result.json"
+        "reports/ENG-18/result.json",
+        "reports/FINAL/result.json"
       ],
       "review": "needs_independent_review"
     },
@@ -164,7 +183,8 @@
       "status": "verified_local",
       "attempts": 2,
       "evidence": [
-        "reports/ENG-19/result.json"
+        "reports/ENG-19/result.json",
+        "reports/FINAL/result.json"
       ],
       "review": "needs_independent_review"
     }

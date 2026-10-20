@@ -108,6 +108,7 @@ type Engine struct {
 	// task operation. Once BeginDelete returns, every admitted writer is reflected
 	// in inflight and every later writer is rejected.
 	deleteMu sync.RWMutex
+	closed   bool
 
 	// Every long-lived task goroutine (planner, workers and deadline coordinator)
 	// runs under one task-scoped context. Successful deletion cancels that context,
@@ -749,7 +750,7 @@ func (e *Engine) ReadyFor(t *Task) bool {
 func (e *Engine) Run(ctx context.Context, t *Task) {
 	workers := e.m.Workers()
 	e.deleteMu.RLock()
-	if e.IsDeleting(t.ID) {
+	if e.closed || e.IsDeleting(t.ID) {
 		e.deleteMu.RUnlock()
 		return
 	}

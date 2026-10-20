@@ -55,6 +55,7 @@ type Server struct {
 	// scheduler tick and an HTTP settings change / task creation can't both count
 	// free slots off the same snapshot and over-promote past the limit.
 	concMu sync.Mutex
+	closed bool
 
 	cfgMu     sync.Mutex
 	chatAgent *agent.ChatAgent // conversational runner for the chat page; nil w/o LLM
@@ -146,6 +147,7 @@ type triggeredRun struct {
 }
 
 func New(ctx context.Context, m *Manager, skillDir string, dataDir string, keyDir string) *Server {
+	ctx, cancelOwned := context.WithCancelCause(ctx)
 	key, err := loadOrCreateJWTKey(keyDir, dataDir)
 	if err != nil {
 		log.Fatalf("[auth] JWT key: %v", err)
@@ -258,10 +260,36 @@ func New(ctx context.Context, m *Manager, skillDir string, dataDir string, keyDi
 		log.Printf("[engine] no LLM provider configured — engine idle until set via /api/llm or env")
 	}
 	s.restoreTaskRuntimes()
-	go s.reconcileConcurrency()
+	if ctx.Err() == nil {
+		go s.reconcileConcurrency()
+	}
 	s.startTaskArchiveWorker()
 	s.wireInterceptReviewer() // LLM 兜底审批:未命中拦截规则的命令交给模型判定
 	s.startControlRecovery(ctx)
+	m.mu.Lock()
+	m.onClose = append(m.onClose, func() {
+		cancelOwned(agent.AbortShutdown)
+		s.concMu.Lock()
+		s.closed = true
+		s.engine.deleteMu.Lock()
+		s.engine.closed = true
+		s.engine.deleteMu.Unlock()
+		s.engine.runtimeMu.Lock()
+		ids := make([]string, 0, len(s.engine.runtimes))
+		for id := range s.engine.runtimes {
+			ids = append(ids, id)
+		}
+		s.engine.runtimeMu.Unlock()
+		s.concMu.Unlock()
+		for _, id := range ids {
+			s.engine.StopTask(id)
+		}
+		s.archiveWG.Wait()
+		if s.side != nil {
+			<-s.side.done
+		}
+	})
+	m.mu.Unlock()
 	return s
 }
 
