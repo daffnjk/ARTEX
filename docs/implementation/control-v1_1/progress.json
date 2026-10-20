@@ -137,10 +137,12 @@
       "review": "needs_independent_review"
     },
     "ENG-16": {
-      "status": "pending",
-      "attempts": 0,
-      "evidence": [],
-      "review": "not_started"
+      "status": "verified_local",
+      "attempts": 5,
+      "evidence": [
+        "reports/ENG-16/result.json"
+      ],
+      "review": "needs_independent_review"
     },
     "ENG-17": {
       "status": "pending",

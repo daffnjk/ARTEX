@@ -1,0 +1,86 @@
+{
+  "task_id": "ENG-16",
+  "status": "verified_local",
+  "review": "needs_independent_review",
+  "code_tree_sha256": "45100f9ee56162b71f6109f4f5a02c03e98fec73e3cda40e47e52f6e53ebc841",
+  "required": {
+    "status": "PASS",
+    "required_count": 3,
+    "event_count": 134,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "regression": {
+    "status": "PASS",
+    "required_count": 93,
+    "event_count": 809,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "raw_receipts": "reports/ENG-16/runs/05",
+  "log_hashes": {
+    "required.jsonl": "3003ebf4d9a2ed10e9296f8a6c3628e1d9dfd7227e6ab546ba70b7c6701a0b9c",
+    "regression.jsonl": "a759bdb548d74afd9b7f39182a3efd4fcb91c5d5ad8e87d104a21e5c3b7ed8b8",
+    "required.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "regression.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "limits": [
+    "Not final aggregate acceptance; independent review deferred",
+    "No production or real target execution"
+  ],
+  "notes": [
+    "Backend 3 required + 93 regressions PASS; frontend check/build exit0; synthetic screenshot self-check PASS."
+  ],
+  "ui": {
+    "kind": "synthetic_ui_self_check",
+    "status": "PASS",
+    "independent": false,
+    "assertions": [
+      "Partial/unknown/unconfirmed visible",
+      "Original lost execution collected without POST or resubmit",
+      "Invalid incomplete evidence and advisory identity visible"
+    ],
+    "screenshot_sha256": "b6379b81372245f60d740c444736762a2acbefdea6a5624cfbba9d615e7e166a",
+    "request_log_sha256": "12400808cc1ddef1555a0d5ea0f1920a92335c50a161f658af59d8a2d928dc6e",
+    "limitations": [
+      "Synthetic display backend; real authorization verified by Go tests",
+      "No real target/model or independent reviewer"
+    ]
+  },
+  "frontend": {
+    "check": {
+      "command": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "cwd": "web",
+      "exit_code": 0,
+      "seconds": 1.0634570121765137,
+      "node": "26.9.0",
+      "npm": "11.19.1",
+      "logs": {
+        "check.stdout": "c1d84f4fd67f02d482285947ffb597b6e38e479a23f56d0f4856c6fa3c4e4b04",
+        "check.stderr": "e2dc8d41b8c11f84dbc2b440c3e3b1b13fd35bcf0c5f12612e6eabf297e0e383"
+      }
+    },
+    "build": {
+      "command": [
+        "npm",
+        "run",
+        "build"
+      ],
+      "cwd": "web",
+      "exit_code": 0,
+      "seconds": 28.16034507751465,
+      "node": "26.9.0",
+      "npm": "11.19.1",
+      "logs": {
+        "build.stdout": "343e6184c09c0a2058057852908bb769357ffc86bc790d5d58f82a754998210a",
+        "build.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    }
+  }
+}

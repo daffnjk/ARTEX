@@ -37,6 +37,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { api } from "@/lib/api";
+import { type ControlStatus, controlApi, controlResultLabel } from "@/lib/control";
 import type { LLMProfile, Task } from "@/lib/types";
 
 import { AssetsTab } from "./_tabs/assets-tab";
@@ -207,6 +208,34 @@ function TaskDetailInner() {
   const searchParams = useSearchParams();
   const id = searchParams.get("id") ?? "";
   const [task, setTask] = React.useState<Task | null>(null);
+  const [controlStatus, setControlStatus] = React.useState<ControlStatus | null>(null);
+  const controlForTask = controlStatus && String(controlStatus.task_id) === id ? controlStatus : null;
+  const refreshControl = React.useCallback(async () => {
+    try {
+      setControlStatus(await controlApi.status(id));
+    } catch {
+      setControlStatus(null);
+    }
+  }, [id]);
+  React.useEffect(() => {
+    let live = true;
+    const load = () =>
+      controlApi
+        .status(id)
+        .then((state) => {
+          if (live) setControlStatus(state);
+        })
+        .catch(() => {
+          if (live) setControlStatus(null);
+        });
+    void load();
+    const timer = setInterval(() => void load(), 5000);
+    return () => {
+      live = false;
+      clearInterval(timer);
+    };
+  }, [id]);
+
   const [paused, setPaused] = React.useState(false);
   const [loaded, setLoaded] = React.useState(false);
   const [tab, setTab] = React.useState("sessions");
@@ -366,7 +395,13 @@ function TaskDetailInner() {
           </code>
           <Separator orientation="vertical" className="mx-1 hidden h-4 sm:block" />
           <TaskLLMControl task={task} profiles={profiles} onUpdated={load} />
-          <StatusBadge domain={terminal ? "task" : "engine"} value={terminal ? task.status : engineMode} dot />
+          {controlForTask?.mode === "legacy" ? (
+            <StatusBadge domain={terminal ? "task" : "engine"} value={terminal ? task.status : engineMode} dot />
+          ) : (
+            <span className="rounded border px-2 py-1 text-xs" role="status">
+              {controlForTask ? controlResultLabel(controlForTask) : "控制状态待核验"}
+            </span>
+          )}
           {canArchive ? (
             <AlertDialog>
               <AlertDialogTrigger asChild>{archiveTrigger}</AlertDialogTrigger>
@@ -421,7 +456,7 @@ function TaskDetailInner() {
           <SessionsTab taskId={id} />
         </TabsContent>
         <TabsContent value="overview" className="mt-0">
-          <OverviewTab taskId={id} />
+          <OverviewTab taskId={id} controlStatus={controlForTask} refreshControl={refreshControl} />
         </TabsContent>
         <TabsContent value="graph" className="mt-0">
           <GraphTab taskId={id} />

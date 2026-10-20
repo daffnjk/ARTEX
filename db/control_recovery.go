@@ -109,6 +109,13 @@ func (d *DB) RequestControlCancellation(ctx context.Context, task control.TaskID
 		return err
 	}
 	defer tx.Rollback()
+	if err = requestControlCancellationTx(ctx, tx, task, id); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+func requestControlCancellationTx(ctx context.Context, tx *sql.Tx, task control.TaskID, id control.ExecutionID) error {
+	var err error
 	var root int64
 	if err = tx.QueryRowContext(ctx, `SELECT id FROM tasks WHERE id=$1 FOR UPDATE`, int64(task)).Scan(&root); err != nil {
 		return err
@@ -138,7 +145,7 @@ func (d *DB) RequestControlCancellation(ctx context.Context, task control.TaskID
 	if _, err = tx.ExecContext(ctx, `INSERT INTO control_outbox(task_id,aggregate_id,event_type,event_version,payload) VALUES($1,$2,'cancel_requested',1,$3) ON CONFLICT DO NOTHING`, int64(task), string(id), payload); err != nil {
 		return err
 	}
-	return tx.Commit()
+	return nil
 }
 func (d *DB) ConfirmControlStopped(ctx context.Context, task control.TaskID, id control.ExecutionID) error {
 	tx, err := d.BeginTx(ctx, nil)

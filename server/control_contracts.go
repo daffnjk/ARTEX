@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/Autumn-27/artex/control"
 	"github.com/golang-jwt/jwt/v5"
@@ -21,6 +22,10 @@ func controlAdminFrom(ctx context.Context) string {
 // ARTEX currently has one authenticated administrator, not a client-supplied role.
 func (s *Server) requireControlAdmin(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" && r.Method != "HEAD" && !strings.HasPrefix(r.Header.Get("Authorization"), "Bearer ") {
+			writeErr(w, 403, "explicit administrator bearer authorization required")
+			return
+		}
 		token, err := jwt.ParseWithClaims(extractToken(r), &jwt.RegisteredClaims{}, func(t *jwt.Token) (any, error) { return s.jwtKey, nil }, jwt.WithValidMethods([]string{"HS256"}), jwt.WithExpirationRequired())
 		if err != nil || !token.Valid {
 			writeErr(w, 403, "authenticated control administrator required")
@@ -45,6 +50,10 @@ func (s *Server) controlContractChange(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil || id <= 0 {
 		writeErr(w, 400, "invalid task ID")
+		return
+	}
+	if operation := r.PathValue("operation"); operation != "approve" && operation != "revoke" {
+		s.controlAdminOperation(w, r)
 		return
 	}
 	var input struct {

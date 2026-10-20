@@ -20,6 +20,7 @@ import {
   XIcon,
 } from "lucide-react";
 
+import { ControlTaskPanel } from "@/components/control-task-panel";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +29,7 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { api } from "@/lib/api";
+import type { ControlStatus } from "@/lib/control";
 import type {
   AssetInterceptKind,
   AssetInterceptRule,
@@ -103,7 +105,15 @@ function StatCard({
   );
 }
 
-export function OverviewTab({ taskId }: { taskId: string }) {
+export function OverviewTab({
+  taskId,
+  controlStatus,
+  refreshControl,
+}: {
+  taskId: string;
+  controlStatus: ControlStatus | null;
+  refreshControl: () => Promise<void>;
+}) {
   const [task, setTask] = React.useState<Task | null>(null);
   const [stats, setStats] = React.useState<Stats | null>(null);
   const [intents, setIntents] = React.useState<TaskNode[]>([]);
@@ -432,6 +442,7 @@ export function OverviewTab({ taskId }: { taskId: string }) {
 
   return (
     <div className="flex flex-col gap-4">
+      <ControlTaskPanel taskId={taskId} status={controlStatus} refresh={refreshControl} />
       {/* 原始任务描述与目标(创建时填写的),置顶便于随时回看。 */}
       <Card>
         <CardHeader>
