@@ -45,8 +45,11 @@ def run(out, name, args, env):
 
 
 def main():
-    if len(sys.argv) != 2:
-        raise ValueError('usage: python3 scripts/test-control-eng00.py NEW_RECEIPT_DIRECTORY')
+    if len(sys.argv) not in (2, 3):
+        raise ValueError('usage: python3 scripts/test-control-eng00.py NEW_RECEIPT_DIRECTORY [ENG-xx|all]')
+    ticket = sys.argv[2] if len(sys.argv) == 3 else 'ENG-00'
+    if ticket != 'all' and not re.fullmatch(r'ENG-(?:0[0-9]|1[0-9])', ticket):
+        raise ValueError('invalid ticket')
     env = os.environ.copy()
     u = isolated_dsn(env)
     out = Path(sys.argv[1]).resolve()
@@ -55,13 +58,14 @@ def main():
     env.update(GOTOOLCHAIN='local', GOWORK='off', GOPROXY='off', GOSUMDB='off', GOFLAGS='-mod=readonly')
     paths = subprocess.check_output(['git', 'ls-files', '-c', '-o', '--exclude-standard'], cwd=ROOT, text=True).splitlines()
     hashes = {p: hashlib.sha256((ROOT / p).read_bytes()).hexdigest()
-              for p in sorted(set(paths)) if (ROOT / p).is_file()}
+              for p in sorted(set(paths)) if (ROOT / p).is_file() and
+              not p.startswith('docs/') and (Path(p).suffix in ('.go', '.py', '.sh', '.json', '.sql', '.mod', '.sum', '.yml') or p == 'go.mod')}
     (out / 'source.json').write_text(json.dumps({
         'head': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
         'files_sha256': hashes,
         'tree_sha256': hashlib.sha256(json.dumps(hashes, sort_keys=True).encode()).hexdigest(),
         'packet_gate_sha256': {p: hashlib.sha256((PACKET / p).read_bytes()).hexdigest()
-                              for p in ('scripts/check_go_test_json.py', 'acceptance/ENG-00.json')},
+                              for p in ('scripts/check_go_test_json.py', 'acceptance/' + ticket + '.json')},
     }, indent=2) + '\n')
     # Explicit libpq parameters must not inherit PGOPTIONS, services or passwords.
     pg_env = {k: v for k, v in env.items() if not k.startswith('PG')}
@@ -84,7 +88,7 @@ def main():
     }, indent=2) + '\n')
     failed = False
     for name, required_path, pattern in [
-        ('required', PACKET / 'acceptance/ENG-00.json', '^TestControl'),
+        ('required', PACKET / ('acceptance/' + ticket + '.json'), '^TestControl'),
         ('regression', ROOT / 'scripts/control-eng00-regressions.json', None),
     ]:
         spec = json.loads(required_path.read_text())
