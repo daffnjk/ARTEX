@@ -88,6 +88,12 @@ func (s *Server) startFindingRetest(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 404, "finding not found")
 		return
 	}
+	if f.TaskID != nil {
+		if err := s.controlBackgroundAllowed(r.Context(), *f.TaskID, "retest"); err != nil {
+			writeErr(w, 409, "controlled retest adapter unavailable")
+			return
+		}
+	}
 	a, err := pg.GetAgentByKey(db.FindingRetestAgentKey)
 	if err != nil {
 		writeErr(w, 500, err.Error())

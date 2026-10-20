@@ -1692,3 +1692,23 @@ BEGIN
 END $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS trg_control_execution_immutable ON action_executions;
 CREATE TRIGGER trg_control_execution_immutable BEFORE UPDATE ON action_executions FOR EACH ROW EXECUTE FUNCTION forbid_control_execution_rewrite();
+
+ALTER TABLE action_executions ADD COLUMN IF NOT EXISTS intent_id BIGINT;
+ALTER TABLE action_executions ADD COLUMN IF NOT EXISTS result_json JSONB;
+ALTER TABLE action_executions ADD COLUMN IF NOT EXISTS result_digest TEXT;
+ALTER TABLE execution_attempts ADD COLUMN IF NOT EXISTS intent_id BIGINT;
+
+-- Controlled-origin assets never fall back to ungated global auto-probing.
+CREATE TABLE IF NOT EXISTS control_asset_boundaries (
+ asset_id BIGINT PRIMARY KEY REFERENCES assets(id) ON DELETE CASCADE,
+ first_task_id BIGINT NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE OR REPLACE FUNCTION remember_control_asset_boundary() RETURNS trigger AS $$
+BEGIN
+ INSERT INTO control_asset_boundaries(asset_id,first_task_id)
+ SELECT NEW.asset_id,NEW.task_id FROM tasks WHERE id=NEW.task_id AND control_mode<>'legacy'
+ ON CONFLICT(asset_id) DO NOTHING;
+ RETURN NEW;
+END $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_control_asset_boundary ON task_asset_links;
+CREATE TRIGGER trg_control_asset_boundary AFTER INSERT OR UPDATE ON task_asset_links FOR EACH ROW EXECUTE FUNCTION remember_control_asset_boundary();

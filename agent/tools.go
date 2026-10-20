@@ -526,6 +526,47 @@ func (t *ToolSet) graphOverviewData() map[string]any {
 	if t.as != nil && t.ts != nil && t.taskID > 0 {
 		{
 			m := map[string]any{}
+			// Scope is descriptive context even when coverage metrics are disabled; it never authorizes execution.
+			if rows, err := t.as.ListTaskScope(t.taskID); err == nil {
+				if len(rows) > 100 {
+					rows = rows[:100]
+					m["scope_truncated"] = true
+				}
+				scope := make([]map[string]any, 0, len(rows))
+				for _, row := range rows {
+					entry := map[string]any{"kind": row.Kind, "source": row.Source, "value": truncOutput(row.Domain+row.Net+row.Value, 512)}
+					if row.CompanyID != nil && t.cs != nil {
+						entry["company_id"] = *row.CompanyID
+						entry["company_name"] = row.CompanyName
+						if rules, err := t.cs.GetScope(*row.CompanyID); err == nil {
+							if len(rules) > 256 {
+								rules = rules[:256]
+								entry["company_scope_truncated"] = true
+							}
+							expanded := make([]map[string]any, 0, len(rules))
+							keywords := []string{}
+							for _, rule := range rules {
+								value := rule.Raw
+								if value == "" {
+									value = rule.Domain + rule.Net + rule.Value
+								}
+								value = truncOutput(value, 512)
+								expanded = append(expanded, map[string]any{"kind": rule.Kind, "value": value})
+								if rule.Kind == "keyword" {
+									keywords = append(keywords, value)
+								}
+							}
+							entry["company_scope"], entry["company_keywords"] = expanded, keywords
+						} else {
+							entry["company_scope_unavailable"] = true
+						}
+					}
+					scope = append(scope, entry)
+				}
+				m["scope"] = scope
+			} else {
+				m["scope_unavailable"] = true
+			}
 			if !t.coverageDisabled {
 				if cov, err := t.as.TaskCoverageWithSources(t.taskID); err == nil {
 					m["denominator"] = cov.Denominator

@@ -52,6 +52,7 @@ type WebSearchOpts struct {
 }
 
 type Worker struct {
+	controlledTools ControlledToolFactory
 	findingRecorder FindingRecorder
 	prov            llm.Provider
 	model           string
@@ -359,6 +360,20 @@ func (w *Worker) ExecuteWithMessage(ctx context.Context, name string, taskID int
 }
 
 func (w *Worker) execute(ctx context.Context, name string, taskID int64, as *db.AssetStore, ts *db.ExplorationStore, intent *db.Node, hooks harness.HookRunner, emit func(db.Activity), enr EnrichTrigger, notifyFinding func(int64, string), requestID, message string) (harness.TerminalReason, WriteCounts, error) {
+	controlled, bindingErr := controlledBinding(ctx, taskID, ts)
+	if bindingErr != nil {
+		return harness.TerminalReason("model_error"), WriteCounts{}, bindingErr
+	}
+	if controlled && w.controlledTools == nil || w.controlledTools != nil && !controlled {
+		if ts != nil {
+			_ = ts.AuditControlDenial(ctx, taskID, "worker-unbound")
+		}
+		return harness.TerminalReason("model_error"), WriteCounts{}, deniedControlledRun()
+	}
+	if controlled {
+		enr = nil
+	}
+
 	tsx := NewToolSet(ts, name)
 	tsx.SetFindingRecorder(w.findingRecorder)
 	tsx.SetTaskID(taskID)
@@ -378,7 +393,20 @@ func (w *Worker) execute(ctx context.Context, name string, taskID int64, as *db.
 	// 收敛工具面、减少低价值调用。其余 SDK 默认工具(Read/Write/Edit/LS/Bash/Sleep)照常。
 	base = append(base, defaultToolsExcept("MultiEdit", "Glob", "Grep")...)
 	ctx = WithRunInfo(ctx, RunInfo{TaskID: taskID, ExplorationID: explorationID(ts), IntentID: intent.ID})
-	tools, def, cleanup := AugmentTools(ctx, "worker", base)
+	var tools []actool.CoreTool
+	var def DeferredInfo
+	cleanup := func() {}
+	if controlled {
+		tools, bindingErr = w.controlledTools(ctx, RunInfoFrom(ctx))
+		if bindingErr != nil {
+			return harness.TerminalReason("model_error"), WriteCounts{}, bindingErr
+		}
+		if tools == nil {
+			return harness.TerminalReason("model_error"), WriteCounts{}, deniedControlledRun()
+		}
+	} else {
+		tools, def, cleanup = AugmentTools(ctx, "worker", base)
+	}
 	defer cleanup()
 
 	// 意图是 worker 的【唯一职责、贯穿整个 run 的不变量】→ 连同启动指令、意图锚定的目标资产
@@ -433,15 +461,21 @@ func (w *Worker) execute(ctx context.Context, name string, taskID int64, as *db.
 		Tools:           tools,
 		DeferredTools:   def.Deferred,
 		UnlockSet:       def.Unlock,
-		PermissionMode:  permission.ModeBypass,
+		PermissionMode: func() permission.Mode {
+			if controlled {
+				return permission.ModeDefault
+			}
+			return permission.ModeBypass
+		}(),
 		// WebFetch 走记录代理，其 HTTP 与 curl 一样被留痕；载入代理 CA 让经 MITM
 		// 重签的 HTTPS 证书能【正常校验通过】（而非关掉校验）。proxy 空则直连。
-		EnableWebFetch: true,
-		WebFetchProxy:  w.proxyAddr,
-		WebFetchCACert: w.proxyCACert,
+		EnableWebFetch:         !controlled,
+		DisableBackgroundTasks: controlled,
+		WebFetchProxy:          w.proxyAddr,
+		WebFetchCACert:         w.proxyCACert,
 		// 联网搜索(可选)。ddgs 无需 key；brave-free 需 BraveKey；tavily 需 TavilyKey。
 		// WebSearchProxy 是独立的出口代理(http/https/socks5)，与记录流量的 MITM 代理无关；空则直连。
-		EnableWebSearch:       w.webSearch.Enabled,
+		EnableWebSearch:       w.webSearch.Enabled && !controlled,
 		WebSearchBackend:      w.webSearch.Backend,
 		BraveSearchAPIKey:     w.webSearch.BraveKey,
 		TavilySearchAPIKey:    w.webSearch.TavilyKey,
@@ -468,6 +502,9 @@ func (w *Worker) execute(ctx context.Context, name string, taskID int64, as *db.
 		NonStreaming:  w.nonStreaming(),                       // 该 profile 选非流式时走 Provider.Complete
 		MaxTokens:     w.maxTokens(),                          // 0 = 不发上限,由服务端默认值决定
 	}
+	if controlled {
+		opts.Todos = nil
+	}
 	if hooks != nil { // typed-nil guard: only set when concrete (avoids harness panic)
 		opts.Hooks = hooks
 	}
@@ -492,7 +529,9 @@ func (w *Worker) execute(ctx context.Context, name string, taskID int64, as *db.
 
 	// 实验功能:开启后由 noa 接管上下文压缩(归档集中在 <workDir>/noa/<SessionID> 下,持久)。
 	noaSession := WorkerSessionID(ts.ID(), intent.ID)
-	enableNoa(&opts, w.noaEnabledFn, w.workDir, noaSession, noaWarn(noaSession))
+	if !controlled {
+		enableNoa(&opts, w.noaEnabledFn, w.workDir, noaSession, noaWarn(noaSession))
+	}
 	ctx = attachSideCapture(ctx, &opts)
 	s := agentcore.NewSession(opts)
 	defer s.Close() // release the session's background-task manager (temp dir + processes)

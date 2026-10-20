@@ -16,6 +16,10 @@ import (
 //
 // Zero value = attribution unknown; every consumer must treat it as optional.
 type RunInfo struct {
+	ExecutionID   string
+	AttemptID     string
+	LeaseEpoch    int64
+	ParentJobID   string
 	TaskID        int64  // task registry id; 0 for non-task runs (chat sessions)
 	ExplorationID int64  // exploration id; 0 when unknown
 	IntentID      int64  // worker's intent node; 0 for planner/mainagent/chat

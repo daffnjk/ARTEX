@@ -65,10 +65,12 @@
       "review": "needs_independent_review"
     },
     "ENG-07": {
-      "status": "pending",
-      "attempts": 0,
-      "evidence": [],
-      "review": "not_started"
+      "status": "verified_local",
+      "attempts": 3,
+      "evidence": [
+        "reports/ENG-07/result.json"
+      ],
+      "review": "needs_independent_review"
     },
     "ENG-08": {
       "status": "pending",

@@ -1,0 +1,47 @@
+{
+  "task_id": "ENG-07",
+  "status": "verified_local",
+  "review": "needs_independent_review",
+  "code_tree_sha256": "c7485a263ab09664c95ab96d60d634775ffc96d6c19a8ea87015d4f84bf92125",
+  "required": {
+    "status": "PASS",
+    "required_count": 4,
+    "event_count": 82,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "regression": {
+    "status": "PASS",
+    "required_count": 34,
+    "event_count": 226,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "raw_receipts": "reports/ENG-07/runs/03",
+  "log_hashes": {
+    "required.jsonl": "66b3aff1274df12339954f56caf5c330d03b40b066074d7b9e525a4bad573d16",
+    "regression.jsonl": "c56f20b0cbca7c0b9ac677005cf16a1886e8e837a74606b23e011df72708f0fc",
+    "required.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "regression.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "limits": [
+    "Not final aggregate acceptance; independent review deferred",
+    "No production or real target execution"
+  ],
+  "notes": [
+    "Four required tests,34 regressions pass; complete agent package 77 tests pass with no skips",
+    "Initial SDK TodoWrite injection removed without weakening test; old scope renderer bug reproduced at pristine HEAD and repaired",
+    "Agent inventory corrected only TestMain setup entry, original gate retained",
+    "Controlled local routes mounted; manual main/retest/enrich stay denied pending adapted capability"
+  ],
+  "complete_agent_regression": {
+    "exit_code": 0,
+    "required_count": 77,
+    "gate": "PASS",
+    "skips": 0,
+    "log_sha256": "5475bd66e976aaa283927f9041d3fef5a311975405e59120897ecb23810fd0a3",
+    "inventory_note": "TestMain is a setup entry, not an executable Test*(testing.T); original generated inventory and gate failure retained locally"
+  }
+}

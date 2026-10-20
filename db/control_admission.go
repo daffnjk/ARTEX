@@ -205,7 +205,7 @@ func (d *DB) PendingControlEvents(ctx context.Context, limit int) ([]execution.O
 	if limit < 1 || limit > 128 {
 		return nil, control.UnboundedEffect
 	}
-	rows, err := d.QueryContext(ctx, `SELECT id,task_id,aggregate_id,event_version FROM control_outbox WHERE delivered_at IS NULL ORDER BY id LIMIT $1`, limit)
+	rows, err := d.QueryContext(ctx, `SELECT id,task_id,aggregate_id,event_version FROM control_outbox WHERE delivered_at IS NULL AND event_type='execution_admitted' ORDER BY id LIMIT $1`, limit)
 	if err != nil {
 		return nil, err
 	}

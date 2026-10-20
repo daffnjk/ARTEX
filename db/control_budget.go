@@ -159,6 +159,12 @@ func (d *DB) SettleControlBudget(ctx context.Context, taskID int64, key string, 
 	if err = tx.QueryRowContext(ctx, `SELECT id FROM tasks WHERE id=$1 FOR UPDATE`, taskID).Scan(&id); err != nil {
 		return err
 	}
+	if err := settleControlBudgetTx(ctx, tx, taskID, key, actual); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+func settleControlBudgetTx(ctx context.Context, tx *sql.Tx, taskID int64, key string, actual map[string]*int64) error {
 	rows, err := tx.QueryContext(ctx, `SELECT dimension,reserved_units,actual_units,settlement_state FROM task_budget_reservations WHERE task_id=$1 AND request_key=$2 ORDER BY dimension`, taskID, key)
 	if err != nil {
 		return err
@@ -217,5 +223,5 @@ func (d *DB) SettleControlBudget(ctx context.Context, taskID int64, key string, 
 			return err
 		}
 	}
-	return tx.Commit()
+	return nil
 }

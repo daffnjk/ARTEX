@@ -36,3 +36,13 @@ type OutboxEvent struct {
 	ExecutionID control.ExecutionID
 	Version     int64
 }
+
+type Attempt struct {
+	ID          control.AttemptID
+	ExecutionID control.ExecutionID
+	TaskID      control.TaskID
+	IntentID    int64
+	Epoch       int64
+	Owner       string
+	Expires     time.Time
+}

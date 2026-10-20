@@ -516,6 +516,19 @@ func (s *Server) runConversationTurn(ctx context.Context, cancel context.CancelC
 			}
 			return
 		}
+		if r != nil {
+			finding, readErr := s.m.pg.GetFinding(r.FindingID)
+			if readErr != nil {
+				s.finishRetest(r.ID, "failed", "task binding unavailable")
+				return
+			}
+			if finding != nil && finding.TaskID != nil {
+				if err := s.controlBackgroundAllowed(ctx, *finding.TaskID, "retest-continuation"); err != nil {
+					s.finishRetest(r.ID, "failed", "controlled retest adapter unavailable")
+					return
+				}
+			}
+		}
 		if r != nil && r.Status == "pending" {
 			defer func() {
 				if ctx.Err() != nil {

@@ -7,6 +7,7 @@
 package enrich
 
 import (
+	"context"
 	"crypto/tls"
 	"html"
 	"io"
@@ -178,6 +179,9 @@ func itoa(n int64) string { return strconv.FormatInt(n, 10) }
 // ---- DNS ----
 
 func (e *Engine) doDNS(id int64, host string) {
+	if !e.legacyAllowed(id) {
+		return
+	}
 	if e.resolv == nil {
 		return
 	}
@@ -222,6 +226,9 @@ func (e *Engine) doDNS(id int64, host string) {
 var reTitle = regexp.MustCompile(`(?is)<title[^>]*>(.*?)</title>`)
 
 func (e *Engine) doHTTP(id int64, rawURL string) {
+	if !e.legacyAllowed(id) {
+		return
+	}
 	host := hostOf(rawURL)
 	if host == "" {
 		return
@@ -289,4 +296,18 @@ func uniq(in []string) []string {
 		out = append(out, s)
 	}
 	return out
+}
+
+func (e *Engine) legacyAllowed(id int64) bool {
+	if e == nil || e.as == nil {
+		return false
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	allowed, err := e.as.LegacyEnrichmentAllowed(ctx, id)
+	if err != nil || !allowed {
+		log.Printf("[enrich] asset %d requires a controlled adapter; legacy probe denied", id)
+		return false
+	}
+	return true
 }

@@ -110,6 +110,15 @@ func mainAgentSystem(goal, dataDir, workDir string) string {
 // text / result) so the main-agent session shows its work — exactly like the
 // worker/planner sessions — not just the final answer.
 func (m *MainAgent) Chat(ctx context.Context, taskID int64, mainSeg int, as *db.AssetStore, ts *db.ExplorationStore, goal, message string, emit func(db.Activity), notify, resume func(), notifyGoal, notifyHint func([]string)) (string, error) {
+	controlled, err := controlledBinding(ctx, taskID, ts)
+	if err != nil {
+		return "", err
+	}
+	if controlled {
+		_ = ts.AuditControlDenial(ctx, taskID, "mainagent-unadapted")
+		return "", deniedControlledRun()
+	}
+
 	tsx := NewToolSet(ts, "human")
 	tsx.SetFindingRecorder(m.findingRecorder)
 	if as != nil {

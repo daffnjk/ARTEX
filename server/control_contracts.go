@@ -72,7 +72,12 @@ func (s *Server) controlContractChange(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, 400, "revocation does not accept a contract")
 			return
 		}
-		epoch, err := pg.RevokeControlContract(r.Context(), id, input.ExpectedEpoch, actor, input.Reason)
+		var epoch int64
+		err := s.controlGate().RevokeTask(r.Context(), control.TaskID(id), func(ctx context.Context) error {
+			var revokeErr error
+			epoch, revokeErr = pg.RevokeControlContract(ctx, id, input.ExpectedEpoch, actor, input.Reason)
+			return revokeErr
+		})
 		if err != nil {
 			writeErr(w, 409, err.Error())
 			return
@@ -89,5 +94,7 @@ func (s *Server) controlContractChange(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 409, err.Error())
 		return
 	}
+	s.controlGate().ResumeTask(control.TaskID(id))
+	s.invalidateTaskAgents()
 	writeJSON(w, 200, out)
 }
