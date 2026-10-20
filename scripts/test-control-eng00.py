@@ -59,7 +59,7 @@ def main():
     paths = subprocess.check_output(['git', 'ls-files', '-c', '-o', '--exclude-standard'], cwd=ROOT, text=True).splitlines()
     hashes = {p: hashlib.sha256((ROOT / p).read_bytes()).hexdigest()
               for p in sorted(set(paths)) if (ROOT / p).is_file() and
-              not p.startswith('docs/') and (Path(p).suffix in ('.go', '.py', '.sh', '.json', '.sql', '.mod', '.sum', '.yml') or p == 'go.mod')}
+              not p.startswith('docs/')}
     (out / 'source.json').write_text(json.dumps({
         'head': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
         'files_sha256': hashes,

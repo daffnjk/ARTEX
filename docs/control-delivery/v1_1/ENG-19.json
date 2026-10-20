@@ -1,0 +1,36 @@
+{
+  "task_id": "ENG-19",
+  "status": "verified_local",
+  "review": "needs_independent_review",
+  "code_tree_sha256": "d596a9792e9c83325f27be191eebc11a227742ffab95704478f5286f1bafb50d",
+  "required": {
+    "status": "PASS",
+    "required_count": 2,
+    "event_count": 198,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "regression": {
+    "status": "PASS",
+    "required_count": 109,
+    "event_count": 1285,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "raw_receipts": "reports/ENG-19/runs/02",
+  "log_hashes": {
+    "required.jsonl": "c3533359c0f9c0407691fd25333e71a3cd1b724fde808f0f55eafb1734a28dbb",
+    "regression.jsonl": "953da65345b2397a063ab5400c0473f7b419357a0465063678b5cdd3b084922a",
+    "required.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "regression.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "limits": [
+    "Not final aggregate acceptance; independent review deferred",
+    "No production or real target execution"
+  ],
+  "notes": [
+    "2 mandatory roots + 109 affected regressions PASS; no broader runtime toggles. Real-model trial NOT_RUN, no approved endpoint/model/budget; release READY_FOR_APPROVAL. Final aggregate pending."
+  ]
+}

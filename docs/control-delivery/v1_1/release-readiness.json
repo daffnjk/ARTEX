@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "release_status": "READY_FOR_APPROVAL",
+  "engineering_status": "FINAL_VALIDATION_PENDING",
+  "independent_review": "needs_independent_review",
+  "real_model_trials": {
+    "status": "NOT_RUN",
+    "reason": "No explicitly approved endpoint/model version/budget for real model trials",
+    "approved_endpoints": []
+  },
+  "deployment": "NOT_AUTHORIZED_NOT_RUN",
+  "open_matrix": [
+    {
+      "adapter": "host_http_v1",
+      "method": "http.get",
+      "version": "1",
+      "target": "explicitly contracted localhost/loopback only",
+      "identity": "anonymous",
+      "status": "LOCAL_SYNTHETIC_VALIDATED_PENDING_FINAL_AGGREGATE"
+    },
+    {
+      "adapter": "Shell/browser/MCP/custom/background",
+      "method": "all",
+      "version": "all",
+      "target": "all",
+      "status": "CLOSED"
+    },
+    {
+      "adapter": "real model provider/reviewer",
+      "model_versions": [],
+      "target": "none approved",
+      "status": "NOT_RUN_NOT_RELEASE_APPROVED"
+    }
+  ],
+  "optional_policy": {
+    "scorer": "proxy-v1 shadow only, no dispatch",
+    "reviewer": "same_host_advisory, no authority",
+    "rollback": "omit optional invocations; all mandatory guards remain"
+  },
+  "cost_comparison": {
+    "ground_truth": "fixed synthetic byte digest and HTTP status",
+    "scripted_model": "scripted-e2e-v1 and adversarial-script-v1, not paid model",
+    "real_model_requests": 0,
+    "real_model_cost": "NOT_APPLICABLE_NO_TRIAL",
+    "token_cost": "request bytes plus output cap estimated; missing usage retains reservation",
+    "physical_http_cost": "per-attempt requests/response_bytes and unknown reservations in test ledger",
+    "quality_benefit": "NOT_ESTABLISHED for real models; no recall or EIG claim"
+  },
+  "limits": [
+    "No independent integration/release review",
+    "No real target tests or production migration/deploy",
+    "Control archive keeps hot audit and cold package; no automatic purge/space reclamation",
+    "Restored history quarantined; fresh plan and approval required",
+    "Mechanical body SHA256 criterion only; business criteria require manual review",
+    "Local cancellation confirms local resource closure only"
+  ]
+}

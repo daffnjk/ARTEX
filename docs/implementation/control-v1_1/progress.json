@@ -161,10 +161,12 @@
       "review": "needs_independent_review"
     },
     "ENG-19": {
-      "status": "pending",
-      "attempts": 0,
-      "evidence": [],
-      "review": "not_started"
+      "status": "verified_local",
+      "attempts": 2,
+      "evidence": [
+        "reports/ENG-19/result.json"
+      ],
+      "review": "needs_independent_review"
     }
   }
 }
