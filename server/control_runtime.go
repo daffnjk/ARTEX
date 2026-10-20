@@ -110,7 +110,7 @@ func (s *Server) controlledWorkerTools(ctx context.Context, ri agent.RunInfo) ([
 			bound.LeaseEpoch = attempt.Epoch
 			bound.ParentJobID = fmt.Sprint(ri.IntentID)
 			ctx = agent.WithRunInfo(ctx, bound)
-			result, runErr := execution.NewHTTPAdapter(s.m.pg, s.controlGate(), nil, nil).Run(ctx, record.TaskID, record.ID)
+			result, runErr := execution.NewHTTPAdapter(&leasedExecutionPolicy{pg: s.m.pg, attempt: attempt}, s.controlGate(), nil, nil).Run(ctx, record.TaskID, record.ID)
 			if result.ContextVersion == "" {
 				result.ContextVersion = proposal.ContextVersion
 			}

@@ -11,6 +11,7 @@ import (
 type supervisedRun struct {
 	task   control.TaskID
 	cancel context.CancelFunc
+	done   chan struct{}
 }
 
 // Supervisor serializes local request-start permission with operator revocation.
@@ -50,7 +51,8 @@ func (s *Supervisor) start(ctx context.Context, source GrantChecker, task contro
 		return ctx, func() {}, err
 	}
 	ctx, cancel := context.WithCancel(ctx)
-	s.active[id] = supervisedRun{task, cancel}
+	done := make(chan struct{})
+	s.active[id] = supervisedRun{task, cancel, done}
 	go func() {
 		ticker := time.NewTicker(25 * time.Millisecond)
 		defer ticker.Stop()
@@ -69,7 +71,8 @@ func (s *Supervisor) start(ctx context.Context, source GrantChecker, task contro
 			}
 		}
 	}()
-	stop := func() { cancel(); s.mu.Lock(); delete(s.active, id); s.mu.Unlock() }
+	var once sync.Once
+	stop := func() { once.Do(func() { cancel(); s.mu.Lock(); delete(s.active, id); close(done); s.mu.Unlock() }) }
 	return ctx, stop, nil
 }
 func (s *Supervisor) RevokeTask(ctx context.Context, task control.TaskID, commit func(context.Context) error) error {
@@ -90,4 +93,20 @@ func (s *Supervisor) ResumeTask(task control.TaskID) {
 	s.mu.Lock()
 	delete(s.blocked, task)
 	s.mu.Unlock()
+}
+
+func (s *Supervisor) CancelRun(ctx context.Context, id control.ExecutionID) bool {
+	s.mu.Lock()
+	run, ok := s.active[id]
+	s.mu.Unlock()
+	if !ok {
+		return false
+	}
+	run.cancel()
+	select {
+	case <-run.done:
+		return true
+	case <-ctx.Done():
+		return false
+	}
 }

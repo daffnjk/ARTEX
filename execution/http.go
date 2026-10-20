@@ -132,6 +132,7 @@ func (a *HTTPAdapter) Run(ctx context.Context, task control.TaskID, id control.E
 			return result, e
 		}
 		request.Header.Set("Accept", "application/json")
+		request.Header.Set("X-ARTEX-Execution-ID", string(id))
 		request.Header.Set("User-Agent", "ARTEX-local-fixture/1")
 		if err = a.supervisor.before(ctx, a.source, task, id); err != nil {
 			transport.CloseIdleConnections()
@@ -175,7 +176,7 @@ func (a *HTTPAdapter) Run(ctx context.Context, task control.TaskID, id control.E
 			continue
 		}
 		result.Complete = true
-		result.Outcome = control.Outcome{Run: control.RunSucceeded, Effect: control.EffectNotApplicable, Cleanup: control.CleanupConfirmed}
+		result.Outcome = control.Outcome{Run: control.RunSucceeded, Effect: control.EffectUnknown, Cleanup: control.CleanupConfirmed}
 		return result, nil
 	}
 	return result, control.UnboundedEffect

@@ -1712,3 +1712,4 @@ BEGIN
 END $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS trg_control_asset_boundary ON task_asset_links;
 CREATE TRIGGER trg_control_asset_boundary AFTER INSERT OR UPDATE ON task_asset_links FOR EACH ROW EXECUTE FUNCTION remember_control_asset_boundary();
+ALTER TABLE action_executions ADD COLUMN IF NOT EXISTS cancel_requested BOOLEAN NOT NULL DEFAULT false;

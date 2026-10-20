@@ -40,7 +40,7 @@ func (p *controlledWorkerProvider) Complete(_ context.Context, req llm.Completio
 func (p *controlledWorkerProvider) Stream(context.Context, llm.CompletionRequest) iter.Seq2[llm.StreamEvent, error] {
 	panic("fixture uses complete only")
 }
-func workerControlFixture(t *testing.T, url string) (*Server, *db.Task, *db.ExplorationStore, *db.Node, control.ActionProposal) {
+func workerControlFixture(t *testing.T, url string, options ...func(*control.Contract)) (*Server, *db.Task, *db.ExplorationStore, *db.Node, control.ActionProposal) {
 	t.Helper()
 	dsn := os.Getenv("ARTEX_TEST_PG_DSN")
 	if dsn == "" || dsn != os.Getenv("ARTEX_PG_DSN") {
@@ -65,6 +65,9 @@ func workerControlFixture(t *testing.T, url string) (*Server, *db.Task, *db.Expl
 		t.Fatal(err)
 	}
 	c := control.Contract{Mode: control.ModeDirect, Methods: []control.MethodRef{{ID: "http.get", Version: "1"}}, Targets: []control.ScopeRule{{Kind: "exact_host", Value: target.Host, Ports: []int{target.Port}}}, IdentityRefs: []string{"anonymous"}, DataScope: []string{"synthetic"}, Budgets: []control.BudgetLimit{{Dimension: "requests", Limit: 10, CloseReserve: 1, Measurement: "exact"}, {Dimension: "response_bytes", Limit: 1048576, Measurement: "exact"}, {Dimension: "concurrency", Limit: 1, Measurement: "exact"}}, ExpiresAt: time.Now().Add(time.Hour), AcceptanceVersion: "synthetic-1"}
+	for _, option := range options {
+		option(&c)
+	}
 	if _, err := d.ApproveControlContract(t.Context(), task.ID, 0, c, "admin:fixture"); err != nil {
 		t.Fatal(err)
 	}

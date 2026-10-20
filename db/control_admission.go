@@ -43,6 +43,10 @@ func (d *DB) AdmitAndReserve(ctx context.Context, taskID control.TaskID, p contr
 		return none, err
 	}
 	p.Target = target
+	if p.IdentityRef == nil {
+		anonymous := "anonymous"
+		p.IdentityRef = &anonymous
+	}
 	digest, err := actionHash(p)
 	if err != nil {
 		return none, err
@@ -150,8 +154,33 @@ func (d *DB) AdmitAndReserve(ctx context.Context, taskID control.TaskID, p contr
 	if inFlight {
 		return none, control.AlreadyRunning
 	}
+	attribution := control.CallAttributionFrom(ctx)
+	closing := attribution.Role == "reconcile" && attribution.TaskID == taskID
+	var unresolved bool
+	if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM action_executions WHERE task_id=$1 AND state='lost' AND effect_status='unknown')`, int64(taskID)).Scan(&unresolved); err != nil {
+		return none, err
+	}
+	if unresolved && !closing {
+		return none, control.EffectUncertain
+	}
+	var priorState string
+	err = tx.QueryRowContext(ctx, `SELECT state FROM action_executions WHERE task_id=$1 AND semantic_key=$2 ORDER BY created_at DESC LIMIT 1`, int64(taskID), semantic).Scan(&priorState)
+	if err == nil {
+		return none, control.ResultAvailable
+	}
+	if err != sql.ErrNoRows {
+		return none, err
+	}
 	id := control.ExecutionID(uuid.NewString())
-	if err = reserveControlBudgetTx(ctx, tx, int64(taskID), string(id), "worker:"+string(id), map[string]int64{"requests": execution.HTTPMaxRequests, "response_bytes": execution.HTTPMaxRequests * execution.HTTPMaxResponseBytes, "concurrency": 1}, false); err != nil {
+	role := "worker"
+	if a := control.CallAttributionFrom(ctx); a.Role == "reconcile" {
+		if a.TaskID != taskID {
+			return none, control.LineageMismatch
+		}
+		role = "reconcile"
+		closing = true
+	}
+	if err = reserveControlBudgetTx(ctx, tx, int64(taskID), string(id), role+":"+string(id), map[string]int64{"requests": execution.HTTPMaxRequests, "response_bytes": execution.HTTPMaxRequests * execution.HTTPMaxResponseBytes, "concurrency": 1}, closing); err != nil {
 		return none, err
 	}
 	raw, err := json.Marshal(p)
@@ -177,17 +206,17 @@ func (d *DB) AdmitAndReserve(ctx context.Context, taskID control.TaskID, p contr
 }
 func (d *DB) CheckExecutionGrant(ctx context.Context, taskID control.TaskID, id control.ExecutionID) error {
 	var currentVersion, currentEpoch, version, epoch int64
-	var revoked bool
+	var revoked, cancelRequested bool
 	var phase, state, contextVersion, actionContext, status string
 	var contractExpiry, grantExpiry time.Time
-	err := d.QueryRowContext(ctx, `SELECT t.contract_version,t.control_epoch,t.control_revoked,t.control_phase,t.control_context_version,t.status,e.contract_version,e.control_epoch,e.context_version,e.grant_expires,e.state,c.expires_at FROM tasks t JOIN action_executions e ON e.task_id=t.id JOIN task_control_contracts c ON c.task_id=t.id AND c.version=e.contract_version WHERE t.id=$1 AND e.id=$2 AND t.deleted_at IS NULL`, int64(taskID), string(id)).Scan(&currentVersion, &currentEpoch, &revoked, &phase, &contextVersion, &status, &version, &epoch, &actionContext, &grantExpiry, &state, &contractExpiry)
+	err := d.QueryRowContext(ctx, `SELECT t.contract_version,t.control_epoch,t.control_revoked,t.control_phase,t.control_context_version,t.status,e.contract_version,e.control_epoch,e.context_version,e.grant_expires,e.state,e.cancel_requested,c.expires_at FROM tasks t JOIN action_executions e ON e.task_id=t.id JOIN task_control_contracts c ON c.task_id=t.id AND c.version=e.contract_version WHERE t.id=$1 AND e.id=$2 AND t.deleted_at IS NULL`, int64(taskID), string(id)).Scan(&currentVersion, &currentEpoch, &revoked, &phase, &contextVersion, &status, &version, &epoch, &actionContext, &grantExpiry, &state, &cancelRequested, &contractExpiry)
 	if err == sql.ErrNoRows {
 		return control.LineageMismatch
 	}
 	if err != nil {
 		return err
 	}
-	if revoked || phase != "accepting" || status == "done" || status == "failed" || status == "timeout" || currentVersion != version || currentEpoch != epoch {
+	if revoked || cancelRequested || phase != "accepting" || status == "done" || status == "failed" || status == "timeout" || currentVersion != version || currentEpoch != epoch {
 		return control.ContractRevoked
 	}
 	if contextVersion != actionContext {

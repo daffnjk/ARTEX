@@ -40,11 +40,12 @@ var BuildVersion = "dev"
 // Server exposes the ARTEX backend over a JSON HTTP API for the shadcn/ui
 // frontend.
 type Server struct {
-	controlSupervisor *execution.Supervisor
-	controlInit       sync.Once
-	m                 *Manager
-	engine            *Engine
-	ctx               context.Context
+	controlSupervisor   *execution.Supervisor
+	controlInit         sync.Once
+	controlRecoveryOnce sync.Once
+	m                   *Manager
+	engine              *Engine
+	ctx                 context.Context
 
 	skillDir string // root directory for skill subdirectories
 	jwtKey   []byte // HS256 signing key loaded from / generated into dataDir/jwt.key
@@ -259,6 +260,7 @@ func New(ctx context.Context, m *Manager, skillDir string, dataDir string, keyDi
 	go s.reconcileConcurrency()
 	s.startTaskArchiveWorker()
 	s.wireInterceptReviewer() // LLM 兜底审批:未命中拦截规则的命令交给模型判定
+	s.startControlRecovery(ctx)
 	return s
 }
 
@@ -269,6 +271,19 @@ func (s *Server) restoreTaskRuntimes() {
 	// reload tasks persisted on disk so the task list survives a restart, and
 	// restore persisted paused state (so a task paused before restart stays paused).
 	for _, t := range m.LoadExisting() {
+		if number, err := parseTaskID(t.ID); err == nil {
+			mode, modeErr := m.pg.ControlMode(s.ctx, number)
+			if modeErr != nil {
+				log.Printf("[control] task %s restore binding unavailable; dispatch disabled", t.ID)
+				continue
+			}
+			if mode != "legacy" {
+				if err := m.pg.SuspendControlTaskOnRestore(s.ctx, number); err != nil {
+					log.Printf("[control] task %s suspension failed; dispatch disabled", t.ID)
+				}
+				continue
+			}
+		}
 		lifecycle := t.lifecycleSnapshot()
 		// clear stale 'running' intents from a prior crash/restart (no live worker
 		// owns them) so they re-claim instead of spinning forever in the UI.
@@ -289,6 +304,12 @@ func (s *Server) restoreTaskRuntimes() {
 	// occupants without live loops, which could permanently block the persistent
 	// FIFO. Paused loops remain idle; queued tasks are admitted below as slots allow.
 	for _, t := range m.List() {
+		if number, err := parseTaskID(t.ID); err == nil {
+			mode, readErr := m.pg.ControlMode(s.ctx, number)
+			if readErr != nil || mode != "legacy" {
+				continue
+			}
+		}
 		lifecycle := t.lifecycleSnapshot()
 		if !lifecycle.Queued && !isTerminalStatus(lifecycle.Status) {
 			s.engine.Run(s.ctx, t)

@@ -45,7 +45,7 @@ func (d *DB) ClaimControlExecution(ctx context.Context, taskID control.TaskID, i
 	if !owned {
 		return out, control.LineageMismatch
 	}
-	out = execution.Attempt{ID: control.AttemptID(uuid.NewString()), ExecutionID: id, TaskID: taskID, IntentID: intentID, Epoch: 1, Owner: owner, Expires: record.GrantExpires}
+	out = execution.Attempt{ID: control.AttemptID(uuid.NewString()), ExecutionID: id, TaskID: taskID, IntentID: intentID, Epoch: 1, Owner: owner, Expires: time.Now().UTC().Add(30 * time.Second)}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO execution_attempts(id,execution_id,attempt_no,lease_epoch,lease_owner,lease_expires,intent_id) VALUES($1,$2,1,1,$3,$4,$5)`, string(out.ID), string(id), owner, out.Expires, intentID); err != nil {
 		return out, err
 	}
@@ -79,9 +79,11 @@ func (d *DB) CommitControlHTTPResult(ctx context.Context, attempt execution.Atte
 		return err
 	}
 	var epoch int64
+	var leaseExpires time.Time
+	var cancelRequested bool
 	var owner, state, contextVersion string
 	var prior sql.NullString
-	err = tx.QueryRowContext(ctx, `SELECT a.lease_epoch,a.lease_owner,a.result_kind,e.context_version,e.result_digest FROM execution_attempts a JOIN action_executions e ON e.id=a.execution_id WHERE a.id=$1 AND e.id=$2 AND e.task_id=$3 FOR UPDATE OF e,a`, string(attempt.ID), string(attempt.ExecutionID), int64(attempt.TaskID)).Scan(&epoch, &owner, &state, &contextVersion, &prior)
+	err = tx.QueryRowContext(ctx, `SELECT a.lease_epoch,a.lease_owner,a.result_kind,e.context_version,e.result_digest,a.lease_expires,e.cancel_requested FROM execution_attempts a JOIN action_executions e ON e.id=a.execution_id WHERE a.id=$1 AND e.id=$2 AND e.task_id=$3 FOR UPDATE OF e,a`, string(attempt.ID), string(attempt.ExecutionID), int64(attempt.TaskID)).Scan(&epoch, &owner, &state, &contextVersion, &prior, &leaseExpires, &cancelRequested)
 	if err != nil {
 		return err
 	}
@@ -97,12 +99,15 @@ func (d *DB) CommitControlHTTPResult(ctx context.Context, attempt execution.Atte
 		}
 		return nil
 	}
-	if state != "running" {
+	if state != "running" || !leaseExpires.After(time.Now()) {
 		return control.StaleLease
 	}
 	state = "failed"
 	if result.Complete && result.Outcome.Run == control.RunSucceeded {
 		state = "succeeded"
+	}
+	if cancelRequested {
+		state = "cancelled"
 	}
 	zero := int64(0)
 	if err = settleControlBudgetTx(ctx, tx, int64(attempt.TaskID), string(attempt.ExecutionID), map[string]*int64{"requests": &result.Requests, "response_bytes": &result.ResponseBytes, "concurrency": &zero}); err != nil {

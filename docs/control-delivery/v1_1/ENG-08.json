@@ -1,0 +1,38 @@
+{
+  "task_id": "ENG-08",
+  "status": "verified_local",
+  "review": "needs_independent_review",
+  "code_tree_sha256": "de5b64f08a5de3c34d68c959ab01bf9324b0547c031ed09fef56bf6fc429a83f",
+  "required": {
+    "status": "PASS",
+    "required_count": 5,
+    "event_count": 215,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "regression": {
+    "status": "PASS",
+    "required_count": 34,
+    "event_count": 226,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "raw_receipts": "reports/ENG-08/runs/02",
+  "log_hashes": {
+    "required.jsonl": "96b2af5f1882909681487c8e1e9b654f94c7209bb4fe0834208fa0598b5b6c32",
+    "regression.jsonl": "589b203ee6fec5cd8422c52368128119bf713b6e420f3e0036bc8d7b510280f4",
+    "required.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "regression.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "limits": [
+    "Not final aggregate acceptance; independent review deferred",
+    "No production or real target execution"
+  ],
+  "notes": [
+    "Five required tests pass plus restart-no-replay assertion;34 existing regressions pass",
+    "Read-only local counter reconciliation preserves one effect and cleanup uncertainty",
+    "No unknown refund or lease-expiry resubmit; server restart suspends old controlled grants"
+  ]
+}
