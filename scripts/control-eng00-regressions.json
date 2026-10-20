@@ -225,6 +225,42 @@
     {
       "package": "github.com/Autumn-27/artex/db",
       "name": "TestTaskPlanPGArchivePurgeRemovesPlan"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlEffectThenCrashReconcile"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlAgentCannotApproveContract"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlRealWorkerUsesGrant"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlUnapprovedToolUnavailable"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlBackgroundPathsEnforced"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlMissingTaskContextDenied"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlModelCannotForgeObservation"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlLLMRetryBudgeted"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/server",
+      "name": "TestControlCloseReserveProtected"
     }
   ]
 }

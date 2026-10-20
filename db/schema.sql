@@ -1762,3 +1762,28 @@ BEGIN
 END $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS trg_control_claim_immutable ON control_claims;
 CREATE TRIGGER trg_control_claim_immutable BEFORE UPDATE ON control_claims FOR EACH ROW EXECUTE FUNCTION forbid_control_claim_rewrite();
+
+ALTER TABLE action_executions ADD COLUMN IF NOT EXISTS base_key TEXT NOT NULL DEFAULT '';
+CREATE UNIQUE INDEX IF NOT EXISTS uq_control_base_inflight ON action_executions(task_id,base_key) WHERE base_key<>'' AND state IN ('queued','running');
+CREATE TABLE IF NOT EXISTS control_retest_approvals (
+ id TEXT PRIMARY KEY,task_id BIGINT NOT NULL,prior_execution_id TEXT NOT NULL REFERENCES action_executions(id),
+ base_key TEXT NOT NULL,context_version TEXT NOT NULL,control_epoch BIGINT NOT NULL,
+ reason TEXT NOT NULL CHECK(reason IN ('evidence_invalidated','environment_changed','independent_confirmation')),
+ actor TEXT NOT NULL,expires_at TIMESTAMPTZ NOT NULL,consumed_execution_id TEXT UNIQUE,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE OR REPLACE FUNCTION forbid_control_retest_rewrite() RETURNS trigger AS $$
+BEGIN
+ IF ROW(NEW.id,NEW.task_id,NEW.prior_execution_id,NEW.base_key,NEW.context_version,NEW.control_epoch,NEW.reason,NEW.actor,NEW.expires_at)
+ IS DISTINCT FROM ROW(OLD.id,OLD.task_id,OLD.prior_execution_id,OLD.base_key,OLD.context_version,OLD.control_epoch,OLD.reason,OLD.actor,OLD.expires_at)
+ OR (OLD.consumed_execution_id IS NOT NULL AND NEW.consumed_execution_id IS DISTINCT FROM OLD.consumed_execution_id)
+ THEN RAISE EXCEPTION 'retest approval immutable except first consumption'; END IF; RETURN NEW;
+END $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_control_retest_immutable ON control_retest_approvals;
+CREATE TRIGGER trg_control_retest_immutable BEFORE UPDATE ON control_retest_approvals FOR EACH ROW EXECUTE FUNCTION forbid_control_retest_rewrite();
+CREATE OR REPLACE FUNCTION forbid_control_base_rewrite() RETURNS trigger AS $$
+BEGIN IF OLD.base_key<>'' AND NEW.base_key IS DISTINCT FROM OLD.base_key THEN RAISE EXCEPTION 'action base key immutable'; END IF; RETURN NEW; END $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_control_base_immutable ON action_executions;
+CREATE TRIGGER trg_control_base_immutable BEFORE UPDATE ON action_executions FOR EACH ROW EXECUTE FUNCTION forbid_control_base_rewrite();
+DROP TRIGGER IF EXISTS trg_control_retest_no_delete ON control_retest_approvals;
+CREATE TRIGGER trg_control_retest_no_delete BEFORE DELETE ON control_retest_approvals FOR EACH ROW EXECUTE FUNCTION forbid_mutation();

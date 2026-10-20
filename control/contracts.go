@@ -187,6 +187,7 @@ type ActionProposal struct {
 	StepID           *int64  `json:"step_id,omitempty"`
 	RequiredClaimIDs []int64 `json:"required_claim_ids,omitempty"`
 	IdempotencyKey   string  `json:"idempotency_key"`
+	RetestRef        *string `json:"retest_ref,omitempty"`
 }
 
 func bounded(s string, n int) bool { return strings.TrimSpace(s) != "" && len(s) <= n }
@@ -196,6 +197,9 @@ func (p ActionProposal) Validate() error {
 	}
 	if (p.Target.Scheme != "http" && p.Target.Scheme != "https") || !bounded(p.Target.Host, 253) || p.Target.Port < 1 || p.Target.Port > 65535 || !strings.HasPrefix(p.Target.Path, "/") || len(p.Target.Path) > 2048 {
 		return errors.New("invalid structured target")
+	}
+	if p.RetestRef != nil && !bounded(*p.RetestRef, 128) {
+		return errors.New("invalid retest reference")
 	}
 	if p.IdentityRef != nil && !bounded(*p.IdentityRef, 128) {
 		return errors.New("invalid identity reference")

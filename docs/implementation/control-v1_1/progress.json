@@ -105,10 +105,12 @@
       "review": "needs_independent_review"
     },
     "ENG-12": {
-      "status": "pending",
-      "attempts": 0,
-      "evidence": [],
-      "review": "not_started"
+      "status": "verified_local",
+      "attempts": 3,
+      "evidence": [
+        "reports/ENG-12/result.json"
+      ],
+      "review": "needs_independent_review"
     },
     "ENG-13": {
       "status": "pending",

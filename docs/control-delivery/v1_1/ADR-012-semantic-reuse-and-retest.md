@@ -1,0 +1,9 @@
+# ENG-12: separate wire action identity from request replay
+
+For the only enabled method, bounded anonymous HTTP GET, the wire purpose is a fixed read. Canonical method/version/target/identity define a base action key; relevant host context defines the semantic result revision. Narrative wording, nonce, plan ID and experiment ID cannot create a second wire action. Required claims still gate admission but do not change the physical action. Future methods with additional wire parameters must extend this signature before being enabled.
+
+The existing idempotency key remains digest bound. A duplicate returns its original execution plus typed ALREADY_RUNNING/RESULT_AVAILABLE feedback, preserving old callers' error checks. The Worker exposes that reference and does not claim it again. Task-root serialization and a partial database unique index enforce one in-flight base action, even across context changes. Historical keys are backfilled in bounded task-local transactions; conflicting historical in-flight actions fail closed, never discarded.
+
+A retest requires a separate host administrator approval bound to task/base/context/epoch, expiring after five minutes, consumed once in the same reservation transaction. Evidence withdrawal and environment change are checked against stored history. Independent confirmation is an explicit administrator decision, never model narrative. Lost unknown effects cannot be resubmitted. Every actual retest reserves the normal budget. Approval storage retains immutable provenance and first consumption; no cross-task negative cache or vulnerability-class skip rule is added.
+
+Migration is additive. Rollback keeps uniqueness and consumed approvals, disables further retests and preserves prior results. Reused results retain their original experiment lineage; reuse cannot relabel them for a different experiment. Independent review pending.

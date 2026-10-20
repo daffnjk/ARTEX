@@ -51,13 +51,11 @@ func (d *DB) AdmitAndReserve(ctx context.Context, taskID control.TaskID, p contr
 	if err != nil {
 		return none, err
 	}
-	semantic, err := actionHash(struct {
-		Method, Version, Context string
-		Target                   control.Target
-		Identity                 *string
-		Experiment, Step         *int64
-		Claims                   []int64
-	}{p.MethodID, p.MethodVersion, p.ContextVersion, p.Target, p.IdentityRef, p.ExperimentID, p.StepID, p.RequiredClaimIDs})
+	baseKey, err := controlBaseActionKey(p)
+	if err != nil {
+		return none, err
+	}
+	semantic, err := actionHash(struct{ Base, Context string }{baseKey, p.ContextVersion})
 	if err != nil {
 		return none, err
 	}
@@ -71,6 +69,9 @@ func (d *DB) AdmitAndReserve(ctx context.Context, taskID control.TaskID, p contr
 	var revoked bool
 	err = tx.QueryRowContext(ctx, `SELECT exploration_id,contract_version,control_epoch,control_phase,control_revoked,status,control_context_version FROM tasks WHERE id=$1 AND deleted_at IS NULL FOR UPDATE`, int64(taskID)).Scan(&expID, &version, &epoch, &phase, &revoked, &status, &contextVersion)
 	if err != nil {
+		return none, err
+	}
+	if err = backfillControlBaseKeys(ctx, tx, int64(taskID)); err != nil {
 		return none, err
 	}
 	old, err := scanControlExecution(tx.QueryRowContext(ctx, `SELECT `+controlExecutionColumns+` FROM action_executions WHERE task_id=$1 AND idempotency_key=$2`, int64(taskID), p.IdempotencyKey))
@@ -145,12 +146,12 @@ func (d *DB) AdmitAndReserve(ctx context.Context, taskID control.TaskID, p contr
 		}
 	}
 
-	var inFlight bool
-	if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM action_executions WHERE task_id=$1 AND semantic_key=$2 AND state IN ('queued','running'))`, int64(taskID), semantic).Scan(&inFlight); err != nil {
-		return none, err
+	existing, existingErr := scanControlExecution(tx.QueryRowContext(ctx, `SELECT `+controlExecutionColumns+` FROM action_executions WHERE task_id=$1 AND base_key=$2 AND state IN ('queued','running') ORDER BY created_at DESC LIMIT 1`, int64(taskID), baseKey))
+	if existingErr == nil {
+		return existing, control.AlreadyRunning
 	}
-	if inFlight {
-		return none, control.AlreadyRunning
+	if existingErr != sql.ErrNoRows {
+		return none, existingErr
 	}
 	attribution := control.CallAttributionFrom(ctx)
 	closing := attribution.Role == "reconcile" && attribution.TaskID == taskID
@@ -161,15 +162,22 @@ func (d *DB) AdmitAndReserve(ctx context.Context, taskID control.TaskID, p contr
 	if unresolved && !closing {
 		return none, control.EffectUncertain
 	}
-	var priorState string
-	err = tx.QueryRowContext(ctx, `SELECT state FROM action_executions WHERE task_id=$1 AND semantic_key=$2 ORDER BY created_at DESC LIMIT 1`, int64(taskID), semantic).Scan(&priorState)
-	if err == nil {
-		return none, control.ResultAvailable
+	prior, priorErr := scanControlExecution(tx.QueryRowContext(ctx, `SELECT `+controlExecutionColumns+` FROM action_executions WHERE task_id=$1 AND base_key=$2 ORDER BY created_at DESC LIMIT 1`, int64(taskID), baseKey))
+	if priorErr != nil && priorErr != sql.ErrNoRows {
+		return none, priorErr
 	}
-	if err != sql.ErrNoRows {
-		return none, err
+	if priorErr == nil && p.RetestRef == nil {
+		return prior, control.ResultAvailable
+	}
+	if priorErr == sql.ErrNoRows && p.RetestRef != nil {
+		return none, control.PreconditionInvalid
 	}
 	id := control.ExecutionID(uuid.NewString())
+	if priorErr == nil {
+		if err = consumeControlRetest(ctx, tx, int64(taskID), p, baseKey, epoch, id); err != nil {
+			return none, err
+		}
+	}
 	role := "worker"
 	if a := control.CallAttributionFrom(ctx); a.Role == "reconcile" {
 		if a.TaskID != taskID {
@@ -189,7 +197,7 @@ func (d *DB) AdmitAndReserve(ctx context.Context, taskID control.TaskID, p contr
 	if expires.Before(grantExpires) {
 		grantExpires = expires
 	}
-	if _, err = tx.ExecContext(ctx, `INSERT INTO action_executions(id,task_id,exploration_id,action_json,digest,idempotency_key,semantic_key,contract_version,control_epoch,context_version,grant_expires) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`, string(id), int64(taskID), expID, raw, digest, p.IdempotencyKey, semantic, version, epoch, contextVersion, grantExpires); err != nil {
+	if _, err = tx.ExecContext(ctx, `INSERT INTO action_executions(id,task_id,exploration_id,action_json,digest,idempotency_key,semantic_key,contract_version,control_epoch,context_version,grant_expires,base_key) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, string(id), int64(taskID), expID, raw, digest, p.IdempotencyKey, semantic, version, epoch, contextVersion, grantExpires, baseKey); err != nil {
 		return none, err
 	}
 	payload, _ := json.Marshal(map[string]any{"execution_id": id})

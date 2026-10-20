@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/Autumn-27/artex/agent"
@@ -67,6 +68,7 @@ func (s *Server) controlledWorkerTools(ctx context.Context, ri agent.RunInfo) ([
 	for _, key := range []string{"experiment_id", "step_id"} {
 		props[key] = map[string]any{"type": "integer"}
 	}
+	props["retest_ref"] = map[string]any{"type": "string"}
 	props["identity_ref"] = map[string]any{"type": "string"}
 	props["required_claim_ids"] = map[string]any{"type": "array", "items": map[string]any{"type": "integer"}}
 	schema := map[string]any{"type": "object", "additionalProperties": false, "required": []string{"schema_version", "method_id", "method_version", "target", "purpose", "context_version", "idempotency_key"}, "properties": props}
@@ -87,6 +89,10 @@ func (s *Server) controlledWorkerTools(ctx context.Context, ri agent.RunInfo) ([
 				return actool.Errorf("invalid bounded proposal"), nil
 			}
 			record, err := s.m.pg.AdmitAndReserve(ctx, control.TaskID(ri.TaskID), proposal)
+			if (errors.Is(err, control.AlreadyRunning) || errors.Is(err, control.ResultAvailable)) && record.ID != "" {
+				view, _ := json.Marshal(map[string]any{"execution_id": record.ID, "status": record.Outcome.Run, "feedback": err.Error(), "reuse_original": true})
+				return actool.Text(string(view)), nil
+			}
 			if err != nil {
 				return actool.Errorf(err.Error()), nil
 			}
