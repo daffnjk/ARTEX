@@ -1658,3 +1658,37 @@ CREATE TABLE IF NOT EXISTS task_budget_reservations (
  actual_units BIGINT CHECK(actual_units>=0),settlement_state TEXT NOT NULL DEFAULT 'reserved',
  PRIMARY KEY(task_id,request_key,dimension)
 );
+
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS control_context_version TEXT NOT NULL DEFAULT 'initial';
+CREATE TABLE IF NOT EXISTS action_executions (
+ id TEXT PRIMARY KEY, task_id BIGINT NOT NULL,exploration_id BIGINT NOT NULL,
+ action_json JSONB NOT NULL,digest TEXT NOT NULL,idempotency_key TEXT NOT NULL,semantic_key TEXT NOT NULL,
+ contract_version BIGINT NOT NULL,control_epoch BIGINT NOT NULL,context_version TEXT NOT NULL,
+ grant_expires TIMESTAMPTZ NOT NULL,state TEXT NOT NULL DEFAULT 'queued',
+ effect_status TEXT NOT NULL DEFAULT 'unknown',cleanup_status TEXT NOT NULL DEFAULT 'not_required',
+ created_at TIMESTAMPTZ NOT NULL DEFAULT now(),UNIQUE(task_id,idempotency_key),
+ FOREIGN KEY(task_id,contract_version) REFERENCES task_control_contracts(task_id,version)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_control_action_inflight ON action_executions(task_id,semantic_key) WHERE state IN ('queued','running');
+CREATE TABLE IF NOT EXISTS execution_attempts (
+ id TEXT PRIMARY KEY,execution_id TEXT NOT NULL REFERENCES action_executions(id),attempt_no BIGINT NOT NULL,
+ lease_epoch BIGINT NOT NULL,lease_owner TEXT NOT NULL,lease_expires TIMESTAMPTZ NOT NULL,
+ started_at TIMESTAMPTZ NOT NULL DEFAULT now(),finished_at TIMESTAMPTZ,
+ result_kind TEXT NOT NULL DEFAULT 'running',effect_status TEXT NOT NULL DEFAULT 'unknown',
+ cleanup_status TEXT NOT NULL DEFAULT 'not_required',UNIQUE(execution_id,attempt_no)
+);
+CREATE TABLE IF NOT EXISTS control_outbox (
+ id BIGSERIAL PRIMARY KEY,task_id BIGINT NOT NULL,aggregate_id TEXT NOT NULL,
+ event_type TEXT NOT NULL,event_version BIGINT NOT NULL,payload JSONB NOT NULL,
+ delivered_at TIMESTAMPTZ,created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+ UNIQUE(aggregate_id,event_type,event_version)
+);
+CREATE OR REPLACE FUNCTION forbid_control_execution_rewrite() RETURNS trigger AS $$
+BEGIN
+ IF ROW(NEW.id,NEW.task_id,NEW.exploration_id,NEW.action_json,NEW.digest,NEW.idempotency_key,NEW.semantic_key,NEW.contract_version,NEW.control_epoch,NEW.context_version,NEW.grant_expires)
+ IS DISTINCT FROM ROW(OLD.id,OLD.task_id,OLD.exploration_id,OLD.action_json,OLD.digest,OLD.idempotency_key,OLD.semantic_key,OLD.contract_version,OLD.control_epoch,OLD.context_version,OLD.grant_expires)
+ THEN RAISE EXCEPTION 'control execution identity and grant are immutable'; END IF;
+ RETURN NEW;
+END $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_control_execution_immutable ON action_executions;
+CREATE TRIGGER trg_control_execution_immutable BEFORE UPDATE ON action_executions FOR EACH ROW EXECUTE FUNCTION forbid_control_execution_rewrite();
