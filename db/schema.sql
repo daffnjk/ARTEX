@@ -1615,3 +1615,31 @@ CREATE INDEX IF NOT EXISTS idx_notification_deliveries_batch
     ON notification_deliveries(batch_id) WHERE batch_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_notification_deliveries_channel
     ON notification_deliveries(channel_id, id DESC);
+
+-- Control v1.1: legacy rows remain legacy until a host-approved contract exists.
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS control_mode TEXT NOT NULL DEFAULT 'legacy';
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS contract_version BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS control_epoch BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS control_phase TEXT NOT NULL DEFAULT 'accepting';
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS control_revoked BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS control_outcome JSONB;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS control_stop_reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS control_cleanup TEXT NOT NULL DEFAULT 'not_required';
+-- Historical authority survives task deletion; no cascading deletion of approvals.
+CREATE TABLE IF NOT EXISTS task_control_contracts (
+ task_id BIGINT NOT NULL, version BIGINT NOT NULL CHECK(version>0),
+ body JSONB NOT NULL, digest TEXT NOT NULL,
+ approved_actor TEXT NOT NULL, approved_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+ expires_at TIMESTAMPTZ NOT NULL, PRIMARY KEY(task_id,version)
+);
+DROP TRIGGER IF EXISTS trg_control_contract_immutable ON task_control_contracts;
+CREATE TRIGGER trg_control_contract_immutable BEFORE UPDATE OR DELETE ON task_control_contracts
+ FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
+CREATE TABLE IF NOT EXISTS control_contract_events (
+ id BIGSERIAL PRIMARY KEY,task_id BIGINT NOT NULL,version BIGINT NOT NULL,
+ epoch BIGINT NOT NULL,event TEXT NOT NULL,reason TEXT NOT NULL,actor TEXT NOT NULL,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+DROP TRIGGER IF EXISTS trg_control_contract_event_immutable ON control_contract_events;
+CREATE TRIGGER trg_control_contract_event_immutable BEFORE UPDATE OR DELETE ON control_contract_events
+ FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
