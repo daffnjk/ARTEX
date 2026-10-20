@@ -163,9 +163,26 @@ func (d *DB) RecordControlFeedback(ctx context.Context, task control.TaskID, id 
 	if err != nil {
 		return err
 	}
-	// Generated host event identity avoids conflating separate real feedback events.
-	_, err = d.ExecContext(ctx, `INSERT INTO control_outbox(task_id,aggregate_id,event_type,event_version,payload) SELECT id,'feedback:'||id::text||':'||nextval('control_feedback_seq')::text,'control_feedback',1,$2 FROM tasks WHERE id=$1 AND control_mode<>'legacy' AND deleted_at IS NULL`, int64(task), raw)
-	return err
+
+	tx, err := d.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var root int64
+	if err = tx.QueryRowContext(ctx, `SELECT id FROM tasks WHERE id=$1 AND control_mode<>'legacy' AND deleted_at IS NULL FOR UPDATE`, int64(task)).Scan(&root); err != nil {
+		return err
+	}
+	if kind == control.FeedbackRateLimited {
+		if _, err = tx.ExecContext(ctx, `UPDATE tasks SET control_cooldown_until=GREATEST(control_cooldown_until,$2) WHERE id=$1`, int64(task), time.Now().UTC().Add(decision.Cooldown)); err != nil {
+			return err
+		}
+	}
+	// Generated host identity distinguishes actual feedback events; model cannot set the deadline.
+	if _, err = tx.ExecContext(ctx, `INSERT INTO control_outbox(task_id,aggregate_id,event_type,event_version,payload) SELECT id,'feedback:'||id::text||':'||nextval('control_feedback_seq')::text,'control_feedback',1,$2 FROM tasks WHERE id=$1`, int64(task), raw); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 func (d *DB) PrepareControlPlanningWindow(ctx context.Context, task control.TaskID) (control.PlanningWindow, error) {
 	var state control.PlanningWindow

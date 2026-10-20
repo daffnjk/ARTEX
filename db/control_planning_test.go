@@ -1,8 +1,10 @@
 package db
 
 import (
+	"errors"
 	"github.com/Autumn-27/artex/control"
 	"testing"
+	"time"
 )
 
 func TestControlScoringRespectsHardFilter(t *testing.T) {
@@ -26,5 +28,23 @@ func TestControlSamePredictionsNoDiscrimination(t *testing.T) {
 	var n int
 	if err = d.QueryRow(`SELECT count(*) FROM action_executions WHERE task_id=$1`, task.ID).Scan(&n); err != nil || n != 0 {
 		t.Fatal("shadow scoring dispatched work", n, err)
+	}
+}
+
+func TestControlCooldownFeedbackAtomic(t *testing.T) {
+	d, task, p := admissionFixture(t)
+	if err := d.RecordControlFeedback(t.Context(), control.TaskID(task.ID), "", control.FeedbackRateLimited, time.Second); err != nil {
+		t.Fatal(err)
+	}
+	var until time.Time
+	var n int
+	if err := d.QueryRow(`SELECT control_cooldown_until FROM tasks WHERE id=$1`, task.ID).Scan(&until); err != nil || !until.After(time.Now()) {
+		t.Fatal("cooldown not committed", until, err)
+	}
+	if err := d.QueryRow(`SELECT count(*) FROM control_outbox WHERE task_id=$1 AND event_type='control_feedback'`, task.ID).Scan(&n); err != nil || n != 1 {
+		t.Fatal("feedback not atomic", n, err)
+	}
+	if _, err := d.AdmitAndReserve(t.Context(), control.TaskID(task.ID), p); !errors.Is(err, control.RateLimited) {
+		t.Fatal("cooldown bypassed", err)
 	}
 }

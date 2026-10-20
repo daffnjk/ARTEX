@@ -153,10 +153,12 @@
       "review": "needs_independent_review"
     },
     "ENG-18": {
-      "status": "pending",
-      "attempts": 0,
-      "evidence": [],
-      "review": "not_started"
+      "status": "verified_local",
+      "attempts": 7,
+      "evidence": [
+        "reports/ENG-18/result.json"
+      ],
+      "review": "needs_independent_review"
     },
     "ENG-19": {
       "status": "pending",

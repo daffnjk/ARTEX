@@ -433,6 +433,10 @@
     {
       "package": "github.com/Autumn-27/artex/server",
       "name": "TestTaskArchiveAPIQueueListAndLimits"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestControlCooldownFeedbackAtomic"
     }
   ]
 }

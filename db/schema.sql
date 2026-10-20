@@ -1809,3 +1809,5 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_control_review_session ON hypothesis_review
 CREATE TABLE IF NOT EXISTS control_restored_history (task_id BIGINT PRIMARY KEY,archive_id BIGINT NOT NULL UNIQUE,source_task_id BIGINT NOT NULL,history JSONB NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT now());
 DROP TRIGGER IF EXISTS trg_control_restored_history ON control_restored_history;
 CREATE TRIGGER trg_control_restored_history BEFORE UPDATE OR DELETE ON control_restored_history FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
+
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS control_cooldown_until TIMESTAMPTZ;

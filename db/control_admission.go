@@ -67,7 +67,8 @@ func (d *DB) AdmitAndReserve(ctx context.Context, taskID control.TaskID, p contr
 	var expID, version, epoch int64
 	var phase, status, contextVersion string
 	var revoked bool
-	err = tx.QueryRowContext(ctx, `SELECT exploration_id,contract_version,control_epoch,control_phase,control_revoked,status,control_context_version FROM tasks WHERE id=$1 AND deleted_at IS NULL FOR UPDATE`, int64(taskID)).Scan(&expID, &version, &epoch, &phase, &revoked, &status, &contextVersion)
+	var cooldown sql.NullTime
+	err = tx.QueryRowContext(ctx, `SELECT exploration_id,contract_version,control_epoch,control_phase,control_revoked,status,control_context_version,control_cooldown_until FROM tasks WHERE id=$1 AND deleted_at IS NULL FOR UPDATE`, int64(taskID)).Scan(&expID, &version, &epoch, &phase, &revoked, &status, &contextVersion, &cooldown)
 	if err != nil {
 		return none, err
 	}
@@ -83,6 +84,9 @@ func (d *DB) AdmitAndReserve(ctx context.Context, taskID control.TaskID, p contr
 	}
 	if err != sql.ErrNoRows {
 		return none, err
+	}
+	if cooldown.Valid && cooldown.Time.After(time.Now()) {
+		return none, control.RateLimited
 	}
 	if revoked || phase != "accepting" || status == "done" || status == "timeout" || status == "failed" {
 		return none, control.ContractRevoked
