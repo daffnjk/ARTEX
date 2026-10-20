@@ -45,16 +45,8 @@ func (c Contract) Validate(now time.Time) error {
 		seen[key] = true
 	}
 	for _, r := range c.Targets {
-		if r.Kind != "exact_host" && r.Kind != "domain_subtree" && r.Kind != "cidr" {
-			return ScopeDenied
-		}
-		if !bounded(r.Value, 253) || len(r.Ports) == 0 || len(r.Ports) > 32 {
-			return ScopeDenied
-		}
-		for _, port := range r.Ports {
-			if port < 1 || port > 65535 {
-				return ScopeDenied
-			}
+		if err := ValidateScopeRule(r); err != nil {
+			return err
 		}
 	}
 	for _, v := range append(append([]string{}, c.IdentityRefs...), c.DataScope...) {

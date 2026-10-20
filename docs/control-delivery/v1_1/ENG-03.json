@@ -1,0 +1,37 @@
+{
+  "task_id": "ENG-03",
+  "status": "verified_local",
+  "review": "needs_independent_review",
+  "code_tree_sha256": "e6e81f910e28e3c7ac68dbfc2d5276e566d97c98eb5fd92a4259f6937f708bd9",
+  "required": {
+    "status": "PASS",
+    "required_count": 4,
+    "event_count": 60,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "regression": {
+    "status": "PASS",
+    "required_count": 17,
+    "event_count": 76,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "raw_receipts": "reports/ENG-03/runs/01",
+  "log_hashes": {
+    "required.jsonl": "7f6b6310372f06d9617016c85075f04862d8c3a50a1fd35b882929066b215f6d",
+    "regression.jsonl": "af9de46de29ef22f49d7347c51e88afaa0b0bce782f2b1cbd9d0e4238f1b873d",
+    "required.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "regression.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "limits": [
+    "Not final aggregate acceptance; independent review deferred",
+    "No production or real target execution"
+  ],
+  "notes": [
+    "5 second FuzzControlTargetRoundTrip pass, 274829 executions",
+    "Pure matching refuses ambiguous formats and unsupported scope kinds"
+  ]
+}

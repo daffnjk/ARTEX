@@ -1,0 +1,7 @@
+# ADR-003: explicit logical and connection scope
+
+Pure matching supports exact_host, domain_subtree (label boundaries, apex included) and canonical cidr, each with explicit ports. Deny always wins; unknown rule kinds invalidate the policy. Domain targets require logical host authorization AND separately authorized resolved addresses. All DNS answers must pass; an empty or mixed answer set is refused. The adapter must pin an approved IP and preserve HTTP Host/TLS identity instead of resolving again.
+
+Only http/https, canonical numeric ports, canonical IPs and ASCII DNS labels are supported. One trailing host dot and case are normalized. Userinfo, IP zones/mapped IPv6, numeric legacy IPv4 forms, backslashes, whitespace, encoded URLs, query/fragment and dot path segments are refused. URL path/resource scope rules are unsupported and fail closed, never widened. International hostnames must be supplied in ASCII A-label form; control remains stdlib-only, so raw Unicode IDNs are refused rather than passed through an implicit IDNA conversion. Existing asset/coverage IDNA parsing remains unchanged and is not an authorization port.
+
+Coverage parsers and optional intercept rules are not reused as authorization: the former intentionally aggregate root domains and the latter can be disabled. Tests include exact/subdomain/suffix boundaries, deny precedence, mixed DNS answers, host/IP separation, malformed inputs and roundtrip fuzz seeds. First execution remains restricted to synthetic loopback fixtures in ENG-06; matching alone makes no connection.
