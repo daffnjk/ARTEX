@@ -265,6 +265,114 @@
     {
       "package": "github.com/Autumn-27/artex/db",
       "name": "TestTaskStatusWriteSurfaceIsPinned"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/db",
+      "name": "TestReviewPacket"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestControlHTTPBodyHashVerifier"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestRequiresGoalReview"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestChangeProposalRequiresReviewAndReplay"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestVerifierRequiresTrustedGoalAcceptance"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestScenarioRegistryLoads"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestScenarioReplay"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestScenarioInventorySummary"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestPremiseMarkerVerifier"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestFrozenAcceptanceBinding"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestAcceptanceResolverIdentityAndValidity"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestAcceptanceChangeDiscardsVerdict"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestAcceptanceResolutionFailureAndCancellation"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestFrozenAcceptanceSourceSnapshotsAndValidates"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestFrozenAcceptanceConcurrentEvaluation"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestAcceptanceAllowsDifferentControlIdentities"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestAcceptanceMissingRegisteredRule"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestCancellationAfterLastEvidenceCannotReachVerifier"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestUnimplementedCriterionNeverConfirms"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestEvidenceFailuresCannotReachVerifier"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestMissingResolverAndEvidence"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestTrustedVerifierResults"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestRegistryVersionAndSnapshot"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestVerifierCannotMutateStoredPayload"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestPanicAndCancellationFailClosed"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestEvidenceResourceBounds"
+    },
+    {
+      "package": "github.com/Autumn-27/artex/harness",
+      "name": "TestDigestKnownValue"
     }
   ]
 }

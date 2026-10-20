@@ -128,8 +128,14 @@ func (s *Server) controlledWorkerTools(ctx context.Context, ri agent.RunInfo) ([
 			if err := s.m.pg.CommitControlHTTPResult(ctx, attempt, result); err != nil {
 				return actool.Errorf("result commit failed; execution remains recoverable"), nil
 			}
-			if _, err := s.m.pg.CaptureControlObservations(ctx, attempt); err != nil {
+			observations, captureErr := s.m.pg.CaptureControlObservations(ctx, attempt)
+			if captureErr != nil {
 				return actool.Errorf("host observation capture failed; no formal evidence is available"), nil
+			}
+			if result.Complete {
+				if evaluationErr := s.evaluateCapturedControlObservations(ctx, record.TaskID, observations); evaluationErr != nil {
+					return actool.Errorf("raw capture saved; formal evaluation unavailable; do not repeat the action"), nil
+				}
 			}
 			if runErr != nil {
 				kind := feedbackKind(runErr)

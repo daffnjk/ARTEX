@@ -1,0 +1,36 @@
+{
+  "task_id": "ENG-15",
+  "status": "verified_local",
+  "review": "needs_independent_review",
+  "code_tree_sha256": "d4e6e7910e598c90d1364302d7b4ff9435b50fea5fce991cfc00380fd7bca90b",
+  "required": {
+    "status": "PASS",
+    "required_count": 4,
+    "event_count": 318,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "regression": {
+    "status": "PASS",
+    "required_count": 93,
+    "event_count": 809,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "raw_receipts": "reports/ENG-15/runs/04",
+  "log_hashes": {
+    "required.jsonl": "1b473c6a94b57103b45d53ff9021856e0288765377343144d119934e2ec5eff5",
+    "regression.jsonl": "4a2cf52a3218f8f0045d34bf463b92a4ca23f4717b62479460f50d4228489f9b",
+    "required.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "regression.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "limits": [
+    "Not final aggregate acceptance; independent review deferred",
+    "No production or real target execution"
+  ],
+  "notes": [
+    "Four required roots plus real localhost Reviewer transport/tool-denial/budget tests;93 old and affected regression roots pass; no real model or independent trust-domain review"
+  ]
+}

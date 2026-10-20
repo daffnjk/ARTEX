@@ -22,12 +22,13 @@ type controlBudgetProvider struct {
 	pg   *db.DB
 }
 type controlCallBudget struct {
-	pg       *db.DB
-	taskID   int64
-	role     string
-	estimate int64
-	mu       sync.Mutex
-	keys     []string
+	pg          *db.DB
+	taskID      int64
+	role        string
+	parentJobID string
+	estimate    int64
+	mu          sync.Mutex
+	keys        []string
 }
 
 func (p *controlBudgetProvider) prepare(ctx context.Context, req llm.CompletionRequest) (context.Context, *controlCallBudget, context.CancelFunc, error) {
@@ -69,12 +70,18 @@ func (p *controlBudgetProvider) prepare(ctx context.Context, req llm.CompletionR
 		return ctx, nil, noop, control.UnboundedEffect
 	}
 	ctx, cancel := context.WithDeadline(ctx, active.Body.ExpiresAt)
-	state := &controlCallBudget{pg: p.pg, taskID: taskID, role: a.Role, estimate: int64(len(raw) + req.MaxTokens)}
+	state := &controlCallBudget{pg: p.pg, taskID: taskID, role: a.Role, parentJobID: agent.RunInfoFrom(ctx).ParentJobID, estimate: int64(len(raw) + req.MaxTokens)}
 	return agent.WithModelRequestGuard(ctx, state.before), state, cancel, nil
 }
 func (b *controlCallBudget) before(ctx context.Context) (context.Context, error) {
 	key := uuid.NewString()
 	attr := b.role + ":" + key
+	if b.parentJobID != "" {
+		if len(b.parentJobID) > 128 {
+			return ctx, control.LineageMismatch
+		}
+		attr = b.role + ":" + b.parentJobID + ":" + key
+	}
 	if err := b.pg.ReserveControlBudget(ctx, b.taskID, key, attr, map[string]int64{"llm_requests": 1, "tokens": b.estimate}, false); err != nil {
 		return ctx, err
 	}

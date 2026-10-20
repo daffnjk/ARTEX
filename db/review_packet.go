@@ -1,10 +1,12 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Autumn-27/artex/control"
 )
 
 // M3.4（research）：干净上下文 Reviewer 的评议包与存档。
@@ -16,6 +18,7 @@ import (
 
 // ReviewPacket 是评议包（干净上下文的全部输入）。
 type ReviewPacket struct {
+	Control         *ControlReviewEvidence `json:"control,omitempty"`
 	ExplorationID   int64                  `json:"exploration_id"`
 	Hypotheses      []Hypothesis           `json:"hypotheses"`
 	Events          []HypothesisEventRow   `json:"events"`
@@ -36,6 +39,16 @@ type HypothesisEventRow struct {
 
 // BuildReviewPacket 从权威状态组装评议包（干净上下文：不含任何对话/提示词）。
 func (s *ExplorationStore) BuildReviewPacket() (*ReviewPacket, error) {
+	var task int64
+	var mode string
+	err := s.db.QueryRow(`SELECT id,control_mode FROM tasks WHERE exploration_id=$1 AND deleted_at IS NULL`, s.expID).Scan(&task, &mode)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	if err == nil && mode != "legacy" {
+		return s.db.BuildControlReviewPacket(context.Background(), control.TaskID(task))
+	}
+
 	hyps, err := s.ListHypotheses()
 	if err != nil {
 		return nil, err
@@ -135,15 +148,28 @@ WHERE h.exploration_id=$1 ORDER BY e.id DESC LIMIT 100`, s.expID)
 
 // StoreReview 存档一次评议（append-only；usage 记录计量）。
 func (s *ExplorationStore) StoreReview(model string, advisory map[string]any, usage map[string]any) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var mode string
+	err = tx.QueryRow(`SELECT control_mode FROM tasks WHERE exploration_id=$1 FOR UPDATE`, s.expID).Scan(&mode)
+	if err != nil && err != sql.ErrNoRows {
+		return err
+	}
+	if err == nil && mode != "legacy" {
+		return fmt.Errorf("controlled review requires a host-issued session")
+	}
 	advRaw, err := json.Marshal(advisory)
 	if err != nil {
 		return err
 	}
 	useRaw, _ := json.Marshal(usage)
-	_, err = s.db.Exec(`INSERT INTO hypothesis_reviews(exploration_id, model, advisory, usage)
+	_, err = tx.Exec(`INSERT INTO hypothesis_reviews(exploration_id, model, advisory, usage)
 		VALUES ($1,$2,$3,$4)`, s.expID, model, advRaw, useRaw)
 	if err != nil {
 		return fmt.Errorf("store review: %w", err)
 	}
-	return nil
+	return tx.Commit()
 }

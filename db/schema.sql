@@ -1794,3 +1794,13 @@ CREATE TABLE IF NOT EXISTS control_score_snapshots(id BIGSERIAL PRIMARY KEY,task
 DROP TRIGGER IF EXISTS trg_control_score_immutable ON control_score_snapshots;
 CREATE TRIGGER trg_control_score_immutable BEFORE UPDATE OR DELETE ON control_score_snapshots FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS control_close_request JSONB;
+
+ALTER TABLE hypothesis_reviews ADD COLUMN IF NOT EXISTS task_id BIGINT;
+ALTER TABLE hypothesis_reviews ADD COLUMN IF NOT EXISTS session_id TEXT;
+ALTER TABLE hypothesis_reviews ADD COLUMN IF NOT EXISTS packet_digest TEXT;
+ALTER TABLE hypothesis_reviews ADD COLUMN IF NOT EXISTS contract_version BIGINT;
+ALTER TABLE hypothesis_reviews ADD COLUMN IF NOT EXISTS context_version TEXT;
+ALTER TABLE hypothesis_reviews ADD COLUMN IF NOT EXISTS acceptance_version TEXT;
+ALTER TABLE hypothesis_reviews ADD COLUMN IF NOT EXISTS trust_domain TEXT NOT NULL DEFAULT 'legacy_advisory';
+ALTER TABLE hypothesis_reviews ADD COLUMN IF NOT EXISTS review_kind TEXT NOT NULL DEFAULT 'legacy_advisory';
+CREATE UNIQUE INDEX IF NOT EXISTS uq_control_review_session ON hypothesis_reviews(session_id) WHERE session_id IS NOT NULL;

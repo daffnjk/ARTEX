@@ -15,7 +15,11 @@ func (s *Server) renderControlReport(ctx context.Context, task control.TaskID) (
 	if err != nil {
 		return "", err
 	}
-	return report.ControlMarkdown(summary), nil
+	packet, packetErr := s.m.pg.BuildControlReviewPacket(ctx, task)
+	if packetErr != nil {
+		return "", packetErr
+	}
+	return report.ControlMarkdown(summary, packet), nil
 }
 func (e *Engine) closeControlledTask(ctx context.Context, t *Task, reason control.StopReason) {
 	id, err := strconv.ParseInt(t.ID, 10, 64)

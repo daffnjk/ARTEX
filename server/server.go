@@ -677,6 +677,7 @@ func (s *Server) chatAgentRef() *agent.ChatAgent {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("POST /api/tasks/{id}/control/{operation}", s.requireControlAdmin(http.HandlerFunc(s.controlContractChange)))
+	mux.Handle("GET /api/tasks/{id}/control/observations/{observation}", s.requireControlAdmin(http.HandlerFunc(s.controlObservation)))
 	s.registerSideRoutes(mux)
 
 	// Auth routes — exempt from JWT check (handled in requireAuth)
