@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "plan_version": "1.1",
-  "note": "ENG-00 本地必测与17项相关回归通过，待独立审查；未解锁ENG-01，不代表全仓测试或CI通过。",
+  "note": "v1.2 autonomous execution; verified_local does not imply independent review or final aggregate PASS",
   "current_task": null,
   "tasks": {
     "ENG-00": {
@@ -81,10 +81,12 @@
       "review": "needs_independent_review"
     },
     "ENG-09": {
-      "status": "pending",
-      "attempts": 0,
-      "evidence": [],
-      "review": "not_started"
+      "status": "verified_local",
+      "attempts": 2,
+      "evidence": [
+        "reports/ENG-09/result.json"
+      ],
+      "review": "needs_independent_review"
     },
     "ENG-10": {
       "status": "pending",

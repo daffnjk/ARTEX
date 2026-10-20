@@ -24,44 +24,69 @@ var ErrHarnessObservationConflict = errors.New("harness observation id exists wi
 // StoreHarnessObservation 写入一条可信观察（宿主 API）。校验 harness 容量上限
 // 与 digest 一致性；同 id 同内容幂等成功，同 id 异内容显式冲突。
 func (d *DB) StoreHarnessObservation(o harness.Observation) error {
-	if o.ID == "" || o.TaskID <= 0 || o.ExperimentID == "" || o.ContextVersion == "" {
-		return fmt.Errorf("harness observation: id/task_id/experiment_id/context_version required")
+	mode, err := d.ControlMode(context.Background(), o.TaskID)
+	if err != nil && err != sql.ErrNoRows {
+		return err
 	}
-	if len(o.Payload) > harness.MaxArtifactBytes {
-		return fmt.Errorf("harness observation %s: payload exceeds %d bytes", o.ID, harness.MaxArtifactBytes)
+	if err == nil && mode != "legacy" {
+		return fmt.Errorf("controlled observations require host execution capture")
+	}
+	return storeHarnessObservation(context.Background(), d, o, nil)
+}
+
+type observationWriter interface {
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+	ExecContext(context.Context, string, ...any) (sql.Result, error)
+}
+
+func storeHarnessObservation(ctx context.Context, w observationWriter, o harness.Observation, meta *controlCaptureMetadata) error {
+	if o.ID == "" || o.TaskID <= 0 || o.ExperimentID == "" || o.ContextVersion == "" || len(o.Payload) > harness.MaxArtifactBytes {
+		return fmt.Errorf("invalid bounded harness observation")
 	}
 	digest := harness.Digest(o.Payload)
-	// 幂等判定必须比对完整身份（id 全局唯一）：同 id 且身份字段一致才幂等，
-	// 否则显式冲突——只比 digest 会把跨任务的撞 id 误判为幂等（实测发现）。
-	var (
-		exTask, exExp, exExec, exCtx, exSubj, exObj string
-		exDigest                                    string
-		exComplete                                  bool
-	)
-	err := d.QueryRow(`SELECT task_id::text, experiment_id, execution_id, context_version,
-		subject_ref, object_ref, payload_sha256, complete FROM harness_observations WHERE id=$1`, o.ID).Scan(
-		&exTask, &exExp, &exExec, &exCtx, &exSubj, &exObj, &exDigest, &exComplete)
-	switch {
-	case err == nil:
-		same := exDigest == digest && exExp == o.ExperimentID && exExec == o.ExecutionID &&
-			exCtx == o.ContextVersion && exSubj == o.SubjectRef && exObj == o.ObjectRef &&
-			exComplete == o.Complete && exTask == fmt.Sprint(o.TaskID)
-		if same {
-			return nil // 幂等：同 id 同身份同内容（observed_at 属元数据不参与判定）
+	compare := func() (bool, error) {
+		var task int64
+		var exp, exec, version, subject, object, storedDigest, captureDigest string
+		var complete bool
+		err := w.QueryRowContext(ctx, `SELECT task_id,experiment_id,execution_id,context_version,subject_ref,object_ref,payload_sha256,complete,capture_digest FROM harness_observations WHERE id=$1`, o.ID).Scan(&task, &exp, &exec, &version, &subject, &object, &storedDigest, &complete, &captureDigest)
+		if err == sql.ErrNoRows {
+			return false, nil
 		}
-		return fmt.Errorf("%w: %s", ErrHarnessObservationConflict, o.ID)
-	case !errors.Is(err, sql.ErrNoRows):
-		return fmt.Errorf("harness observation lookup: %w", err)
+		if err != nil {
+			return false, err
+		}
+		wantCapture := ""
+		if meta != nil {
+			wantCapture = meta.Digest
+		}
+		if task != o.TaskID || exp != o.ExperimentID || exec != o.ExecutionID || version != o.ContextVersion || subject != o.SubjectRef || object != o.ObjectRef || storedDigest != digest || complete != o.Complete || captureDigest != wantCapture {
+			return true, ErrHarnessObservationConflict
+		}
+		return true, nil
 	}
-	_, err = d.Exec(`
-INSERT INTO harness_observations(id, task_id, experiment_id, execution_id, context_version,
-    subject_ref, object_ref, observed_at, complete, payload, payload_sha256)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-ON CONFLICT (id) DO NOTHING`,
-		o.ID, o.TaskID, o.ExperimentID, o.ExecutionID, o.ContextVersion,
-		o.SubjectRef, o.ObjectRef, o.ObservedAt, o.Complete, o.Payload, digest)
+	if found, err := compare(); found || err != nil {
+		return err
+	}
+	m := controlCaptureMetadata{Source: "legacy", Validity: "unknown", JSON: []byte(`{}`)}
+	if meta != nil {
+		m = *meta
+	}
+	res, err := w.ExecContext(ctx, `INSERT INTO harness_observations(id,task_id,experiment_id,execution_id,context_version,subject_ref,object_ref,observed_at,complete,payload,payload_sha256,exploration_id,attempt_id,lease_epoch,capture_source,capture_validity,capture_meta,capture_digest) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) ON CONFLICT(id) DO NOTHING`, o.ID, o.TaskID, o.ExperimentID, o.ExecutionID, o.ContextVersion, o.SubjectRef, o.ObjectRef, o.ObservedAt, o.Complete, o.Payload, digest, m.ExplorationID, m.AttemptID, m.Epoch, m.Source, m.Validity, m.JSON, m.Digest)
 	if err != nil {
-		return fmt.Errorf("store harness observation %s: %w", o.ID, err)
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		found, err := compare()
+		if err != nil {
+			return err
+		}
+		if !found {
+			return ErrHarnessObservationConflict
+		}
 	}
 	return nil
 }

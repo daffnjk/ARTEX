@@ -1,0 +1,36 @@
+{
+  "task_id": "ENG-09",
+  "status": "verified_local",
+  "review": "needs_independent_review",
+  "code_tree_sha256": "22ed292eca0bcec536d6c39324a97752fa621ff28e95f9f7984c6e94b0549547",
+  "required": {
+    "status": "PASS",
+    "required_count": 4,
+    "event_count": 235,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "regression": {
+    "status": "PASS",
+    "required_count": 34,
+    "event_count": 226,
+    "original_exit_code": 0,
+    "errors": [],
+    "notice": "Log validation only; not proof of log authenticity or independent review."
+  },
+  "raw_receipts": "reports/ENG-09/runs/02",
+  "log_hashes": {
+    "required.jsonl": "539ad6498c7f645879873f21de2184e9d9751bc1cc121a40cfaac7e43b9247dd",
+    "regression.jsonl": "d0341d4be64dec097e63bf9040b3184325c87bf6d83fa91e60e418b33881c3cd",
+    "required.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "regression.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "limits": [
+    "Not final aggregate acceptance; independent review deferred",
+    "No production or real target execution"
+  ],
+  "notes": [
+    "Four required roots and 34 regressions pass; host raw capture and redacted model view; bounded BYTEA only"
+  ]
+}

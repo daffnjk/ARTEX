@@ -24,6 +24,7 @@ type Resolver interface {
 	LookupNetIP(context.Context, string, string) ([]netip.Addr, error)
 }
 type HTTPHop struct {
+	RawHeaders map[string][]string `json:"raw_headers,omitempty"`
 	Target     control.Target
 	PeerIP     netip.Addr
 	StatusCode int
@@ -159,7 +160,7 @@ func (a *HTTPAdapter) Run(ctx context.Context, task control.TaskID, id control.E
 			}
 		}
 		sum := sha256.Sum256(payload)
-		result.Hops = append(result.Hops, HTTPHop{target, peer, response.StatusCode, headers, payload, hex.EncodeToString(sum[:]), complete})
+		result.Hops = append(result.Hops, HTTPHop{RawHeaders: response.Header.Clone(), Target: target, PeerIP: peer, StatusCode: response.StatusCode, Headers: headers, Body: payload, SHA256: hex.EncodeToString(sum[:]), Complete: complete})
 		result.ResponseBytes += int64(len(payload))
 		if !complete {
 			return result, control.ObservationIncomplete
@@ -180,4 +181,21 @@ func (a *HTTPAdapter) Run(ctx context.Context, task control.TaskID, id control.E
 		return result, nil
 	}
 	return result, control.UnboundedEffect
+}
+
+// RedactedHTTPResult is the model view; private capture headers stay in host storage.
+func RedactedHTTPResult(result HTTPResult) HTTPResult {
+	result.Hops = append([]HTTPHop{}, result.Hops...)
+	for i := range result.Hops {
+		hop := &result.Hops[i]
+		hop.RawHeaders = nil
+		headers := map[string][]string{}
+		for _, name := range []string{"Content-Type", "Content-Length"} {
+			if values, ok := hop.Headers[name]; ok {
+				headers[name] = append([]string{}, values...)
+			}
+		}
+		hop.Headers = headers
+	}
+	return result
 }

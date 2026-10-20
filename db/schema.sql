@@ -1713,3 +1713,21 @@ END $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS trg_control_asset_boundary ON task_asset_links;
 CREATE TRIGGER trg_control_asset_boundary AFTER INSERT OR UPDATE ON task_asset_links FOR EACH ROW EXECUTE FUNCTION remember_control_asset_boundary();
 ALTER TABLE action_executions ADD COLUMN IF NOT EXISTS cancel_requested BOOLEAN NOT NULL DEFAULT false;
+
+ALTER TABLE harness_observations ADD COLUMN IF NOT EXISTS exploration_id BIGINT;
+ALTER TABLE harness_observations ADD COLUMN IF NOT EXISTS attempt_id TEXT;
+ALTER TABLE harness_observations ADD COLUMN IF NOT EXISTS lease_epoch BIGINT;
+ALTER TABLE harness_observations ADD COLUMN IF NOT EXISTS capture_source TEXT NOT NULL DEFAULT 'legacy';
+ALTER TABLE harness_observations ADD COLUMN IF NOT EXISTS capture_validity TEXT NOT NULL DEFAULT 'unknown';
+ALTER TABLE harness_observations ADD COLUMN IF NOT EXISTS capture_meta JSONB NOT NULL DEFAULT '{}';
+ALTER TABLE harness_observations ADD COLUMN IF NOT EXISTS capture_digest TEXT NOT NULL DEFAULT '';
+CREATE OR REPLACE FUNCTION forbid_control_result_rewrite() RETURNS trigger AS $$
+BEGIN
+ IF OLD.result_json IS NOT NULL AND ROW(NEW.result_json,NEW.result_digest) IS DISTINCT FROM ROW(OLD.result_json,OLD.result_digest)
+ THEN RAISE EXCEPTION 'captured execution result is immutable'; END IF;
+ IF OLD.intent_id IS NOT NULL AND NEW.intent_id IS DISTINCT FROM OLD.intent_id
+ THEN RAISE EXCEPTION 'execution intent binding is immutable'; END IF;
+ RETURN NEW;
+END $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_control_result_immutable ON action_executions;
+CREATE TRIGGER trg_control_result_immutable BEFORE UPDATE ON action_executions FOR EACH ROW EXECUTE FUNCTION forbid_control_result_rewrite();

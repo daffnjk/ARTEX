@@ -96,7 +96,12 @@ func (s *Server) controlledWorkerTools(ctx context.Context, ri agent.RunInfo) ([
 					return actool.Errorf(err.Error()), nil
 				}
 				if len(existing) > 0 {
-					return actool.Text(string(existing)), nil
+					var stored execution.HTTPResult
+					if json.Unmarshal(existing, &stored) != nil {
+						return actool.Errorf("stored result unavailable"), nil
+					}
+					view, _ := json.Marshal(execution.RedactedHTTPResult(stored))
+					return actool.Text(string(view)), nil
 				}
 				return actool.Text(fmt.Sprintf("execution %s is %s; collect the original result", record.ID, record.Outcome.Run)), nil
 			}
@@ -117,10 +122,13 @@ func (s *Server) controlledWorkerTools(ctx context.Context, ri agent.RunInfo) ([
 			if err := s.m.pg.CommitControlHTTPResult(ctx, attempt, result); err != nil {
 				return actool.Errorf("result commit failed; execution remains recoverable"), nil
 			}
+			if _, err := s.m.pg.CaptureControlObservations(ctx, attempt); err != nil {
+				return actool.Errorf("host observation capture failed; no formal evidence is available"), nil
+			}
 			if runErr != nil {
 				return actool.Errorf(runErr.Error()), nil
 			}
-			output, err := json.Marshal(result)
+			output, err := json.Marshal(execution.RedactedHTTPResult(result))
 			if err != nil {
 				return actool.Errorf("result encoding failed"), nil
 			}
